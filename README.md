@@ -55,17 +55,16 @@ form alone. With no channel set, the widget slot renders a labelled note instead
 ## Deploy (Cloudflare)
 
 The site is a static build, served by Cloudflare from `dist/`. Configuration lives in
-`wrangler.jsonc`; `.node-version` pins the build image to Node 22.
+`wrangler.jsonc` (`pages_build_output_dir`); `.node-version` pins the build image to Node 22.
 
-Connected through the Cloudflare dashboard: **Workers & Pages → Create → Import a repository →
-`abbou631-dev/romesomuch`**, with
+Cloudflare Pages project `romesomuch`, connected to this repository:
 
 | Setting | Value |
 | --- | --- |
+| Production branch | `main` |
 | Build command | `npm run build` |
-| Deploy command | `npx wrangler deploy` |
 | Build output directory | `dist` |
-| Root directory | *(empty)* |
+| Live URL | https://romesomuch.pages.dev |
 
 Every push to `main` then builds and deploys on its own. Pull requests get a preview URL.
 
