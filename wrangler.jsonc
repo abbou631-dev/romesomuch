@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "romesomuch",
+  "compatibility_date": "2026-09-01",
+  // Static Astro build. No Worker script: Cloudflare serves dist/ directly.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}
