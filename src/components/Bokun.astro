@@ -1,0 +1,34 @@
+---
+interface Props { productId: string; price: number; unit: "person" | "group"; durationLabel: string }
+const { productId, price, unit, durationLabel } = Astro.props;
+const channel = import.meta.env.PUBLIC_BOKUN_CHANNEL ?? "";
+const src = channel ? `https://widgets.bokun.io/online-sales/${channel}/experience/${productId}` : "";
+---
+<div class="book" id="bokunBox">
+  <span class="badge-live">Live availability</span>
+  <h3 style="margin-top:10px">Book instantly</h3>
+  <p class="fine" style="margin-top:4px">€{price} per {unit} · {durationLabel} · confirmed straight away</p>
+  <div class="bokunWidget" id="bokunSlot" data-src={src}></div>
+  {!channel && (
+    <div class="ph" style="margin-top:14px">
+      <span class="k">Calendario Bokun</span>
+      <span class="d">
+        Manca <code>PUBLIC_BOKUN_CHANNEL</code> in <code>.env</code>. Impostato il booking channel UUID,
+        questa esperienza mostra il calendario Bokun con disponibilità e pagamento; il prodotto è
+        <code>{productId}</code>.
+      </span>
+    </div>
+  )}
+</div>
+
+{channel && (
+  <script is:inline define:vars={{ channel }}>
+    if (!document.getElementById("bokunLoader")) {
+      const s = document.createElement("script");
+      s.id = "bokunLoader";
+      s.async = true;
+      s.src = `https://widgets.bokun.io/assets/javascripts/apps/build/BokunWidgetsLoader.js?bookingChannelUUID=${channel}`;
+      document.head.appendChild(s);
+    }
+  </script>
+)}

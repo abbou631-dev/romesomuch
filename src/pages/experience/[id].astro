@@ -1,0 +1,85 @@
+---
+import type { GetStaticPaths } from "astro";
+import { getCollection, render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import Shot from "../../components/Shot.astro";
+import Rail from "../../components/Rail.astro";
+import BookingPanel from "../../components/BookingPanel.astro";
+import { categoryName } from "../../lib/site";
+
+export const getStaticPaths = (async () => {
+  const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
+  return all.map((exp) => ({ params: { id: exp.id }, props: { exp } }));
+}) satisfies GetStaticPaths;
+
+const { exp } = Astro.props;
+const d = exp.data;
+const { Content } = await render(exp);
+const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
+const related = all.filter((e) => e.data.category === d.category && e.id !== exp.id).slice(0, 4);
+---
+<Base title={`${d.title} — RomeSoMuch`} description={d.blurb} active={d.category}>
+  <div class="wrap">
+    <div class="detail">
+      <div>
+        <p class="crumb" style="opacity:1;color:var(--muted)">
+          <a href="/">Home</a> / <a href={`/experiences/${d.category}/`}>{categoryName(d.category)}</a>
+        </p>
+        <h1 style="font-size:clamp(28px,4.6vw,54px)">{d.title}</h1>
+        <p style="margin-top:10px;color:var(--muted);font-size:15px;font-weight:500">{d.blurb}</p>
+
+        <div class="gal" style="margin-top:20px">
+          <div class="main" id="galMain">
+            <Shot image={d.images[0]} alt={d.title} sizes="(max-width: 960px) 100vw, 760px" loading="eager" />
+          </div>
+          {d.images.length > 1 && (
+            <div class="thumbs">
+              {d.images.map((image, i) => (
+                <button class={i === 0 ? "on" : ""} data-i={i} aria-label={`Image ${i + 1}`}>
+                  <Shot image={image} alt="" sizes="96px" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <dl class="facts">
+          <div><dt>Length</dt><dd>{d.durationLabel}</dd></div>
+          <div><dt>Group size</dt><dd>Up to {d.maxGuests}</dd></div>
+          <div><dt>Languages</dt><dd>{d.languages}</dd></div>
+          <div><dt>Meeting point</dt><dd>{d.meetingPoint}</dd></div>
+        </dl>
+
+        <div class="prose">
+          <h2>What you do</h2>
+          <Content />
+          <h2>Included</h2>
+          <ul class="incl">{d.included.map((i) => <li>{i}</li>)}</ul>
+          <h2>Good to know</h2>
+          <p>
+            Free cancellation up to 48 hours before the start time. Inside 48 hours the experience is
+            charged in full, because the guide, cook or driver is already booked.
+          </p>
+        </div>
+      </div>
+
+      <BookingPanel exp={exp} />
+    </div>
+  </div>
+
+  {related.length > 0 && (
+    <Rail title={`More ${categoryName(d.category)}`} items={related} href={`/experiences/${d.category}/`} tone="tone" />
+  )}
+</Base>
+
+<script>
+  const main = document.getElementById("galMain");
+  const thumbs = Array.from(document.querySelectorAll<HTMLButtonElement>(".thumbs button"));
+  thumbs.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!main) return;
+      main.innerHTML = btn.innerHTML;
+      thumbs.forEach((b) => b.classList.toggle("on", b === btn));
+    });
+  });
+</script>

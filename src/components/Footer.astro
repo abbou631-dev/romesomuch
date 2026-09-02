@@ -1,0 +1,42 @@
+---
+import { Image } from "astro:assets";
+import logo from "../assets/logo.png";
+---
+<footer>
+  <div class="fcta wrap">
+    <h2>So much Rome.<br />Start with one thing.</h2>
+    <p>Book an experience today, add the rest later. Every request gets an answer the same day.</p>
+    <a class="btn" href="/experiences/all/">Browse everything</a>
+  </div>
+  <div class="wrap">
+    <div class="fgrid">
+      <div class="fcol">
+        <Image src={logo} alt="RomeSoMuch" width={200} densities={[1, 2]} />
+        <p style="font-size:13px;color:var(--muted);margin-top:12px;max-width:32ch;font-weight:500">
+          Experiences, tours and day trips in Rome, run by people who live here.
+        </p>
+      </div>
+      <div class="fcol">
+        <h4>Experiences</h4>
+        <a href="/experiences/tours/">Tours</a>
+        <a href="/experiences/food/">Food &amp; Wine</a>
+        <a href="/experiences/activities/">Activities</a>
+        <a href="/experiences/day-trips/">Day Trips</a>
+      </div>
+      <div class="fcol">
+        <h4>RomeSoMuch</h4>
+        <a href="/journal/">Journal</a>
+        <a href="/about/">About</a>
+        <a href="/contact/">Contact</a>
+        <a href="/experiences/all/">All experiences</a>
+      </div>
+      <div class="fcol">
+        <h4>Legal</h4>
+        <a href="/legal/privacy/">Privacy Policy</a>
+        <a href="/legal/cookies/">Cookie Policy</a>
+        <a href="/legal/terms/">Terms of Service</a>
+      </div>
+    </div>
+    <div class="fbot"><span>© 2026 RomeSoMuch</span><span>Rome, Italy</span></div>
+  </div>
+</footer>

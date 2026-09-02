@@ -1,0 +1,33 @@
+---
+import type { CollectionEntry } from "astro:content";
+import Shot from "./Shot.astro";
+import { categoryName, money } from "../lib/site";
+
+interface Props { exp: CollectionEntry<"experiences">; loading?: "eager" | "lazy" }
+const { exp, loading = "lazy" } = Astro.props;
+const d = exp.data;
+---
+<a
+  class="card"
+  href={`/experience/${exp.id}/`}
+  data-price={d.price}
+  data-duration={d.duration}
+  data-category={d.category}
+>
+  <div class="shot">
+    <span class="tag">{categoryName(d.category)}</span>
+    <Shot image={d.images[0]} alt={d.title} loading={loading} />
+  </div>
+  <div class="cbody">
+    <h3>{d.title}</h3>
+    <div class="cmeta">
+      <span>{d.durationLabel}</span><span>max {d.maxGuests}</span><span>{d.languages}</span>
+    </div>
+    <div class="cfoot">
+      <div class="price">
+        <span class="f">from</span><span class="v tnum">{money(d.price)}</span><span class="u">/ {d.unit}</span>
+      </div>
+      <span class="pill">{d.bokunProductId ? "Instant booking" : "Free cancel 48h"}</span>
+    </div>
+  </div>
+</a>

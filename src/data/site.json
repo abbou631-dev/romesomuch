@@ -1,0 +1,136 @@
+{
+ "categories": [
+  {
+   "slug": "all",
+   "name": "All",
+   "blurb": "Everything we run in Rome, in one list."
+  },
+  {
+   "slug": "tours",
+   "name": "Tours",
+   "blurb": "The big sites, walked properly, with someone who knows them."
+  },
+  {
+   "slug": "food",
+   "name": "Food & Wine",
+   "blurb": "Cook it, taste it, drink it. Mostly all three."
+  },
+  {
+   "slug": "activities",
+   "name": "Activities",
+   "blurb": "Workshops, wellness, opera and things to do with kids."
+  },
+  {
+   "slug": "day-trips",
+   "name": "Day Trips",
+   "blurb": "Out of the city and back before dinner."
+  }
+ ],
+ "topPicks": [
+  "colosseum",
+  "pasta",
+  "fiat500",
+  "aperitivo",
+  "tivoli",
+  "fresco"
+ ],
+ "legal": {
+  "terms": {
+   "t": "Terms of Service",
+   "l": "The rules that apply when you book an experience through RomeSoMuch.",
+   "u": "Last updated: 2 September 2026",
+   "s": [
+    [
+     "Who we are",
+     "RomeSoMuch [ragione sociale] is registered at [indirizzo], VAT number [P.IVA], and can be reached at [email]. These terms govern every booking made through this website."
+    ],
+    [
+     "Booking and confirmation",
+     "A booking is complete when you receive our written confirmation by email. Experiences with live availability are confirmed automatically at checkout; all others are requests, which we answer the same day and which become bookings only once confirmed."
+    ],
+    [
+     "Prices and payment",
+     "Prices are shown per person or per group, as stated on each experience, and include VAT where applicable. Entry tickets, transfers and meals are included only where the experience says so."
+    ],
+    [
+     "Cancellation",
+     "You may cancel free of charge up to 48 hours before the start time. Inside 48 hours the experience is charged in full, because the guide, cook or driver is already committed. If we cancel — weather, illness, closure of a site — you choose between a new date and a full refund."
+    ],
+    [
+     "Late arrival and no-show",
+     "Meeting points and times are in your confirmation. An experience that has already started cannot be joined late, and a no-show is charged in full."
+    ],
+    [
+     "Your responsibilities",
+     "Some experiences involve walking, steps, heat or alcohol. Tell us about mobility needs, allergies or medical conditions when you book, so we can adapt or advise against. Children must be accompanied by an adult."
+    ],
+    [
+     "Liability",
+     "We provide the experience with reasonable care and are liable for what we control. We are not liable for third-party closures, strikes, traffic or weather, nor for personal belongings."
+    ],
+    [
+     "Complaints and applicable law",
+     "Write to [email] and we answer within [X] working days. Italian law applies, and the courts of Rome have jurisdiction, without prejudice to the mandatory rights of consumers."
+    ]
+   ]
+  },
+  "privacy": {
+   "t": "Privacy Policy",
+   "l": "What personal data we collect when you book, why, and how long we keep it.",
+   "u": "Last updated: 2 September 2026",
+   "s": [
+    [
+     "Data controller",
+     "The controller is RomeSoMuch [ragione sociale], [indirizzo], [email]. For any request about your data, write to that address."
+    ],
+    [
+     "What we collect",
+     "Booking data: name, email, phone, date, number of guests and any notes you send us. Payment data is handled by our payment provider — we never see or store card numbers. Technical data: the pages you visit on this site, in aggregate."
+    ],
+    [
+     "Why we use it",
+     "To confirm and run your booking (performance of a contract), to answer your messages (legitimate interest), to meet tax and accounting obligations (legal obligation), and — only with your consent — to send you occasional emails about new experiences."
+    ],
+    [
+     "Who else sees it",
+     "Only the people who need it to deliver your experience: the guide, chef or driver assigned to you, our booking system provider, our payment provider, and our accountant. We do not sell data and we do not share it for anyone else's marketing."
+    ],
+    [
+     "How long we keep it",
+     "Booking records for 10 years, as tax law requires. Enquiries that do not become bookings for 24 months. Consent-based emails until you unsubscribe."
+    ],
+    [
+     "Your rights",
+     "You can ask for access, correction, deletion, restriction or portability of your data, object to processing, and withdraw consent at any time by writing to [email]. You can also complain to the Garante per la protezione dei dati personali."
+    ]
+   ]
+  },
+  "cookies": {
+   "t": "Cookie Policy",
+   "l": "Which cookies this site sets, what they do, and how to refuse them.",
+   "u": "Last updated: 2 September 2026",
+   "s": [
+    [
+     "What cookies are",
+     "Small files stored by your browser. Some are needed for the site to work; others measure how it is used or come from services embedded in the page."
+    ],
+    [
+     "Technical cookies",
+     "Always active, no consent needed. They keep your session, your language and the state of the booking form. Deleting them logs you out of an unfinished booking."
+    ],
+    [
+     "Analytics cookies",
+     "Used only if you accept them. They tell us which experiences people look at and where they leave the page, in aggregate. They can be refused without losing any function of the site."
+    ],
+    [
+     "Third-party cookies",
+     "The booking calendar is provided by Bokun (Tripadvisor group) and sets its own cookies when it loads, so that availability and checkout work. Payment pages set cookies for fraud prevention. These services have their own policies."
+    ],
+    [
+     "Managing your choices",
+     "Use the cookie banner to accept or refuse non-essential cookies, and your browser settings to delete cookies already stored. Refusing analytics has no effect on booking."
+    ]
+   ]
+  }
+ }
+}

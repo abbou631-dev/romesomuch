@@ -1,0 +1,25 @@
+---
+import type { GetStaticPaths } from "astro";
+import { getCollection, render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import Shot from "../../components/Shot.astro";
+
+export const getStaticPaths = (async () => {
+  const posts = await getCollection("journal");
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}) satisfies GetStaticPaths;
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+<Base title={`${post.data.title} — RomeSoMuch`} description={post.data.excerpt}>
+  <div class="wrap">
+    <article class="article">
+      <p class="crumb" style="opacity:1;color:var(--muted)"><a href="/journal/">← Journal</a></p>
+      <h1>{post.data.title}</h1>
+      <p class="lbl" style="margin-top:12px">{post.data.date}</p>
+      <div class="shot"><Shot image={{ photo: post.data.cover }} alt="" sizes="(max-width: 760px) 100vw, 680px" loading="eager" /></div>
+      <Content />
+    </article>
+  </div>
+</Base>

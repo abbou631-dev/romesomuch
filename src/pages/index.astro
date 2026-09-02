@@ -1,0 +1,64 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../layouts/Base.astro";
+import Rail from "../components/Rail.astro";
+import Card from "../components/Card.astro";
+import JournalCard from "../components/JournalCard.astro";
+import HowItWorks from "../components/HowItWorks.astro";
+import { categories, topPicks } from "../lib/site";
+
+const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
+const picks = topPicks.map((id) => all.find((e) => e.id === id)!).filter(Boolean);
+const posts = await getCollection("journal");
+const tones = ["", "tone", "", "tone-2"] as const;
+const quick = [
+  { label: "Under €50", href: "/experiences/all/" },
+  { label: "Food & Wine", href: "/experiences/food/" },
+  { label: "Under 2 hours", href: "/experiences/all/" },
+  { label: "Out of the city", href: "/experiences/day-trips/" },
+  { label: "With kids", href: "/experiences/activities/" },
+];
+---
+<Base title="RomeSoMuch — experiences in Rome">
+  <section class="picks">
+    <div class="wrap">
+      <div class="picks-head">
+        <div>
+          <p class="badge">Rome · this month</p>
+          <h1 style="margin-top:14px">Top picks in <span class="hl">Rome</span></h1>
+          <p class="sub">
+            The experiences we would book first: hand-picked, running now, bookable in a couple of taps.
+          </p>
+        </div>
+        <a class="see" href="/experiences/all/">See all {all.length}</a>
+      </div>
+      <div class="qf">{quick.map((q) => <a href={q.href}>{q.label}</a>)}</div>
+      <div class="track">{picks.map((exp, i) => <Card exp={exp} loading={i < 3 ? "eager" : "lazy"} />)}</div>
+    </div>
+  </section>
+
+  {categories.filter((c) => c.slug !== "all").map((c, i) => (
+    <Rail
+      title={c.name}
+      sub={c.blurb}
+      href={`/experiences/${c.slug}/`}
+      items={all.filter((e) => e.data.category === c.slug)}
+      tone={tones[i] ?? ""}
+    />
+  ))}
+
+  <HowItWorks />
+
+  <section class="rail tone">
+    <div class="wrap">
+      <div class="rail-head">
+        <div>
+          <h2>From the Journal</h2>
+          <p class="sub">Sezione blog gestita dai file in <code>src/content/journal</code>.</p>
+        </div>
+        <a class="see" href="/journal/">All articles</a>
+      </div>
+      <div class="grid">{posts.map((post) => <JournalCard post={post} />)}</div>
+    </div>
+  </section>
+</Base>

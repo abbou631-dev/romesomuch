@@ -1,0 +1,27 @@
+---
+import type { CollectionEntry } from "astro:content";
+import Card from "./Card.astro";
+
+interface Props {
+  title: string;
+  sub?: string;
+  href?: string;
+  items: CollectionEntry<"experiences">[];
+  tone?: "" | "tone" | "tone-2" | "dark";
+}
+const { title, sub, href, items, tone = "" } = Astro.props;
+---
+<section class={`rail ${tone}`}>
+  <div class="wrap">
+    <div class="rail-head">
+      <div>
+        <h2>{title}</h2>
+        {sub && <p class="sub">{sub}</p>}
+      </div>
+      {href && <a class="see" href={href}>See all {items.length}</a>}
+    </div>
+    <div class="track">
+      {items.map((exp) => <Card exp={exp} />)}
+    </div>
+  </div>
+</section>

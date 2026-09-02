@@ -1,0 +1,15 @@
+---
+import type { CollectionEntry } from "astro:content";
+import Shot from "./Shot.astro";
+
+interface Props { post: CollectionEntry<"journal"> }
+const { post } = Astro.props;
+---
+<a class="card" href={`/journal/${post.id}/`}>
+  <div class="shot"><Shot image={{ photo: post.data.cover }} alt={post.data.title} /></div>
+  <div class="cbody">
+    <h3>{post.data.title}</h3>
+    <p class="cmeta"><span>{post.data.date}</span></p>
+    <p style="font-size:13.5px;color:var(--muted);font-weight:500">{post.data.excerpt}</p>
+  </div>
+</a>

@@ -1,0 +1,28 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import Shot from "../../components/Shot.astro";
+
+const posts = await getCollection("journal");
+---
+<Base title="Journal — RomeSoMuch">
+  <section class="band">
+    <div class="wrap">
+      <p class="crumb">Home / Journal</p>
+      <h1>Journal</h1>
+      <p class="lede">What is open, what is on, and when to go.</p>
+    </div>
+  </section>
+  <div class="wrap" style="padding-bottom:16px">
+    {posts.map((post) => (
+      <a class="post" href={`/journal/${post.id}/`}>
+        <div class="shot"><Shot image={{ photo: post.data.cover }} alt={post.data.title} sizes="210px" /></div>
+        <div>
+          <p class="lbl">{post.data.date}</p>
+          <h3>{post.data.title}</h3>
+          <p class="ex">{post.data.excerpt}</p>
+        </div>
+      </a>
+    ))}
+  </div>
+</Base>

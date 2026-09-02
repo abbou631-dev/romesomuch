@@ -1,0 +1,16 @@
+---
+import { Image } from "astro:assets";
+import { photo } from "../lib/images";
+
+type Picture = { photo: string } | { poster: string; tone: "ink" | "blue" | "sun" };
+interface Props { image: Picture; alt?: string; sizes?: string; loading?: "eager" | "lazy" }
+const { image, alt = "", sizes = "(max-width: 640px) 64vw, 320px", loading = "lazy" } = Astro.props;
+---
+{"photo" in image ? (
+  <Image src={photo(image.photo)} alt={alt} widths={[320, 640, 1000]} sizes={sizes} loading={loading} />
+) : (
+  <div class={`poster p-${image.tone}`}>
+    <span class="n">Photo placeholder</span>
+    <span class="w">{image.poster}</span>
+  </div>
+)}

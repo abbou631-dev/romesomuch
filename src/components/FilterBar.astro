@@ -1,0 +1,90 @@
+---
+interface Props { slug: string }
+const { slug } = Astro.props;
+const price = [["any", "Any"], ["lt50", "Under €50"], ["50-90", "€50–90"], ["gt90", "Over €90"]];
+const length = [["any", "Any"], ["lt2", "Up to 2h"], ["half", "Half day"], ["full", "Full day"]];
+---
+<div class="filters" data-slug={slug}>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div class="fgroup">
+      <span class="lbl">Price</span>
+      {price.map(([v, label]) => (
+        <button class={`chip${v === "any" ? " on" : ""}`} data-filter="price" data-value={v}>{label}</button>
+      ))}
+    </div>
+    <div class="fgroup">
+      <span class="lbl">Length</span>
+      {length.map(([v, label]) => (
+        <button class={`chip${v === "any" ? " on" : ""}`} data-filter="length" data-value={v}>{label}</button>
+      ))}
+    </div>
+  </div>
+  <label style="display:flex;align-items:center;gap:9px">
+    <span class="lbl">Sort</span>
+    <select class="sort" id="sort">
+      <option value="curated">Curated</option>
+      <option value="px-asc">Price, low to high</option>
+      <option value="px-desc">Price, high to low</option>
+      <option value="dur">Shortest first</option>
+    </select>
+  </label>
+</div>
+
+<script>
+  const grid = document.getElementById("grid");
+  if (grid) {
+    const cards = Array.from(grid.children) as HTMLElement[];
+    const order = new Map(cards.map((c, i) => [c, i]));
+    const count = document.getElementById("count")!;
+    const state = { price: "any", length: "any", sort: "curated" };
+
+    const keepPrice = (p: number) =>
+      state.price === "any" ||
+      (state.price === "lt50" && p < 50) ||
+      (state.price === "50-90" && p >= 50 && p <= 90) ||
+      (state.price === "gt90" && p > 90);
+
+    const keepLength = (d: number) =>
+      state.length === "any" ||
+      (state.length === "lt2" && d <= 2) ||
+      (state.length === "half" && d > 2 && d <= 4) ||
+      (state.length === "full" && d > 4);
+
+    const apply = () => {
+      let shown = 0;
+      const visible: HTMLElement[] = [];
+      for (const card of cards) {
+        const p = Number(card.dataset.price);
+        const d = Number(card.dataset.duration);
+        const ok = keepPrice(p) && keepLength(d);
+        card.hidden = !ok;
+        if (ok) { shown++; visible.push(card); }
+      }
+      visible.sort((a, b) => {
+        const pa = Number(a.dataset.price), pb = Number(b.dataset.price);
+        if (state.sort === "px-asc") return pa - pb;
+        if (state.sort === "px-desc") return pb - pa;
+        if (state.sort === "dur") return Number(a.dataset.duration) - Number(b.dataset.duration);
+        return order.get(a)! - order.get(b)!;
+      });
+      visible.forEach((card) => grid.appendChild(card));
+      count.textContent = `${shown} experience${shown === 1 ? "" : "s"} shown.`;
+    };
+
+    document.querySelectorAll<HTMLButtonElement>(".chip[data-filter]").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const group = chip.dataset.filter as "price" | "length";
+        state[group] = chip.dataset.value!;
+        document
+          .querySelectorAll(`.chip[data-filter="${group}"]`)
+          .forEach((c) => c.classList.toggle("on", c === chip));
+        apply();
+      });
+    });
+    document.getElementById("sort")!.addEventListener("change", (ev) => {
+      state.sort = (ev.target as HTMLSelectElement).value;
+      apply();
+    });
+    apply();
+  }
+</script>

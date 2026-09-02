@@ -1,0 +1,26 @@
+---
+import { Image } from "astro:assets";
+import logo from "../assets/logo.png";
+import { categories } from "../lib/site";
+
+const { active = "" } = Astro.props;
+---
+<div class="notice">
+  PROTOTIPO DI DESIGN — esperienze, prezzi e testi sono segnaposto · le foto sono stock/placeholder, non materiale definitivo
+</div>
+<header>
+  <div class="bar">
+    <a class="logo" href="/"><Image src={logo} alt="RomeSoMuch" width={220} densities={[1, 2]} loading="eager" /></a>
+    <nav class="cats">
+      {categories.map((c) => (
+        <a href={`/experiences/${c.slug}/`} class={active === c.slug ? "on" : ""}>{c.name}</a>
+      ))}
+    </nav>
+    <nav class="sec">
+      <a href="/journal/">Journal</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
+      <a class="cta" href="/experiences/all/">All experiences</a>
+    </nav>
+  </div>
+</header>
