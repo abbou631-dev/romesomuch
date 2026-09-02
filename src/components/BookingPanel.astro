@@ -8,102 +8,17 @@ const { exp } = Astro.props;
 const d = exp.data;
 ---
 <aside>
-  {d.bokunProductId && (
-    <Bokun productId={d.bokunProductId} price={d.price} unit={d.unit} durationLabel={d.durationLabel} />
-  )}
-  <form
-    class="book"
-    id="bookForm"
-    style={d.bokunProductId ? "margin-top:16px" : undefined}
-    data-price={d.price}
-    data-unit={d.unit}
-    data-max={d.maxGuests}
-    data-title={d.title}
-  >
-    <h3>{d.bokunProductId ? "Prefer to ask first?" : "Book it"}</h3>
-    <p class="fine" style="margin-top:4px">{money(d.price)} per {d.unit} · {d.durationLabel}</p>
-    <div class="field">
-      <label for="bDate">Date</label>
-      <input id="bDate" name="date" type="date" required />
-    </div>
-    <div class="field">
-      <label for="bTime">Start time</label>
-      <select id="bTime" name="time">{d.slots.map((s) => <option>{s}</option>)}</select>
-    </div>
-    <div class="field">
-      <label for="bG">Guests (max {d.maxGuests})</label>
-      <div class="step">
-        <button type="button" id="bDec" aria-label="Fewer guests">−</button>
-        <span class="n tnum" id="bG">2</span>
-        <button type="button" id="bInc" aria-label="More guests">+</button>
-      </div>
-    </div>
-    <div class="total"><span class="lbl">Total</span><span class="t tnum" id="bT"></span></div>
-    <p class="fine" id="bB"></p>
-    <button class="btn" type="submit">Request this booking</button>
-    <p class="fine">
-      Nessun pagamento in questa fase: la richiesta arriva in casella e viene confermata a mano.
-      Il checkout online passa da Bokun sulle esperienze che lo hanno attivo.
-    </p>
-    <div id="bOut"></div>
-  </form>
+  <Bokun productId={d.bokunProductId} price={d.price} unit={d.unit} durationLabel={d.durationLabel} />
 </aside>
 
-<div class="mbar" id="mbar" hidden></div>
+<div class="mbar" id="mbar">
+  <div class="p"><span>From · live availability</span><b class="tnum">{money(d.price)}</b></div>
+  <button class="btn" type="button" id="mbarCta">See calendar</button>
+</div>
 
 <script>
-  const form = document.getElementById("bookForm") as HTMLFormElement | null;
-  if (form) {
-    const price = Number(form.dataset.price);
-    const unit = form.dataset.unit as "person" | "group";
-    const max = Number(form.dataset.max);
-    const title = form.dataset.title ?? "";
-    const hasCalendar = Boolean(document.getElementById("bokunBox"));
-    const gEl = document.getElementById("bG")!;
-    const dec = document.getElementById("bDec") as HTMLButtonElement;
-    const inc = document.getElementById("bInc") as HTMLButtonElement;
-    const bar = document.getElementById("mbar")!;
-    const dateEl = document.getElementById("bDate") as HTMLInputElement;
-    let guests = Math.min(2, max);
-
-    const money = (n: number) => `€${n}`;
-    const total = () => (unit === "group" ? price : price * guests);
-
-    const paint = () => {
-      gEl.textContent = String(guests);
-      dec.disabled = guests <= 1;
-      inc.disabled = guests >= max;
-      document.getElementById("bT")!.textContent = money(total());
-      document.getElementById("bB")!.textContent =
-        unit === "group"
-          ? `Flat price for the group, up to ${max} people.`
-          : `${money(price)} × ${guests} guests.`;
-      bar.innerHTML = `<div class="p"><span>${
-        hasCalendar ? "From · live availability" : `Total · ${guests} guests`
-      }</span><b class="tnum">${money(hasCalendar ? price : total())}</b></div>
-        <button class="btn" type="button">${hasCalendar ? "See calendar" : "Request booking"}</button>`;
-      bar.querySelector("button")!.addEventListener("click", () => {
-        (document.getElementById("bokunBox") ?? form).scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-      bar.hidden = false;
-      document.body.classList.add("has-bar");
-    };
-
-    dec.addEventListener("click", () => { guests = Math.max(1, guests - 1); paint(); });
-    inc.addEventListener("click", () => { guests = Math.min(max, guests + 1); paint(); });
-
-    const tomorrow = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
-    dateEl.min = tomorrow;
-    dateEl.value = tomorrow;
-
-    form.addEventListener("submit", (ev) => {
-      ev.preventDefault();
-      const time = (document.getElementById("bTime") as HTMLSelectElement).value;
-      document.getElementById("bOut")!.innerHTML =
-        `<div class="confirm"><strong>Request ready.</strong><br>${title} · ${dateEl.value} at ${time} · ${guests} guests · ${money(total())}<br>
-         <span style="color:var(--muted)">Demo: in produzione parte l'email a RomeSoMuch o il checkout Bokun.</span></div>`;
-    });
-
-    paint();
-  }
+  document.body.classList.add("has-bar");
+  document.getElementById("mbarCta")?.addEventListener("click", () => {
+    document.getElementById("bokunBox")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 </script>
