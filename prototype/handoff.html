@@ -1,0 +1,139 @@
+<title>RomeSoMuch Handoff</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&display=swap">
+<style>
+:root{
+ --paper:#fbfaf7;--surface:#fff;--sunk:#f2f0ea;--hair:#e2ded4;
+ --ink:#0b0a09;--ink-2:#33302b;--muted:#736f68;--blue:#1b32e0;--blue-wash:#e9ecff;--sun:#ffc93c;
+ --disp:"Archivo Black","Helvetica Neue",Arial,sans-serif;--body:"Archivo","Helvetica Neue",Arial,sans-serif;
+ --pad:clamp(16px,4vw,48px);color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --paper:#0c0b0a;--surface:#161513;--sunk:#1e1c19;--hair:#2c2924;
+ --ink:#f8f6f1;--ink-2:#ddd8ce;--muted:#9d9890;--blue:#8494ff;--blue-wash:#16183a;--sun:#ffd15c;color-scheme:dark;}}
+:root[data-theme="dark"]{
+ --paper:#0c0b0a;--surface:#161513;--sunk:#1e1c19;--hair:#2c2924;
+ --ink:#f8f6f1;--ink-2:#ddd8ce;--muted:#9d9890;--blue:#8494ff;--blue-wash:#16183a;--sun:#ffd15c;color-scheme:dark;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6}
+.wrap{max-width:920px;margin:0 auto;padding:0 var(--pad)}
+h1,h2,h3{margin:0;font-family:var(--disp);text-transform:uppercase;letter-spacing:-.03em;line-height:1;text-wrap:balance}
+h1{font-size:clamp(34px,6.5vw,68px)}
+h2{font-size:clamp(21px,3vw,28px);margin-top:38px}
+h3{font-size:15px;letter-spacing:.02em;margin-top:22px}
+p,li{color:var(--ink-2)}
+p{margin:12px 0}
+a{color:var(--blue)}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--sunk);padding:2px 6px;border-radius:4px;word-break:break-all}
+header.top{border-bottom:2px solid var(--ink);padding:clamp(26px,5vw,54px) 0 22px;margin-bottom:6px}
+.kick{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.sub{margin-top:14px;font-size:16px;max-width:60ch}
+section{border-top:1.5px solid var(--hair);padding:6px 0 26px}
+section:first-of-type{border-top:none}
+ul{margin:12px 0;padding-left:20px}
+li{margin:6px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:16px 0}
+.box{background:var(--surface);border:1.5px solid var(--hair);border-radius:6px;padding:14px 16px}
+.box .k{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.box p{margin:6px 0 0;font-size:14px}
+.warn{background:var(--blue-wash);border:2px solid var(--blue);border-radius:6px;padding:16px 18px;margin:18px 0}
+.warn .k{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--blue)}
+.note{background:var(--sun);color:#0b0a09;border-radius:6px;padding:14px 16px;margin:18px 0;font-weight:600;font-size:14px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+th,td{text-align:left;padding:9px 10px;border-bottom:1.5px solid var(--hair);vertical-align:top}
+th{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap}
+pre{background:var(--sunk);border:1.5px solid var(--hair);border-radius:6px;padding:14px;overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.55;color:var(--ink)}
+footer{border-top:2px solid var(--ink);margin-top:40px;padding:20px 0 40px;font-size:12.5px;color:var(--muted)}
+</style>
+<header class="top"><div class="wrap">
+ <p class="kick">Handoff · 2 settembre 2026</p>
+ <h1>RomeSoMuch<br>Experience Platform</h1>
+ <p class="sub">Stato del lavoro, decisioni di design, vincoli tecnici e cosa resta da fare. Documento di passaggio per riprendere in una nuova sessione o per il developer che porta il prototipo in produzione.</p>
+</div></header>
+<div class="wrap">
+
+<section>
+<h2>Cosa esiste oggi</h2>
+<table>
+<tr><th>Cosa</th><th>Link / percorso</th></tr>
+<tr><td><strong>RomeSoMuch</strong> — prototipo del sito, identità nuova sul logo fornito</td><td><a href="https://claude.ai/code/artifact/54a057d4-19a4-44a2-842d-88ef37da5da8">artifact 54a057d4</a><br><span class="mono">~/Downloads/romesomuch-site.html</span></td></tr>
+<tr><td><strong>DeMarino Collection</strong> — prototipo della stessa piattaforma, brand DeMarino</td><td><a href="https://claude.ai/code/artifact/94ad7ec2-3054-4e0e-aa8f-11e1ccecaca6">artifact 94ad7ec2</a><br><span class="mono">~/Downloads/demarino-experiences.html</span></td></tr>
+<tr><td>Brief cliente (sorgente di tutta la struttura)</td><td><span class="mono">~/Downloads/DeMarino_Brief_Sito_Web.docx</span><br><span class="mono">~/Downloads/GIACOMO BRIEF SITO.pdf</span> (stesso testo)</td></tr>
+<tr><td>Logo RomeSoMuch</td><td><span class="mono">~/Downloads/LOGO ROMESOMUCH (1).png</span></td></tr>
+<tr><td>Foto usate come stock</td><td><span class="mono">~/Downloads/DEMARINO EXP PIC.zip</span>, <span class="mono">DEMARINO PHOTOS.zip</span></td></tr>
+</table>
+<p>I due prototipi condividono l'architettura ma non il design: DeMarino è la versione per il cliente (bianco, Instrument Serif, ottone, tono da concierge privato), RomeSoMuch è il brand proprio (nero e bianco, Archivo Black, blu elettrico, tono da piattaforma di booking).</p>
+</section>
+
+<section>
+<h2>Il brief, in breve</h2>
+<p>Il cliente ha un sito Webflow con case ed esperienze, ma non può vendere attività online. Vuole evolverlo in una piattaforma di prenotazione ispirata a Fever e Bucketlisters, <strong>modificando il meno possibile</strong> quello che c'è già. Richieste esplicite:</p>
+<ul>
+<li>Header con logo a sinistra, più basso, con le categorie come navigazione primaria: Tours, Activities, Food, Day-Trips.</li>
+<li>Homepage: hero semplificato, poi "Top Picks of the Month" curata da CMS, poi uno slider per ogni categoria con link "See all". Card con immagine, nome, <strong>prezzo e durata</strong>.</li>
+<li>Una pagina per ogni categoria, con la griglia dei listing; filtri e ordinamento sono un plus, non obbligatori in v1.</li>
+<li>Sezione blog gestibile da CMS: elenco articoli + pagina articolo.</li>
+<li>Su ogni pagina esperienza: data, eventuale orario, numero ospiti, totale che si aggiorna, e pagamento online <em>oppure</em> richiesta di prenotazione confermata a mano.</li>
+<li>Fuori scope v1: filtri complessi, mappe, multi-città, login, multilingua.</li>
+</ul>
+<p>Entrambi i prototipi coprono tutti questi punti. In fondo alla homepage c'è una lista puntata di cosa cambia rispetto al sito attuale, pensata per essere girata al developer.</p>
+</section>
+
+<section>
+<h2>Design system RomeSoMuch</h2>
+<div class="grid">
+<div class="box"><span class="k">Display</span><p>Archivo Black — scelto perché è la grottesca più vicina al lettering "ROME" del logo. Tutto maiuscolo, tracking negativo.</p></div>
+<div class="box"><span class="k">Testo</span><p>Archivo (400/500/600/700). Stessa famiglia, così la pagina resta coerente col marchio.</p></div>
+<div class="box"><span class="k">Colore</span><p>Carta <span class="mono">#fbfaf7</span>, inchiostro <span class="mono">#0b0a09</span>, blu azione <span class="mono">#1b32e0</span>, giallo accento <span class="mono">#ffc93c</span>. Il giallo si usa solo per il banner e i poster tile.</p></div>
+<div class="box"><span class="k">Logo</span><p>Il PNG originale ha lo sfondo bianco: è stato reso trasparente per luminanza e ritagliato al bbox. In dark mode si inverte via <span class="mono">filter</span>.</p></div>
+</div>
+<p>Il tema scuro è già definito a livello di token (bare <span class="mono">:root</span>, <span class="mono">prefers-color-scheme</span> e <span class="mono">[data-theme]</span>), quindi il sito regge entrambi i contesti senza ritocchi.</p>
+</section>
+
+<section>
+<h2>Come è costruito il prototipo</h2>
+<ul>
+<li><strong>Un solo file HTML</strong>, senza build e senza dipendenze. Font da Google Fonts, tutto il resto inline.</li>
+<li><strong>Router a hash</strong>: <span class="mono">#/</span> home, <span class="mono">#/c/&lt;categoria&gt;/&lt;sort&gt;</span> categoria, <span class="mono">#/e/&lt;id&gt;</span> esperienza, <span class="mono">#/journal[/&lt;slug&gt;]</span> blog, più about e contact.</li>
+<li><strong>Dati in un array JS</strong> (<span class="mono">E</span>): id, categoria, titolo, prezzo, unità di prezzo, durata, capienza, lingue, meeting point, orari, immagini, descrizione, incluso. Aggiungere un'esperienza = aggiungere un oggetto.</li>
+<li><strong>Due modelli di prezzo</strong>: <span class="mono">unit:"person"</span> moltiplica per il numero di ospiti, <span class="mono">unit:"group"</span> resta fisso (es. Fiat 500). Il totale si aggiorna in tempo reale.</li>
+<li><strong>Immagini come data URI</strong> generate da uno script Python (Pillow): ridimensionate a 1000px, JPEG q68. Il file finale pesa circa 2,6 MB.</li>
+</ul>
+<div class="warn"><span class="k">Vincolo degli Artifact</span>
+<p style="margin-top:8px">La CSP degli artifact blocca immagini, CSS e fetch da host esterni: gli unici script ammessi arrivano da cdnjs, jsdelivr, cdn.tailwindcss.com e code.jquery.com, e i font da Google Fonts. Per questo <strong>non si possono usare URL Unsplash</strong> né caricare foto da un CDN: tutto va incorporato nel file. In produzione (Webflow o altro) questo vincolo sparisce e le immagini tornano normali file.</p></div>
+</section>
+
+<section>
+<h2>Immagini e contenuti segnaposto</h2>
+<div class="note">Regola tenuta per tutto il progetto: nessuna recensione, valutazione, statistica o citazione inventata. Dove manca la prova reale, il prototipo mostra un riquadro etichettato da riempire.</div>
+<ul>
+<li><strong>Foto</strong>: usate quelle già disponibili in locale (Musei Vaticani, Alfa Spider, pasta, spa, atelier, campagna). Dove non esisteva l'immagine giusta — Colosseo, Trastevere, Tivoli, Pompei, opera, rooftop, cantina — c'è un <strong>poster tile</strong> colorato con la parola in Archivo Black e la scritta "Photo placeholder".</li>
+<li><strong>Recensioni</strong>: tre riquadri tratteggiati vuoti, con istruzioni su cosa inserire. Nessun punteggio o stellina sulle card.</li>
+<li><strong>Esperienze, prezzi, orari e testi</strong>: verosimili ma inventati, dichiarati nel banner giallo in cima alla pagina. Vanno sostituiti col catalogo reale prima di qualunque uso pubblico.</li>
+<li><strong>Articoli del Journal</strong>: solo il primo ha un incipit reale, il resto è testo segnaposto dichiarato.</li>
+</ul>
+</section>
+
+<section>
+<h2>Cosa manca prima della produzione</h2>
+<ul>
+<li>Catalogo reale: nomi, prezzi, durate, orari, capienze, meeting point, testi delle esperienze.</li>
+<li>Fotografie definitive, almeno una per esperienza (oggi ne mancano 8, sostituite dai poster tile).</li>
+<li>Decisione sul booking: checkout con pagamento online (Stripe, o uno strumento tipo Bókun / FareHarbor / Regiondo) oppure richiesta via email confermata a mano. Il prototipo mostra la seconda, che è il primo passo più rapido.</li>
+<li>Dove finisce la richiesta di prenotazione: casella dedicata, CRM o form Webflow.</li>
+<li>Scelta della lingua del sito: oggi tutto in inglese, con banner e note tecniche in italiano. Da confermare se serve anche l'italiano.</li>
+<li>Recensioni reali da raccogliere e inserire.</li>
+<li>Se il sito resta su Webflow: mappare le collection CMS (Esperienze, Categorie, Articoli) e ricostruire questi template lì.</li>
+</ul>
+</section>
+
+<section>
+<h2>Riprendere il lavoro</h2>
+<p>Per aggiornare un artifact senza creare un doppione, si ripubblica lo stesso file passando l'URL esistente. Da una sessione nuova serve sempre l'URL:</p>
+<pre>~/Downloads/romesomuch-site.html   →  artifact 54a057d4-19a4-44a2-842d-88ef37da5da8
+~/Downloads/demarino-experiences.html →  artifact 94ad7ec2-3054-4e0e-aa8f-11e1ccecaca6</pre>
+<p>Gli script Python usati per le immagini e per il logo stanno nella cartella temporanea della sessione e sono monouso: si riscrivono in due minuti (Pillow, resize, base64) se serve rigenerare gli asset.</p>
+</section>
+
+</div>
+<footer><div class="wrap">RomeSoMuch · documento di handoff · aggiornato il 2 settembre 2026</div></footer>
