@@ -1,0 +1,202 @@
+# Sveltia CMS — https://github.com/sveltia/sveltia-cms
+# Editing happens straight on the `main` branch: every save is a commit, and
+# every commit to `main` triggers the Cloudflare Pages build.
+
+backend:
+  name: github
+  repo: abbou631-dev/romesomuch
+  branch: main
+  # OAuth relay: /auth and /callback are Cloudflare Pages Functions served by
+  # this same site (see functions/ in the repository).
+  base_url: https://romesomuch.pages.dev
+
+site_url: https://romesomuch.pages.dev
+display_url: https://romesomuch.pages.dev
+publish_mode: simple
+
+# Uploads land next to the existing photography; the build optimises them.
+media_folder: src/assets/experiences
+public_folder: /src/assets/experiences
+
+slug:
+  encoding: ascii
+  clean_accents: true
+
+collections:
+  - name: experiences
+    label: Experiences
+    label_singular: Experience
+    description: One file per experience. The filename becomes the URL, e.g. colosseum.md → /experience/colosseum/
+    folder: src/content/experiences
+    extension: md
+    format: yaml-frontmatter
+    create: true
+    slug: "{{slug}}"
+    identifier_field: title
+    summary: "{{order}} · {{title}} — €{{price}}"
+    sortable_fields: [order, title, price, category]
+    view_groups:
+      - label: Category
+        field: category
+    fields:
+      - name: order
+        label: Order
+        widget: number
+        value_type: int
+        min: 1
+        hint: Position in the card rails. Lower comes first.
+
+      - name: title
+        label: Title
+        widget: string
+
+      - name: category
+        label: Category
+        widget: select
+        options:
+          - { label: Tours, value: tours }
+          - { label: Food & Wine, value: food }
+          - { label: Activities, value: activities }
+          - { label: Day Trips, value: day-trips }
+
+      - name: blurb
+        label: Blurb
+        widget: string
+        hint: One short line shown on the experience page, under the title.
+
+      - name: price
+        label: Price (€)
+        widget: number
+        value_type: int
+        min: 1
+
+      - name: unit
+        label: Price unit
+        widget: select
+        options:
+          - { label: Per person, value: person }
+          - { label: Per group (flat), value: group }
+
+      - name: duration
+        label: Duration (hours)
+        widget: number
+        value_type: float
+        min: 0.5
+        step: 0.5
+        hint: Used by the "Up to 2h / Half day / Full day" filter.
+
+      - name: durationLabel
+        label: Duration label
+        widget: string
+        hint: What the card shows, e.g. 3h, 90min, Full day.
+
+      - name: maxGuests
+        label: Max guests
+        widget: number
+        value_type: int
+        min: 1
+
+      - name: languages
+        label: Languages
+        widget: string
+        hint: "Separated by a middle dot, e.g. EN · IT · ES"
+
+      - name: meetingPoint
+        label: Meeting point
+        widget: string
+
+      - name: slots
+        label: Start times
+        widget: list
+        min: 1
+        summary: "{{fields.slot}}"
+        field: { name: slot, label: Time, widget: string, pattern: ['^\d{1,2}:\d{2}$', 'Use HH:MM, e.g. 09:00'] }
+
+      - name: images
+        label: Photos
+        label_singular: Photo
+        widget: list
+        min: 1
+        types:
+          - name: photo
+            label: Photo
+            widget: object
+            summary: "{{fields.photo}}"
+            fields:
+              - { name: photo, label: File, widget: image }
+          - name: poster
+            label: Poster placeholder
+            widget: object
+            summary: "Placeholder — {{fields.poster}}"
+            fields:
+              - { name: poster, label: Word on the tile, widget: string }
+              - name: tone
+                label: Tone
+                widget: select
+                options:
+                  - { label: Ink (dark), value: ink }
+                  - { label: Blue, value: blue }
+                  - { label: Sun (yellow), value: sun }
+        hint: First photo is the card image. Use a poster placeholder only while the real photo is missing.
+
+      - name: included
+        label: What's included
+        widget: list
+        min: 1
+        summary: "{{fields.item}}"
+        field: { name: item, label: Line, widget: string }
+
+      - name: bokunProductId
+        label: Bokun product ID
+        widget: string
+        required: false
+        hint: Product id alone. Works together with PUBLIC_BOKUN_CHANNEL set in Cloudflare.
+
+      - name: bokunEmbed
+        label: Bokun embed code
+        widget: text
+        required: false
+        hint: Paste the whole snippet Bokun gives you (Widgets → Copy code). It wins over the product ID above.
+
+      - name: body
+        label: What you do
+        widget: markdown
+
+  - name: journal
+    label: Journal
+    label_singular: Article
+    description: One file per article. The filename becomes the URL, e.g. september.md → /journal/september/
+    folder: src/content/journal
+    extension: md
+    format: yaml-frontmatter
+    create: true
+    slug: "{{slug}}"
+    identifier_field: title
+    summary: "{{title}} — {{date}}"
+    sortable_fields: [title, date]
+    fields:
+      - name: title
+        label: Title
+        widget: string
+
+      - name: date
+        label: Date
+        widget: datetime
+        date_format: D MMMM YYYY
+        time_format: false
+        format: D MMMM YYYY
+        picker_utc: true
+        hint: Shown as written, e.g. 1 September 2026.
+
+      - name: excerpt
+        label: Excerpt
+        widget: text
+        hint: Two lines at most. Used on the cards and at the top of the article.
+
+      - name: cover
+        label: Cover photo
+        widget: image
+
+      - name: body
+        label: Article
+        widget: markdown

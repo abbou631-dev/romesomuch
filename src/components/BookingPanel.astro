@@ -8,7 +8,7 @@ const { exp } = Astro.props;
 const d = exp.data;
 ---
 <aside>
-  <Bokun productId={d.bokunProductId} price={d.price} unit={d.unit} durationLabel={d.durationLabel} />
+  <Bokun productId={d.bokunProductId} embed={d.bokunEmbed} price={d.price} unit={d.unit} durationLabel={d.durationLabel} />
 </aside>
 
 <div class="mbar" id="mbar">

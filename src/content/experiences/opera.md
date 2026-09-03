@@ -11,7 +11,7 @@ maxGuests: 30
 languages: "IT with EN surtitles"
 meetingPoint: "Venue, centre"
 slots: ["20:30"]
-images: [{"poster": "Opera", "tone": "blue"}, {"photo": "gallery-ceiling"}]
+images: [{"type": "poster", "poster": "Opera", "tone": "blue"}, {"type": "photo", "photo": "gallery-ceiling"}]
 included: ["Reserved seat", "Programme in English", "Interval drink"]
 bokunProductId: null
 ---

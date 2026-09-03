@@ -11,7 +11,7 @@ maxGuests: 12
 languages: "EN · IT"
 meetingPoint: "Via Appia Antica 126"
 slots: ["09:30", "14:30"]
-images: [{"photo": "catacomb-card"}, {"poster": "Appia", "tone": "ink"}]
+images: [{"type": "photo", "photo": "catacomb-card"}, {"type": "poster", "poster": "Appia", "tone": "ink"}]
 included: ["Catacomb entry and guide", "Transfer from the meeting point", "Water"]
 bokunProductId: null
 ---

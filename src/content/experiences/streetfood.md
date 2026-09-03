@@ -11,7 +11,7 @@ maxGuests: 12
 languages: "EN · IT"
 meetingPoint: "Piazza Trilussa"
 slots: ["12:00", "18:30"]
-images: [{"photo": "pasta-table"}, {"photo": "pasta-pan"}]
+images: [{"type": "photo", "photo": "pasta-table"}, {"type": "photo", "photo": "pasta-pan"}]
 included: ["Seven food stops, all included", "Two glasses of wine", "Guide for 3 hours"]
 bokunProductId: "PRODUCT_ID"
 ---

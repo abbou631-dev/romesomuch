@@ -11,7 +11,7 @@ maxGuests: 14
 languages: "EN · IT · ES"
 meetingPoint: "Arco di Costantino"
 slots: ["09:00", "11:30", "15:00"]
-images: [{"poster": "Colosseum", "tone": "ink"}, {"photo": "sculpture-rotunda"}]
+images: [{"type": "poster", "poster": "Colosseum", "tone": "ink"}, {"type": "photo", "photo": "sculpture-rotunda"}]
 included: ["Skip-the-line ticket, booked for you", "Licensed guide for 3 hours", "Arena floor and Palatine access", "Radio headsets"]
 bokunProductId: "PRODUCT_ID"
 ---

@@ -11,7 +11,7 @@ maxGuests: 10
 languages: "EN · IT"
 meetingPoint: "Centre, address on booking"
 slots: ["13:00", "16:00"]
-images: [{"photo": "sauna-bench"}, {"photo": "sauna-room"}]
+images: [{"type": "photo", "photo": "sauna-bench"}, {"type": "photo", "photo": "sauna-room"}]
 included: ["Three-hour circuit access", "Robe, slippers and towel", "Herbal infusions"]
 bokunProductId: null
 ---

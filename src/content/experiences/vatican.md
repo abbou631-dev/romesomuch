@@ -11,7 +11,7 @@ maxGuests: 12
 languages: "EN · IT · FR"
 meetingPoint: "Viale Vaticano, gate B"
 slots: ["08:00", "10:30", "14:00"]
-images: [{"photo": "vatican-gallery"}, {"photo": "gallery-ceiling"}]
+images: [{"type": "photo", "photo": "vatican-gallery"}, {"type": "photo", "photo": "gallery-ceiling"}]
 included: ["Entry ticket and reservation fee", "Guide for 3 hours", "Basilica entry without the outside queue"]
 bokunProductId: "PRODUCT_ID"
 ---

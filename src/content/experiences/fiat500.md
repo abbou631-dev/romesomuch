@@ -11,7 +11,7 @@ maxGuests: 3
 languages: "EN"
 meetingPoint: "Pick-up at your hotel"
 slots: ["10:00", "17:30"]
-images: [{"photo": "spider-street"}, {"photo": "steering-wheel"}, {"photo": "spider-rear"}]
+images: [{"type": "photo", "photo": "spider-street"}, {"type": "photo", "photo": "steering-wheel"}, {"type": "photo", "photo": "spider-rear"}]
 included: ["Vintage car and driver for 2 hours", "Photo stops at four viewpoints", "ZTL permits and fuel"]
 bokunProductId: null
 ---

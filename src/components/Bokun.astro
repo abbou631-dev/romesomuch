@@ -1,18 +1,39 @@
 ---
-interface Props { productId: string | null; price: number; unit: "person" | "group"; durationLabel: string }
-const { productId, price, unit, durationLabel } = Astro.props;
-const channel = import.meta.env.PUBLIC_BOKUN_CHANNEL ?? "";
-const ready = Boolean(channel && productId);
-const src = ready ? `https://widgets.bokun.io/online-sales/${channel}/experience/${productId}` : "";
-const missing = !channel
-  ? "Manca PUBLIC_BOKUN_CHANNEL in .env: aggiungi il booking channel UUID e il calendario compare qui."
-  : "Manca bokunProductId nel frontmatter di questa esperienza: aggiungi l'id prodotto Bokun e il calendario compare qui.";
+interface Props {
+  productId: string | null;
+  embed?: string | null;
+  price: number;
+  unit: "person" | "group";
+  durationLabel: string;
+}
+const { productId, embed = null, price, unit, durationLabel } = Astro.props;
+
+// Two ways to wire an experience to Bokun, in order of precedence:
+// 1. the embed snippet pasted in the CMS, which carries its own channel UUID;
+// 2. a product id plus PUBLIC_BOKUN_CHANNEL from the environment.
+const pasted = embed?.trim() ?? "";
+// Scripts injected through set:html never execute, so the loader is added below
+// with the channel read out of the snippet.
+const markup = pasted.replace(/<script[\s\S]*?<\/script>/gi, "").trim();
+const pastedChannel = pasted.match(/bookingChannelUUID=([\w-]+)/)?.[1] ?? "";
+const channel = pastedChannel || (import.meta.env.PUBLIC_BOKUN_CHANNEL ?? "");
+const src = channel && productId
+  ? `https://widgets.bokun.io/online-sales/${channel}/experience/${productId}`
+  : "";
+const ready = Boolean(channel) && Boolean(markup || src);
+
+const missing = markup
+  ? "Il codice Bokun incollato non contiene il bookingChannelUUID: aggiungi PUBLIC_BOKUN_CHANNEL o incolla lo snippet completo."
+  : !channel
+    ? "Manca PUBLIC_BOKUN_CHANNEL: aggiungilo alle variabili del progetto oppure incolla il codice di incorporamento Bokun nel CMS."
+    : "Manca il collegamento a Bokun per questa esperienza: incolla il codice di incorporamento nel CMS, o inserisci il product id.";
 ---
 <div class="book" id="bokunBox">
   <span class="badge-live">Live availability</span>
   <h3 style="margin-top:10px">Book instantly</h3>
   <p class="fine" style="margin-top:4px">€{price} per {unit} · {durationLabel} · confirmed straight away</p>
-  <div class="bokunWidget" id="bokunSlot" data-src={src}></div>
+  {ready && markup && <div class="bokunEmbed" set:html={markup} />}
+  {ready && !markup && <div class="bokunWidget" id="bokunSlot" data-src={src}></div>}
   {!ready && (
     <div class="ph" style="margin-top:14px">
       <span class="k">Calendario Bokun</span>

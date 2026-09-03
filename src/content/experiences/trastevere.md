@@ -11,7 +11,7 @@ maxGuests: 16
 languages: "EN · IT"
 meetingPoint: "Ponte Sisto"
 slots: ["18:00", "19:00"]
-images: [{"poster": "Trastevere", "tone": "blue"}, {"photo": "window-dome"}]
+images: [{"type": "poster", "poster": "Trastevere", "tone": "blue"}, {"type": "photo", "photo": "window-dome"}]
 included: ["Guide for 2.5 hours", "Route map sent the morning of", "Recommendations for dinner nearby"]
 bokunProductId: null
 ---

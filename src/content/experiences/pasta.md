@@ -11,7 +11,7 @@ maxGuests: 12
 languages: "EN · IT"
 meetingPoint: "Monti, address on booking"
 slots: ["10:30", "17:00"]
-images: [{"photo": "ravioli-hands"}, {"photo": "pasta-class-group"}, {"photo": "pasta-table"}]
+images: [{"type": "photo", "photo": "ravioli-hands"}, {"type": "photo", "photo": "pasta-class-group"}, {"type": "photo", "photo": "pasta-table"}]
 included: ["3-hour class with a Roman cook", "All ingredients and an apron to keep", "Full meal of what you made", "Wine, water and coffee"]
 bokunProductId: "PRODUCT_ID"
 ---

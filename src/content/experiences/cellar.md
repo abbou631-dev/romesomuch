@@ -11,7 +11,7 @@ maxGuests: 16
 languages: "EN · IT"
 meetingPoint: "Via dei Coronari"
 slots: ["18:00", "20:00"]
-images: [{"poster": "Cellar", "tone": "blue"}, {"photo": "pasta-pan"}]
+images: [{"type": "poster", "poster": "Cellar", "tone": "blue"}, {"type": "photo", "photo": "pasta-pan"}]
 included: ["Six tastings", "Cheese and salumi board", "Sommelier for 90 minutes"]
 bokunProductId: null
 ---

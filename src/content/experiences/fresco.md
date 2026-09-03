@@ -11,7 +11,7 @@ maxGuests: 8
 languages: "EN · IT"
 meetingPoint: "Studio in Trastevere"
 slots: ["10:00", "15:00"]
-images: [{"photo": "atelier-painting"}, {"poster": "Studio", "tone": "ink"}]
+images: [{"type": "photo", "photo": "atelier-painting"}, {"type": "poster", "poster": "Studio", "tone": "ink"}]
 included: ["Materials and plaster panel", "Instruction from a working painter", "Delivery of your finished panel"]
 bokunProductId: null
 ---

@@ -11,7 +11,7 @@ maxGuests: 20
 languages: "EN · IT"
 meetingPoint: "Rooftop bar, centre"
 slots: ["18:30", "19:30"]
-images: [{"poster": "Rooftop", "tone": "sun"}, {"photo": "plated-course"}]
+images: [{"type": "poster", "poster": "Rooftop", "tone": "sun"}, {"type": "photo", "photo": "plated-course"}]
 included: ["Reserved rooftop table", "One cocktail or glass of wine", "Aperitivo plate"]
 bokunProductId: "PRODUCT_ID"
 ---

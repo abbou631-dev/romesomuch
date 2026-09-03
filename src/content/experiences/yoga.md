@@ -11,7 +11,7 @@ maxGuests: 14
 languages: "EN"
 meetingPoint: "Giardino degli Aranci"
 slots: ["06:30", "07:00"]
-images: [{"photo": "yoga-practice"}, {"photo": "yoga-mat"}]
+images: [{"type": "photo", "photo": "yoga-practice"}, {"type": "photo", "photo": "yoga-mat"}]
 included: ["Certified teacher, 90 minutes", "Mat and blanket", "Coffee afterwards"]
 bokunProductId: null
 ---
