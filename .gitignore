@@ -3,3 +3,5 @@ node_modules/
 .astro/
 .env
 .DS_Store
+
+.wrangler/

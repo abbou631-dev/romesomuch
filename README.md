@@ -29,6 +29,55 @@ Everything editable lives in `src/content` and `src/data`, so copy changes never
 Astro optimises every photo at build time (WebP, responsive `srcset`), so drop full-resolution
 files in and let the build size them.
 
+## CMS (Sveltia)
+
+The editing interface is [Sveltia CMS](https://github.com/sveltia/sveltia-cms), served as a static
+page from `public/admin/`. It is git-based: every save is a commit on `main`, and every commit on
+`main` redeploys the site.
+
+- `public/admin/index.html` — loads the CMS.
+- `public/admin/config.yml` — the collections. Fields here mirror the Zod schema in
+  `src/content.config.ts`; change one and change the other.
+- Live at `/admin/` (locally: http://localhost:4321/admin/).
+
+**Collections**
+
+| Collection | Files | Fields |
+| --- | --- | --- |
+| Experiences | `src/content/experiences/*.md` | order, title, category, blurb, price, unit, duration, durationLabel, maxGuests, languages, meetingPoint, start times, photos, what's included, Bokun product id, Bokun embed code, body |
+| Journal | `src/content/journal/*.md` | title, date, excerpt, cover, body |
+
+Photos are uploaded into `src/assets/experiences/` and the build optimises them. The `Photos` field
+takes either a real photo or a poster placeholder (word + tone), which is why every entry carries a
+`type` key.
+
+**Sign-in.** The GitHub backend needs an OAuth relay, since the site is on Cloudflare and not
+Netlify. That relay is part of this repository — two Cloudflare Pages Functions deployed with the
+site, so there is no separate worker to maintain:
+
+- `functions/auth.js` → `/auth` sends the CMS pop-up to GitHub, asking only for the scopes the CMS
+  needs and setting a one-time state cookie.
+- `functions/callback.js` → `/callback` swaps the code for a token and posts it back to the CMS
+  window, only if that window's origin is on the allowlist.
+
+What has to be done once, by hand:
+
+1. GitHub → Settings → Developer settings → OAuth Apps → New OAuth App.
+   Homepage `https://romesomuch.pages.dev`, callback `https://romesomuch.pages.dev/callback`.
+2. Cloudflare Pages → project `romesomuch` → Settings → Variables and Secrets. Add
+   `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` as secrets, for Production and Preview.
+3. Redeploy (any push to `main` does it, or Deployments → Retry deployment).
+
+Optional: `ALLOWED_ORIGINS`, a comma-separated list of the origins allowed to receive a token.
+Defaults to `romesomuch.pages.dev`, its preview subdomains and localhost.
+
+Two ways to edit without any of that:
+
+- **Work with Local Repository** on the sign-in screen — pick the project folder and edit the files
+  on this machine, no GitHub involved.
+- **Sign In Using Access Token** — a GitHub personal access token with read/write access to the
+  contents of this repository.
+
 ## Bokun
 
 Set the booking channel UUID once, in `.env`:
@@ -43,9 +92,12 @@ Then give an experience its product id in frontmatter:
 bokunProductId: "12345"
 ```
 
-That experience renders the Bokun widget (calendar, availability, payment) and the request form
-moves below it as "Prefer to ask first?". Experiences with `bokunProductId: null` show the request
-form alone. With no channel set, the widget slot renders a labelled note instead — nothing breaks.
+That experience renders the Bokun widget (calendar, availability, payment).
+
+Or skip both and paste the whole snippet Bokun gives you into the **Bokun embed code** field in the
+CMS (`bokunEmbed` in frontmatter). The channel UUID is read out of the snippet, so that field alone
+is enough and it takes precedence over the product id. With neither set, the widget slot renders a
+labelled note instead — nothing breaks.
 
 ## Routes
 
