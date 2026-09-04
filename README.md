@@ -103,6 +103,9 @@ CMS (`bokunEmbed` in frontmatter). The channel UUID is read out of the snippet, 
 is enough and it takes precedence over the product id. With neither set, the widget slot renders a
 labelled note instead — nothing breaks.
 
+Step-by-step guide for wiring a new tour to the calendar, in Italian, including the mobile `zoom`
+rule and the usual failure modes: [`docs/bokun-embed.md`](docs/bokun-embed.md).
+
 ## Routes
 
 `/` · `/experiences/{all,tours,food,activities,day-trips}/` · `/experience/<id>/` ·
