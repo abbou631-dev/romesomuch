@@ -45,7 +45,17 @@ const quick = [
         </div>
         <a class="see" href="/experiences/all/">See all {all.length}</a>
       </div>
+    </div>
+  </section>
+
+  <div class="qfbar">
+    <div class="wrap">
       <div class="qf">{quick.map((q) => <a href={q.href}>{q.label}</a>)}</div>
+    </div>
+  </div>
+
+  <section class="picks picks-body">
+    <div class="wrap">
       <div class="track">{picks.map((exp, i) => <Card exp={exp} loading={i < 3 ? "eager" : "lazy"} />)}</div>
     </div>
   </section>
