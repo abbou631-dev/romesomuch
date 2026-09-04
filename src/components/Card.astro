@@ -3,21 +3,23 @@ import type { CollectionEntry } from "astro:content";
 import Shot from "./Shot.astro";
 import { categoryName, money } from "../lib/site";
 
-interface Props { exp: CollectionEntry<"experiences">; loading?: "eager" | "lazy" }
-const { exp, loading = "lazy" } = Astro.props;
+interface Props { exp: CollectionEntry<"experiences">; loading?: "eager" | "lazy"; rank?: number }
+const { exp, loading = "lazy", rank } = Astro.props;
 const d = exp.data;
 ---
 <a
-  class="card"
+  class:list={["card", rank && "rankcard"]}
   href={`/experience/${exp.id}/`}
   data-price={d.price}
   data-duration={d.duration}
   data-category={d.category}
 >
-  <div class="shot">
-    <span class="tag">{categoryName(d.category)}</span>
-    <Shot image={d.images[0]} alt={d.title} loading={loading} />
-    <span class="wish" aria-hidden="true">&#9825;</span>
+  <div class="shotwrap">
+    {rank && <span class="rank" aria-hidden="true">{rank}</span>}
+    <div class="shot">
+      <span class="tag">{categoryName(d.category)}</span>
+      <Shot image={d.images[0]} alt={d.title} loading={loading} />
+    </div>
   </div>
   <div class="cbody">
     <span class="ratph">&#9733; rating — to be connected</span>
