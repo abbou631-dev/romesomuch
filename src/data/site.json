@@ -54,7 +54,7 @@
     ],
     [
      "Cancellation",
-     "You may cancel free of charge up to 48 hours before the start time. Inside 48 hours the experience is charged in full, because the guide, cook or driver is already committed. If we cancel — weather, illness, closure of a site — you choose between a new date and a full refund."
+     "All sales are final unless otherwise noted. Where an experience states its own cancellation terms — on its page and in your confirmation — those terms apply to that booking. If we cancel, for weather, illness or the closure of a site, you choose between a new date and a full refund."
     ],
     [
      "Late arrival and no-show",
@@ -132,5 +132,6 @@
     ]
    ]
   }
- }
+ },
+ "cancellationDefault": "All sales are final unless otherwise noted."
 }

@@ -2,11 +2,12 @@
 interface Props {
   productId: string | null;
   embed?: string | null;
+  policy: string;
   price: number;
   unit: "person" | "group";
   durationLabel: string;
 }
-const { productId, embed = null, price, unit, durationLabel } = Astro.props;
+const { productId, embed = null, policy, price, unit, durationLabel } = Astro.props;
 
 // Two ways to wire an experience to Bokun, in order of precedence:
 // 1. the embed snippet pasted in the CMS, which carries its own channel UUID;
@@ -40,6 +41,7 @@ const missing = markup
       <span class="d">{missing}</span>
     </div>
   )}
+  <p class="fine">{policy}</p>
 </div>
 
 {ready && (

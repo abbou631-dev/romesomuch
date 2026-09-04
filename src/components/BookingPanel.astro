@@ -1,14 +1,14 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import Bokun from "./Bokun.astro";
-import { money } from "../lib/site";
+import { cancellationDefault, money } from "../lib/site";
 
 interface Props { exp: CollectionEntry<"experiences"> }
 const { exp } = Astro.props;
 const d = exp.data;
 ---
 <aside>
-  <Bokun productId={d.bokunProductId} embed={d.bokunEmbed} price={d.price} unit={d.unit} durationLabel={d.durationLabel} />
+  <Bokun productId={d.bokunProductId} embed={d.bokunEmbed} price={d.price} unit={d.unit} durationLabel={d.durationLabel} policy={d.cancellationPolicy ?? cancellationDefault} />
 </aside>
 
 <div class="mbar" id="mbar">

@@ -146,6 +146,12 @@ collections:
         summary: "{{fields.item}}"
         field: { name: item, label: Line, widget: string }
 
+      - name: cancellationPolicy
+        label: Cancellation policy
+        widget: text
+        required: false
+        hint: Leave empty and the site says "All sales are final unless otherwise noted." Fill it in only where this experience differs.
+
       - name: bokunProductId
         label: Bokun product ID
         widget: string

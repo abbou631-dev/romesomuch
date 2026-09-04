@@ -44,8 +44,12 @@ page from `public/admin/`. It is git-based: every save is a commit on `main`, an
 
 | Collection | Files | Fields |
 | --- | --- | --- |
-| Experiences | `src/content/experiences/*.md` | order, title, category, blurb, price, unit, duration, durationLabel, maxGuests, languages, meetingPoint, start times, photos, what's included, Bokun product id, Bokun embed code, body |
+| Experiences | `src/content/experiences/*.md` | order, title, category, blurb, price, unit, duration, durationLabel, maxGuests, languages, meetingPoint, start times, photos, what's included, cancellation policy, Bokun product id, Bokun embed code, body |
 | Journal | `src/content/journal/*.md` | title, date, excerpt, cover, body |
+
+Cancellation is opt-out: leave `cancellationPolicy` empty and the experience shows the house rule
+from `cancellationDefault` in `src/data/site.json` — all sales are final. Fill the field in for the
+experiences that differ, and that text shows on the page and under the booking calendar.
 
 Photos are uploaded into `src/assets/experiences/` and the build optimises them. The `Photos` field
 takes either a real photo or a poster placeholder (word + tone), which is why every entry carries a

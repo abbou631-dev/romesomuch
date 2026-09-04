@@ -23,6 +23,7 @@ const experiences = defineCollection({
     slots: z.array(z.string()).min(1),
     images: z.array(picture).min(1),
     included: z.array(z.string()).min(1),
+    cancellationPolicy: z.string().nullable().default(null),
     bokunProductId: z.string().nullable().default(null),
     bokunEmbed: z.string().nullable().default(null),
   }),

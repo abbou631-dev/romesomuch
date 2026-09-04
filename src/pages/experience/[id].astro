@@ -5,7 +5,7 @@ import Base from "../../layouts/Base.astro";
 import Shot from "../../components/Shot.astro";
 import Rail from "../../components/Rail.astro";
 import BookingPanel from "../../components/BookingPanel.astro";
-import { categoryName } from "../../lib/site";
+import { cancellationDefault, categoryName } from "../../lib/site";
 
 export const getStaticPaths = (async () => {
   const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
@@ -55,6 +55,8 @@ const related = all.filter((e) => e.data.category === d.category && e.id !== exp
           <Content />
           <h2>Included</h2>
           <ul class="incl">{d.included.map((i) => <li>{i}</li>)}</ul>
+          <h2>Cancellation</h2>
+          <p>{d.cancellationPolicy ?? cancellationDefault}</p>
         </div>
       </div>
 
