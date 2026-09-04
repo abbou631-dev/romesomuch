@@ -1,6 +1,10 @@
 ---
 import { Image } from "astro:assets";
 import logo from "../assets/logo.png";
+import { categories } from "../lib/site";
+
+interface Props { active?: string }
+const { active = "" } = Astro.props;
 ---
 <div class="notice">
   PROTOTIPO DI DESIGN — esperienze, prezzi e testi sono segnaposto · le foto sono stock/placeholder, non materiale definitivo
@@ -9,10 +13,21 @@ import logo from "../assets/logo.png";
   <div class="bar">
     <a class="logo" href="/"><Image src={logo} alt="RomeSoMuch" width={220} densities={[1, 2]} loading="eager" /></a>
     <div class="navstrip">
-      <a class="catbtn" href="/#categories">
-        <span class="grid4" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span>Categories</span>
-      </a>
+      <div class="catwrap" id="cat-wrap">
+        <button class="catbtn" type="button" id="cat-toggle" aria-expanded="false" aria-controls="cat-list">
+          <span class="grid4" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span>Categories</span>
+        </button>
+        <nav class="cats" id="cat-list" aria-label="Categories">
+          {categories.map((c) => (
+            <a
+              href={`/experiences/${c.slug}/`}
+              class={active === c.slug ? "on" : ""}
+              aria-current={active === c.slug ? "page" : undefined}
+            >{c.name}</a>
+          ))}
+        </nav>
+      </div>
       <nav class="sec">
         <a href="/journal/">Journal</a>
         <a href="/about/">About</a>
@@ -22,3 +37,27 @@ import logo from "../assets/logo.png";
     </div>
   </div>
 </header>
+
+<script>
+  const wrap = document.getElementById("cat-wrap");
+  const btn = document.getElementById("cat-toggle");
+  if (wrap && btn) {
+    const setOpen = (open: boolean) => {
+      wrap.classList.toggle("open", open);
+      btn.setAttribute("aria-expanded", String(open));
+    };
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      setOpen(!wrap.classList.contains("open"));
+    });
+    document.addEventListener("click", (ev) => {
+      if (!wrap.contains(ev.target as Node)) setOpen(false);
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape" && wrap.classList.contains("open")) {
+        setOpen(false);
+        btn.focus();
+      }
+    });
+  }
+</script>
