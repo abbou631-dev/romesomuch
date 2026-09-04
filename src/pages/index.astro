@@ -7,7 +7,7 @@ import Rail from "../components/Rail.astro";
 import Card from "../components/Card.astro";
 import JournalCard from "../components/JournalCard.astro";
 import HowItWorks from "../components/HowItWorks.astro";
-import { categories, topPicks } from "../lib/site";
+import { categories, categoryName, topPicks } from "../lib/site";
 
 const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
 const picks = topPicks.map((id) => all.find((e) => e.id === id)!).filter(Boolean);
@@ -15,7 +15,7 @@ const posts = await getCollection("journal");
 const tones = ["", "tone", "", "tone-2"] as const;
 const quick = [
   { label: "Under €50", href: "/experiences/all/" },
-  { label: "Food & Wine", href: "/experiences/food/" },
+  { label: categoryName("food"), href: "/experiences/food/" },
   { label: "Under 2 hours", href: "/experiences/all/" },
   { label: "Out of the city", href: "/experiences/day-trips/" },
   { label: "With kids", href: "/experiences/activities/" },
@@ -31,8 +31,8 @@ const quick = [
       loading="eager"
     />
     <div class="hero-in wrap">
-      <p class="kicker">Rome · this month</p>
-      <h1>Experiences in Rome</h1>
+      <p class="kicker">This month</p>
+      <h1>The short list</h1>
       <p>The experiences we would book first: hand-picked, running now, bookable in a couple of taps.</p>
     </div>
   </section>

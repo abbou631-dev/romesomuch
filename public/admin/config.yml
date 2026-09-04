@@ -55,7 +55,7 @@ collections:
         widget: select
         options:
           - { label: Tours, value: tours }
-          - { label: Food & Wine, value: food }
+          - { label: Foodie, value: food }
           - { label: Activities, value: activities }
           - { label: Day Trips, value: day-trips }
 

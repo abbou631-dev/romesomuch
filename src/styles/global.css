@@ -161,7 +161,7 @@ header{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--paper
 .shotwrap{position:relative}
 /* rank numerals — decorative, top picks rail only */
 .rankcard{padding-left:28px}
-.picks .track{grid-auto-columns:calc(min(232px,43vw) + 28px)}
+.picks .track{gap:8px;grid-auto-columns:calc(min(232px,43vw) + 28px)}
 .rank{position:absolute;left:-22px;bottom:-4px;z-index:3;pointer-events:none;font-family:var(--disp);font-size:72px;line-height:.72;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill}
 /* journal cards keep the wider crop */
 .jcard .shot{aspect-ratio:4/3}
@@ -333,7 +333,7 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
  .see{font-size:10.5px}
  .track{gap:12px}
  .rankcard{padding-left:18px}
- .picks .track{grid-auto-columns:calc(min(232px,43vw) + 18px)}
+ .picks .track{gap:6px;grid-auto-columns:calc(min(232px,43vw) + 18px)}
  .rank{left:-14px;bottom:-3px;font-size:44px;-webkit-text-stroke-width:1.5px}
  .card{gap:8px}
  .cbody{gap:6px}
