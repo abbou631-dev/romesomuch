@@ -1,6 +1,8 @@
 ---
 import { getCollection } from "astro:content";
+import { Image } from "astro:assets";
 import Base from "../layouts/Base.astro";
+import { photo } from "../lib/images";
 import Rail from "../components/Rail.astro";
 import Card from "../components/Card.astro";
 import JournalCard from "../components/JournalCard.astro";
@@ -20,15 +22,26 @@ const quick = [
 ];
 ---
 <Base title="RomeSoMuch — experiences in Rome">
+  <section class="hero">
+    <Image
+      src={photo("window-dome")}
+      alt="A window looking out onto a Roman dome at dusk"
+      widths={[640, 1024, 1600, 2000]}
+      sizes="100vw"
+      loading="eager"
+    />
+    <div class="hero-in wrap">
+      <p class="kicker">Rome · this month</p>
+      <h1>Experiences in Rome</h1>
+      <p>The experiences we would book first: hand-picked, running now, bookable in a couple of taps.</p>
+    </div>
+  </section>
+
   <section class="picks">
     <div class="wrap">
       <div class="picks-head">
         <div>
-          <p class="badge">Rome · this month</p>
-          <h1 style="margin-top:14px">Top picks in <span class="hl">Rome</span></h1>
-          <p class="sub">
-            The experiences we would book first: hand-picked, running now, bookable in a couple of taps.
-          </p>
+          <h2>Top picks in <span class="hl">Rome</span></h2>
         </div>
         <a class="see" href="/experiences/all/">See all {all.length}</a>
       </div>

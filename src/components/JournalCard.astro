@@ -5,7 +5,7 @@ import Shot from "./Shot.astro";
 interface Props { post: CollectionEntry<"journal"> }
 const { post } = Astro.props;
 ---
-<a class="card" href={`/journal/${post.id}/`}>
+<a class="card jcard" href={`/journal/${post.id}/`}>
   <div class="shot"><Shot image={{ photo: post.data.cover }} alt={post.data.title} /></div>
   <div class="cbody">
     <h3>{post.data.title}</h3>

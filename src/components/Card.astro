@@ -17,16 +17,16 @@ const d = exp.data;
   <div class="shot">
     <span class="tag">{categoryName(d.category)}</span>
     <Shot image={d.images[0]} alt={d.title} loading={loading} />
+    <span class="wish" aria-hidden="true">&#9825;</span>
   </div>
   <div class="cbody">
+    <span class="ratph">&#9733; rating — to be connected</span>
     <h3>{d.title}</h3>
-    <div class="cmeta">
-      <span>{d.durationLabel}</span><span>max {d.maxGuests}</span><span>{d.languages}</span>
-    </div>
-    <div class="cfoot">
-      <div class="price">
-        <span class="f">from</span><span class="v tnum">{money(d.price)}</span><span class="u">/ {d.unit}</span>
-      </div>
-    </div>
+    <p class="cmeta">
+      <span>{d.durationLabel}</span><span>{d.meetingPoint}</span>
+    </p>
+    <p class="price">
+      <span class="f">From</span><span class="v tnum">{money(d.price)}</span><span class="u">/ {d.unit}</span>
+    </p>
   </div>
 </a>

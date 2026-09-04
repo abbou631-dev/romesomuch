@@ -12,6 +12,10 @@ const { active = "" } = Astro.props;
   <div class="bar">
     <a class="logo" href="/"><Image src={logo} alt="RomeSoMuch" width={220} densities={[1, 2]} loading="eager" /></a>
     <div class="navstrip">
+      <a class="catbtn" href="/experiences/all/">
+        <span class="grid4" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>Categories</span>
+      </a>
       <nav class="cats">
         {categories.map((c) => (
           <a href={`/experiences/${c.slug}/`} class={active === c.slug ? "on" : ""}>{c.name}</a>
