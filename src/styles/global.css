@@ -373,6 +373,15 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
  .prose p,.incl li{font-size:14px}
  .prose h2{font-size:20px;margin:20px 0 8px}
  .book{padding:16px;border-radius:12px}
+ .book h3{font-size:22px}
+ /* The Bokun calendar lives in a cross-origin iframe, so its own typography and
+    spacing are out of reach: only the container is ours. CSS zoom shrinks the
+    rendered widget and its layout box together, so the height the Bokun script
+    keeps writing on the iframe stays correct, and the widget still lays out
+    against a wider internal viewport - which is what makes it show the per-day
+    prices it hides in a narrow one. */
+ .book .bokunEmbed{zoom:.85}
+ .book .bokunEmbed .bokunWidget{margin-top:8px}
  .legal{padding:18px 0}
  .lsec{padding:16px 0}
  .lsec h2{font-size:17px;gap:10px}
