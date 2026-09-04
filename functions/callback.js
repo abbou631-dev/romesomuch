@@ -28,8 +28,10 @@ export const onRequestGet = async ({ request, env }) => {
   if (!code || !state || !expected || state !== expected) {
     return failure("the request could not be verified. Close this window and try again.");
   }
-  if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
-    return failure("GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET is missing on this Pages project.");
+  const missing = ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"].filter((name) => !env[name]);
+
+  if (missing.length) {
+    return failure(`${missing.join(" and ")} missing or empty on this Pages project.`);
   }
 
   const res = await fetch("https://github.com/login/oauth/access_token", {
