@@ -1,3 +1,35 @@
+> ## ⚠ Problema noto, non ancora risolto
+>
+> **`bokunProductId: "PRODUCT_ID"` è ancora un segnaposto in cinque esperienze del catalogo.**
+> La scelta presa è di non sistemarlo ora: questo blocco serve a non farlo dimenticare.
+>
+> **File interessati** (verificati con `grep -rn PRODUCT_ID src/content/`):
+>
+> - `src/content/experiences/aperitivo.md`
+> - `src/content/experiences/pasta.md`
+> - `src/content/experiences/streetfood.md`
+> - `src/content/experiences/tivoli.md`
+> - `src/content/experiences/vatican.md`
+>
+> C'è anche `src/content/experiences/colosseum.md`, che ha `bokunProductId: PRODUCT_ID` senza
+> virgolette, ma non è esposto al problema: quel file ha anche un `bokunEmbed` reale, e l'embed
+> ha la precedenza sul product id.
+>
+> **Perché è un problema.** Per `src/components/Bokun.astro` il campo è solo una stringa non
+> vuota, quindi viene trattato come un id valido: il componente costruisce l'URL del widget e lo
+> monta, invece di mostrare il riquadro etichettato. Il risultato è un widget puntato a un prodotto
+> Bokun inesistente, cioè uno spazio vuoto o un errore di Bokun, molto più difficile da
+> diagnosticare del segnaposto dichiarato.
+>
+> **Cosa succede in produzione oggi.** Nulla di visibile: il sintomo è latente. La variabile
+> `PUBLIC_BOKUN_CHANNEL` non è presente nella configurazione di Cloudflare, e senza canale il
+> componente non monta nulla e mostra il riquadro etichettato. Il bug comparirà su quelle cinque
+> pagine il giorno in cui la variabile verrà rimessa.
+>
+> **Come si risolve.** Su ciascuno dei cinque file, mettere `bokunProductId: null` (comportamento
+> corretto: riquadro etichettato) oppure incollare lo snippet Bokun reale nel campo `bokunEmbed`,
+> che ha comunque la precedenza.
+
 # Aggiungere il calendario Bokun a una nuova esperienza
 
 Questa guida spiega come collegare una nuova esperienza al calendario di prenotazione Bokun,

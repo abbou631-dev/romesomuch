@@ -6,9 +6,6 @@ import { categories } from "../lib/site";
 interface Props { active?: string }
 const { active = "" } = Astro.props;
 ---
-<div class="notice">
-  PROTOTIPO DI DESIGN — esperienze, prezzi e testi sono segnaposto · le foto sono stock/placeholder, non materiale definitivo
-</div>
 <header>
   <div class="bar">
     <a class="logo" href="/"><Image src={logo} alt="RomeSoMuch" width={220} densities={[1, 2]} loading="eager" /></a>

@@ -33,7 +33,6 @@ p{margin:0}
 .badge::before{content:"";width:8px;height:8px;border-radius:99px;background:var(--yellow-deep);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
 
 /* ---------- header ---------- */
-.notice{background:var(--yellow);color:#0a0a0a;font-size:11.5px;font-weight:700;letter-spacing:.02em;padding:7px 16px;text-align:center}
 header{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--hair)}
 .bar{max-width:var(--maxw);margin:0 auto;height:80px;padding-inline:var(--pad);display:flex;align-items:center;gap:26px}
 .logo{flex:none;display:flex;align-items:center}
@@ -311,7 +310,6 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 @media(max-width:640px){
  :root{--header-h:59px; --qf-h:46px}
  body{font-size:14px}
- .notice{font-size:9.5px;padding:5px 12px;line-height:1.35}
  .bar{height:58px;gap:10px}
  .logo img{height:22px}
  .catbtn{min-height:30px;padding:0 9px;font-size:12px;gap:5px}

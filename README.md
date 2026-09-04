@@ -106,6 +106,13 @@ labelled note instead — nothing breaks.
 Step-by-step guide for wiring a new tour to the calendar, in Italian, including the mobile `zoom`
 rule and the usual failure modes: [`docs/bokun-embed.md`](docs/bokun-embed.md).
 
+### Known issue: `bokunProductId: "PRODUCT_ID"` placeholder
+
+Five experiences (`aperitivo`, `pasta`, `streetfood`, `tivoli`, `vatican`) still carry the literal
+`PRODUCT_ID` placeholder, which the component reads as a valid id and will mount a widget for a
+product that does not exist as soon as `PUBLIC_BOKUN_CHANNEL` is set again. Details and the two-line
+fix are at the top of [`docs/bokun-embed.md`](docs/bokun-embed.md).
+
 ## Routes
 
 `/` · `/experiences/{all,tours,food,activities,day-trips}/` · `/experience/<id>/` ·
@@ -137,6 +144,8 @@ It is read at build time, so changing it needs a redeploy (Deployments → Retry
 
 ## Still to do before launch
 
+- Bokun: replace the `PRODUCT_ID` placeholder in the five experiences listed above (see
+  [`docs/bokun-embed.md`](docs/bokun-embed.md)).
 - Real catalogue: names, prices, times, capacities, meeting points, copy.
 - Real photography — 8 experiences currently ship a poster tile placeholder.
 - Legal documents: fill the bracketed company details and have them reviewed.
