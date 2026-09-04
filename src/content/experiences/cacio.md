@@ -10,7 +10,6 @@ durationLabel: "2h"
 maxGuests: 10
 languages: "EN · IT"
 meetingPoint: "Testaccio"
-slots: ["11:00", "18:30"]
 images: [{"type": "photo", "photo": "cacio-e-pepe"}, {"type": "photo", "photo": "pasta-pan"}]
 included: ["Hands-on class, 2 hours", "Tasting of all four Roman pastas", "Recipe card and pecorino to take home"]
 bokunProductId: null

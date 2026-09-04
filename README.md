@@ -44,7 +44,7 @@ page from `public/admin/`. It is git-based: every save is a commit on `main`, an
 
 | Collection | Files | Fields |
 | --- | --- | --- |
-| Experiences | `src/content/experiences/*.md` | order, title, category, blurb, price, unit, duration, durationLabel, maxGuests, languages, meetingPoint, start times, photos, what's included, cancellation policy, Bokun product id, Bokun embed code, body |
+| Experiences | `src/content/experiences/*.md` | order, title, category, blurb, price, unit, duration, durationLabel, maxGuests, languages, meetingPoint, photos, what's included, cancellation policy, Bokun product id, Bokun embed code, body |
 | Journal | `src/content/journal/*.md` | title, date, excerpt, cover, body |
 
 Cancellation is opt-out: leave `cancellationPolicy` empty and the experience shows the house rule

@@ -10,10 +10,6 @@ durationLabel: 3h
 maxGuests: 14
 languages: EN · IT · ES
 meetingPoint: Arco di Costantino
-slots:
-  - 09:00
-  - 11:30
-  - 15:00
 images:
   - type: poster
     poster: Colosseum

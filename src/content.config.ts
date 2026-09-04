@@ -20,7 +20,6 @@ const experiences = defineCollection({
     maxGuests: z.number().int().positive(),
     languages: z.string(),
     meetingPoint: z.string(),
-    slots: z.array(z.string()).min(1),
     images: z.array(picture).min(1),
     included: z.array(z.string()).min(1),
     cancellationPolicy: z.string().nullable().default(null),

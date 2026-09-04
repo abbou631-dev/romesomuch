@@ -10,7 +10,6 @@ durationLabel: "9h"
 maxGuests: 14
 languages: "EN · IT"
 meetingPoint: "Piazza della Repubblica"
-slots: ["08:00"]
 images: [{"type": "photo", "photo": "countryside-drive"}, {"type": "poster", "poster": "Civita", "tone": "blue"}]
 included: ["Return transfer", "Guide at both towns", "Cathedral and underground entry"]
 bokunProductId: null

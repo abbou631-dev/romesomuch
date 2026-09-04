@@ -10,7 +10,6 @@ durationLabel: "7h"
 maxGuests: 14
 languages: "EN · IT"
 meetingPoint: "Piazza della Repubblica"
-slots: ["09:30"]
 images: [{"type": "photo", "photo": "castelli-drive"}, {"type": "photo", "photo": "countryside-drive"}]
 included: ["Return transfer", "Cellar visit and tasting", "Lunch with wine on a lake terrace"]
 bokunProductId: null

@@ -105,13 +105,6 @@ collections:
         label: Meeting point
         widget: string
 
-      - name: slots
-        label: Start times
-        widget: list
-        min: 1
-        summary: "{{fields.slot}}"
-        field: { name: slot, label: Time, widget: string, pattern: ['^\d{1,2}:\d{2}$', 'Use HH:MM, e.g. 09:00'] }
-
       - name: images
         label: Photos
         label_singular: Photo

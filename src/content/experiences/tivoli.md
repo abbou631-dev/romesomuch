@@ -10,7 +10,6 @@ durationLabel: "8h"
 maxGuests: 16
 languages: "EN · IT"
 meetingPoint: "Piazza della Repubblica"
-slots: ["08:30"]
 images: [{"type": "poster", "poster": "Tivoli", "tone": "ink"}, {"type": "photo", "photo": "countryside-drive"}]
 included: ["Return coach transfer", "Entry to both villas", "Guide at each site"]
 bokunProductId: "PRODUCT_ID"

@@ -10,7 +10,6 @@ durationLabel: "12h"
 maxGuests: 12
 languages: "EN · IT"
 meetingPoint: "Roma Termini"
-slots: ["07:00"]
 images: [{"type": "poster", "poster": "Pompeii", "tone": "ink"}, {"type": "photo", "photo": "sculpture-rotunda"}]
 included: ["Return high-speed train tickets", "Pompeii entry and guide", "Transfers on the ground"]
 bokunProductId: null
