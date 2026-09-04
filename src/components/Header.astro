@@ -1,9 +1,6 @@
 ---
 import { Image } from "astro:assets";
 import logo from "../assets/logo.png";
-import { categories } from "../lib/site";
-
-const { active = "" } = Astro.props;
 ---
 <div class="notice">
   PROTOTIPO DI DESIGN — esperienze, prezzi e testi sono segnaposto · le foto sono stock/placeholder, non materiale definitivo
@@ -12,15 +9,10 @@ const { active = "" } = Astro.props;
   <div class="bar">
     <a class="logo" href="/"><Image src={logo} alt="RomeSoMuch" width={220} densities={[1, 2]} loading="eager" /></a>
     <div class="navstrip">
-      <a class="catbtn" href="/experiences/all/">
+      <a class="catbtn" href="/#categories">
         <span class="grid4" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span>Categories</span>
       </a>
-      <nav class="cats">
-        {categories.map((c) => (
-          <a href={`/experiences/${c.slug}/`} class={active === c.slug ? "on" : ""}>{c.name}</a>
-        ))}
-      </nav>
       <nav class="sec">
         <a href="/journal/">Journal</a>
         <a href="/about/">About</a>

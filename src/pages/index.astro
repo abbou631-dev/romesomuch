@@ -50,15 +50,17 @@ const quick = [
     </div>
   </section>
 
-  {categories.filter((c) => c.slug !== "all").map((c, i) => (
-    <Rail
-      title={c.name}
-      sub={c.blurb}
-      href={`/experiences/${c.slug}/`}
-      items={all.filter((e) => e.data.category === c.slug)}
-      tone={tones[i] ?? ""}
-    />
-  ))}
+  <div id="categories">
+    {categories.filter((c) => c.slug !== "all").map((c, i) => (
+      <Rail
+        title={c.name}
+        sub={c.blurb}
+        href={`/experiences/${c.slug}/`}
+        items={all.filter((e) => e.data.category === c.slug)}
+        tone={tones[i] ?? ""}
+      />
+    ))}
+  </div>
 
   <HowItWorks />
 
