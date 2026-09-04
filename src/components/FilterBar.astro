@@ -19,9 +19,10 @@ const length = [["any", "Any"], ["lt2", "Up to 2h"], ["half", "Half day"], ["ful
       ))}
     </div>
   </div>
-  <label style="display:flex;align-items:center;gap:9px">
+  <label class="sortwrap">
     <span class="lbl">Sort</span>
-    <select class="sort" id="sort">
+    <span class="sortval" id="sortval">Curated</span>
+    <select class="sort" id="sort" aria-label="Sort experiences">
       <option value="curated">Curated</option>
       <option value="px-asc">Price, low to high</option>
       <option value="px-desc">Price, high to low</option>
@@ -81,8 +82,11 @@ const length = [["any", "Any"], ["lt2", "Up to 2h"], ["half", "Half day"], ["ful
         apply();
       });
     });
-    document.getElementById("sort")!.addEventListener("change", (ev) => {
-      state.sort = (ev.target as HTMLSelectElement).value;
+    const sortSel = document.getElementById("sort") as HTMLSelectElement;
+    const sortVal = document.getElementById("sortval")!;
+    sortSel.addEventListener("change", () => {
+      state.sort = sortSel.value;
+      sortVal.textContent = sortSel.options[sortSel.selectedIndex].text;
       apply();
     });
     apply();
