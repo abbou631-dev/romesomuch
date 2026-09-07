@@ -3,6 +3,8 @@ import { glob } from "astro/loaders";
 
 const picture = z.union([
   z.object({ photo: z.string() }),
+  // A vertical clip, served straight from public/media — Astro does not process video.
+  z.object({ video: z.string(), videoPoster: z.string().nullable().default(null) }),
   z.object({ poster: z.string(), tone: z.enum(["ink", "blue", "sun"]) }),
 ]);
 
@@ -17,9 +19,9 @@ const experiences = defineCollection({
     unit: z.enum(["person", "group"]),
     duration: z.number().positive(),
     durationLabel: z.string(),
-    maxGuests: z.number().int().positive(),
-    languages: z.string(),
-    meetingPoint: z.string(),
+    maxGuests: z.number().int().positive().nullable().default(null),
+    languages: z.string().nullable().default(null),
+    meetingPoint: z.string().nullable().default(null),
     images: z.array(picture).min(1),
     included: z.array(z.string()).min(1),
     cancellationPolicy: z.string().nullable().default(null),

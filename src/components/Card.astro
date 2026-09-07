@@ -1,7 +1,7 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import Shot from "./Shot.astro";
-import { categoryName, money } from "../lib/site";
+import { cardImage, categoryName, money } from "../lib/site";
 
 interface Props { exp: CollectionEntry<"experiences">; loading?: "eager" | "lazy"; rank?: number }
 const { exp, loading = "lazy", rank } = Astro.props;
@@ -18,7 +18,7 @@ const d = exp.data;
     {rank && <span class="rank" aria-hidden="true">{rank}</span>}
     <div class="shot">
       <span class="tag">{categoryName(d.category)}</span>
-      <Shot image={d.images[0]} alt={d.title} loading={loading} />
+      <Shot image={cardImage(d.images)} alt={d.title} loading={loading} />
     </div>
   </div>
   <div class="cbody">

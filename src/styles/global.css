@@ -200,17 +200,74 @@ header{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--paper
 select.sort{position:absolute;inset-inline:0;top:50%;transform:translateY(-50%);width:100%;min-height:44px;margin:0;padding:0;border:0;opacity:0;-webkit-appearance:none;appearance:none;cursor:pointer;font-size:16px}
 
 /* ---------- experience page ---------- */
-.detail{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,.8fr);gap:clamp(20px,3vw,48px);padding:clamp(24px,3vw,44px) 0}
+.detail{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,.8fr);gap:clamp(20px,3vw,48px);padding:clamp(14px,1.6vw,24px) 0 clamp(24px,3vw,44px)}
 @media(max-width:960px){.detail{grid-template-columns:1fr}}
-.gal .main{aspect-ratio:16/10;overflow:hidden;border-radius:14px;background:var(--sunk)}
-.gal .main img{width:100%;height:100%;object-fit:cover}
-.thumbs{display:flex;gap:8px;margin-top:9px}
-.thumbs button{padding:0;border:2px solid var(--hair);background:none;cursor:pointer;width:92px;aspect-ratio:4/3;overflow:hidden;border-radius:8px;transition:var(--dur) var(--ease)}
-.thumbs button.on{border-color:var(--yellow-deep)}
-.thumbs img{width:100%;height:100%;object-fit:cover}
-.thumbs .poster{padding:8px}
-.thumbs .poster .n{display:none}
-.thumbs .poster .w{font-size:15px}
+/* Media band. Every tile keeps the 9:16 the media was shot in; four of them fill the
+   page width on desktop, one fills it on a phone. Tiles crop only left-right, the
+   lightbox shows each frame whole. */
+.dhead{padding:clamp(20px,3vw,38px) 0 16px}
+.mosaic-wrap{padding-bottom:clamp(16px,2vw,26px)}
+.mosaic-frame{position:relative}
+.mosaic{display:grid;gap:8px;grid-template-columns:repeat(4,minmax(0,1fr))}
+.mosaic.n1{grid-template-columns:minmax(0,1fr)}
+.mosaic.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mosaic.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mosaic .tile{padding:0;border:0;cursor:pointer;overflow:hidden;background:var(--sunk);border-radius:6px;position:relative;aspect-ratio:9/16}
+.mosaic .tile:first-child{border-radius:16px 6px 6px 16px}
+.mosaic .tile:last-of-type{border-radius:6px 16px 16px 6px}
+.mosaic.n1 .tile:first-child{border-radius:16px}
+.mosaic .tile img,.mosaic .tile video,.mosaic .tile .vthumb,.mosaic .tile .poster{width:100%;height:100%;object-fit:cover;display:block}
+.mosaic .tile img{transition:transform .45s var(--ease)}
+.mosaic .tile:hover img{transform:scale(1.03)}
+/* display:contents on desktop so the wrapper claims no grid cell; the buttons stay
+   pinned inside the band and only become a row of their own on a phone. */
+.mosaic-actions{display:contents}
+.seeall,.sound{position:absolute;border:1px solid var(--ink);background:var(--surface);color:var(--ink);border-radius:99px;padding:9px 16px;font-size:12.5px;font-weight:700;letter-spacing:.02em;cursor:pointer;box-shadow:var(--shadow);transition:var(--dur) var(--ease)}
+.seeall{right:14px;bottom:14px}
+.seeall:hover{background:var(--yellow);border-color:var(--yellow-deep)}
+.sound{left:14px;bottom:14px;display:flex;align-items:center;gap:7px}
+.sound:hover{background:var(--yellow);border-color:var(--yellow-deep)}
+.sound[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow-deep)}
+.sound .ico{font-size:14px;line-height:1}
+
+.vthumb{display:block;position:relative;width:100%;height:100%;background:#0b0b0b}
+.vthumb img{width:100%;height:100%;object-fit:cover}
+.vthumb .play{position:absolute;inset:0;margin:auto;width:46px;height:46px;border-radius:99px;background:rgba(12,12,12,.55)}
+.vthumb .play::after{content:"";position:absolute;inset:0;margin:auto;width:0;height:0;border-style:solid;border-width:9px 0 9px 15px;border-color:transparent transparent transparent #fff;transform:translateX(2px)}
+
+/* Lightbox: the frame is shown whole here, whatever shape it is. */
+.lb[hidden]{display:none}
+.lb{position:fixed;inset:0;z-index:80;background:rgba(10,10,10,.94);display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:clamp(4px,2vw,24px);padding:clamp(12px,3vw,36px)}
+.lb-stage{height:min(82vh,900px);display:flex;align-items:center;justify-content:center}
+.lb-stage>div{height:100%;display:flex}
+.lb-stage img,.lb-stage video{max-height:100%;max-width:100%;width:auto;height:auto;object-fit:contain;border-radius:8px;background:#000}
+.lb-nav{background:none;border:0;color:#fff;font-size:44px;line-height:1;cursor:pointer;padding:8px 12px;opacity:.75;transition:var(--dur) var(--ease)}
+.lb-nav:hover{opacity:1}
+.lb-x{position:absolute;top:18px;right:22px;background:none;border:0;color:#fff;font-size:22px;cursor:pointer;opacity:.8}
+.lb-x:hover{opacity:1}
+.lb-count{position:absolute;bottom:20px;left:0;right:0;text-align:center;color:#fff;font-size:12.5px;letter-spacing:.08em;opacity:.7;margin:0}
+
+@media(max-width:900px){
+  .mosaic{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mosaic .tile:nth-child(n+3){display:none}
+  .mosaic .tile:first-child{border-radius:16px 6px 6px 16px}
+  .mosaic .tile:nth-child(2){border-radius:6px 16px 16px 6px}
+}
+@media(max-width:700px){
+  /* On a phone the band becomes a swipeable strip: the lead tile is capped by height
+     so it does not eat the screen, and the next one peeks in to invite the swipe.
+     It bleeds to both screen edges, so no dead margin either side. */
+  .mosaic{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;
+    margin-inline:calc(var(--pad) * -1);padding-inline:var(--pad);scroll-padding-inline:var(--pad)}
+  .mosaic::-webkit-scrollbar{display:none}
+  .mosaic .tile,.mosaic .tile:nth-child(n+3){display:block;flex:0 0 auto;height:min(54vh,440px);width:auto;scroll-snap-align:start;border-radius:16px}
+  .mosaic-actions{position:static;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+  .seeall,.sound{position:static}
+  .lb{grid-template-columns:1fr;padding:10px}
+  .lb-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:1}
+  .lb-nav.prev{left:2px}
+  .lb-nav.next{right:2px}
+}
 .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(134px,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:14px;overflow:hidden;margin:26px 0}
 .facts div{background:var(--surface);padding:14px 16px}
 .facts dt{font-size:9.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}

@@ -95,15 +95,20 @@ collections:
         widget: number
         value_type: int
         min: 1
+        required: false
+        hint: Leave empty if the experience has no fixed cap. The line disappears from the page.
 
       - name: languages
         label: Languages
         widget: string
-        hint: "Separated by a middle dot, e.g. EN · IT · ES"
+        required: false
+        hint: "Separated by a middle dot, e.g. EN · IT · ES. Leave empty and the line disappears from the page."
 
       - name: meetingPoint
         label: Meeting point
         widget: string
+        required: false
+        hint: Leave empty until the address is confirmed. The line disappears from the page.
 
       - name: images
         label: Photos
@@ -117,6 +122,24 @@ collections:
             summary: "{{fields.photo}}"
             fields:
               - { name: photo, label: File, widget: image }
+          - name: video
+            label: Video
+            widget: object
+            summary: "Video — {{fields.video}}"
+            fields:
+              - name: video
+                label: Video file
+                widget: file
+                media_folder: /public/media
+                public_folder: /media
+                hint: A vertical clip (9:16). Keep it under about 20 MB; it is served as-is.
+              - name: videoPoster
+                label: Poster frame
+                widget: file
+                required: false
+                media_folder: /public/media
+                public_folder: /media
+                hint: Still shown before the clip plays. Without it the tile is black.
           - name: poster
             label: Poster placeholder
             widget: object
@@ -130,7 +153,7 @@ collections:
                   - { label: Ink (dark), value: ink }
                   - { label: Blue, value: blue }
                   - { label: Sun (yellow), value: sun }
-        hint: First photo is the card image. Use a poster placeholder only while the real photo is missing.
+        hint: The first item opens the gallery — a video works well there. Cards always use the first photo. Use a poster placeholder only while the real photo is missing.
 
       - name: included
         label: What's included

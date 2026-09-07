@@ -7,18 +7,18 @@ import Rail from "../components/Rail.astro";
 import Card from "../components/Card.astro";
 import JournalCard from "../components/JournalCard.astro";
 import HowItWorks from "../components/HowItWorks.astro";
-import { categories, categoryName, topPicks } from "../lib/site";
+import { categoryName, liveCategories, topPicks } from "../lib/site";
 
 const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
 const picks = topPicks.map((id) => all.find((e) => e.id === id)!).filter(Boolean);
+const categories = liveCategories(all.map((e) => e.data.category));
 const posts = await getCollection("journal");
 const tones = ["", "tone", "", "tone-2"] as const;
 const quick = [
-  { label: "Under €50", href: "/experiences/all/" },
+  { label: "All experiences", href: "/experiences/all/" },
+  { label: categoryName("tours"), href: "/experiences/tours/" },
   { label: categoryName("food"), href: "/experiences/food/" },
-  { label: "Under 2 hours", href: "/experiences/all/" },
-  { label: "Out of the city", href: "/experiences/day-trips/" },
-  { label: "With kids", href: "/experiences/activities/" },
+  { label: categoryName("activities"), href: "/experiences/activities/" },
 ];
 ---
 <Base title="RomeSoMuch — experiences in Rome">

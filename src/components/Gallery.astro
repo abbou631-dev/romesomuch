@@ -1,0 +1,133 @@
+---
+import Shot from "./Shot.astro";
+
+type Picture =
+  | { photo: string }
+  | { video: string; videoPoster?: string | null }
+  | { poster: string; tone: "ink" | "blue" | "sun" };
+
+interface Props { images: Picture[]; title: string }
+const { images, title } = Astro.props;
+
+// Every tile is 9:16, the shape the media was shot in. Four fit the band on desktop,
+// one fills it on a phone; the rest live in the lightbox behind the counter button.
+const tiles = images.slice(0, 4);
+const lead = images[0];
+const leadIsClip = lead && "video" in lead;
+const photos = images.filter((i) => "photo" in i).length;
+const clips = images.filter((i) => "video" in i).length;
+const label = [photos && `${photos} photo${photos > 1 ? "s" : ""}`, clips && `${clips} video`]
+  .filter(Boolean)
+  .join(" · ");
+---
+<section class="mosaic-wrap">
+  <div class="wrap">
+    <div class="mosaic-frame">
+      <div class:list={["mosaic", `n${tiles.length}`]}>
+        {tiles.map((image, i) => (
+          <button class="tile" data-i={i} type="button" aria-label={`Open media ${i + 1}`}>
+            <Shot
+              image={image}
+              alt={i === 0 ? title : ""}
+              sizes="(max-width: 700px) 60vw, 340px"
+              loading={i === 0 ? "eager" : "lazy"}
+              still={!(i === 0 && leadIsClip)}
+              autoplay={i === 0 && leadIsClip}
+            />
+          </button>
+        ))}
+      </div>
+      <div class="mosaic-actions">
+        {leadIsClip && (
+          <button class="sound" id="soundBtn" type="button" aria-pressed="false" aria-label="Turn sound on">
+            <span class="ico" aria-hidden="true">♪</span> Sound off
+          </button>
+        )}
+        {images.length > 1 && <button class="seeall" type="button" data-i="0">{label}</button>}
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="lb" id="lb" hidden>
+  <button class="lb-x" type="button" aria-label="Close">✕</button>
+  <button class="lb-nav prev" type="button" aria-label="Previous">‹</button>
+  <div class="lb-stage" id="lbStage"></div>
+  <button class="lb-nav next" type="button" aria-label="Next">›</button>
+  <p class="lb-count" id="lbCount"></p>
+  <div class="lb-source" hidden id="lbSource">
+    {images.map((image, i) => (
+      <div data-i={i}>
+        <Shot image={image} alt={title} sizes="(max-width: 900px) 92vw, 700px" loading="lazy" />
+      </div>
+    ))}
+  </div>
+</div>
+
+<script>
+  const lb = document.getElementById("lb");
+  const stage = document.getElementById("lbStage");
+  const count = document.getElementById("lbCount");
+  const source = document.getElementById("lbSource");
+  if (lb && stage && count && source) {
+    const items = Array.from(source.children) as HTMLElement[];
+    let at = 0;
+
+    const show = (i: number) => {
+      at = (i + items.length) % items.length;
+      stage.replaceChildren(items[at].cloneNode(true));
+      stage.querySelector("video")?.setAttribute("controls", "");
+      count.textContent = `${at + 1} / ${items.length}`;
+    };
+    const open = (i: number) => {
+      show(i);
+      lb.hidden = false;
+      document.body.style.overflow = "hidden";
+    };
+    const close = () => {
+      lb.hidden = true;
+      stage.replaceChildren();
+      document.body.style.overflow = "";
+    };
+
+    document.querySelectorAll<HTMLElement>(".mosaic .tile, .mosaic .seeall").forEach((btn) => {
+      btn.addEventListener("click", () => open(Number(btn.dataset.i ?? 0)));
+    });
+
+    // The lead clip runs muted on load; this is the only way to hear it in place.
+    const sound = document.getElementById("soundBtn");
+    const leadVideo = document.querySelector<HTMLVideoElement>(".mosaic .tile video");
+    sound?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!leadVideo) return;
+      leadVideo.muted = !leadVideo.muted;
+      const on = !leadVideo.muted;
+      sound.setAttribute("aria-pressed", String(on));
+      sound.setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on");
+      sound.lastChild!.textContent = on ? " Sound on" : " Sound off";
+      if (on) void leadVideo.play();
+    });
+    // A clip that is off screen has no business playing.
+    if (leadVideo) {
+      new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) void leadVideo.play().catch(() => {});
+          else leadVideo.pause();
+        },
+        { threshold: 0.2 },
+      ).observe(leadVideo);
+    }
+    lb.querySelector(".lb-x")?.addEventListener("click", close);
+    lb.querySelector(".prev")?.addEventListener("click", () => show(at - 1));
+    lb.querySelector(".next")?.addEventListener("click", () => show(at + 1));
+    lb.addEventListener("click", (e) => {
+      if (e.target === lb) close();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (lb.hidden) return;
+      if (e.key === "Escape") close();
+      if (e.key === "ArrowLeft") show(at - 1);
+      if (e.key === "ArrowRight") show(at + 1);
+    });
+  }
+</script>

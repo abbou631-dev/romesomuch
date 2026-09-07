@@ -2,12 +2,60 @@
 import { Image } from "astro:assets";
 import { photo } from "../lib/images";
 
-type Picture = { photo: string } | { poster: string; tone: "ink" | "blue" | "sun" };
-interface Props { image: Picture; alt?: string; sizes?: string; loading?: "eager" | "lazy" }
-const { image, alt = "", sizes = "(max-width: 640px) 64vw, 320px", loading = "lazy" } = Astro.props;
+type Picture =
+  | { photo: string }
+  | { video: string; videoPoster?: string | null }
+  | { poster: string; tone: "ink" | "blue" | "sun" };
+interface Props {
+  image: Picture;
+  alt?: string;
+  sizes?: string;
+  loading?: "eager" | "lazy";
+  /** Thumbnails show the poster frame only: a <video> in a small tile is wasted bytes. */
+  still?: boolean;
+  /** Lead tile: the clip runs by itself, silent and looping, like a reel. */
+  autoplay?: boolean;
+}
+const {
+  image,
+  alt = "",
+  sizes = "(max-width: 640px) 64vw, 320px",
+  loading = "lazy",
+  still = false,
+  autoplay = false,
+} = Astro.props;
 ---
 {"photo" in image ? (
-  <Image src={photo(image.photo)} alt={alt} widths={[320, 640, 1000]} sizes={sizes} loading={loading} />
+  <Image src={photo(image.photo)} alt={alt} widths={[320, 640, 1000, 1400]} sizes={sizes} loading={loading} />
+) : "video" in image ? (
+  still ? (
+    <span class="vthumb">
+      {image.videoPoster && <img src={image.videoPoster} alt={alt} loading="lazy" />}
+      <span class="play" aria-hidden="true"></span>
+    </span>
+  ) : autoplay ? (
+    <video
+      src={image.video}
+      poster={image.videoPoster ?? undefined}
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="auto"
+      aria-label={alt}
+    ></video>
+  ) : (
+    <video
+      src={image.video}
+      poster={image.videoPoster ?? undefined}
+      controls
+      autoplay
+      muted
+      playsinline
+      preload="metadata"
+      aria-label={alt}
+    ></video>
+  )
 ) : (
   <div class={`poster p-${image.tone}`}>
     <span class="n">Photo placeholder</span>

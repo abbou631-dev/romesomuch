@@ -87,12 +87,22 @@
     },
   });
 
-  // Same two states as src/components/Shot.astro: a photo, or a poster tile.
+  // Same states as src/components/Shot.astro: a photo, a video, or a poster tile.
   function shot(getAsset, picture, fallbackWord) {
     var image = picture || {};
     var asset = findAsset(getAsset, image.photo);
 
     if (asset) return h(Photo, { asset: asset });
+
+    if (image.video) {
+      var posterAsset = findAsset(getAsset, image.videoPoster);
+      return h(
+        "span",
+        { className: "vthumb" },
+        posterAsset ? h(Photo, { asset: posterAsset }) : null,
+        h("span", { className: "play" }),
+      );
+    }
 
     return h(
       "div",
@@ -171,6 +181,11 @@
     var included = value(entry, "included") || [];
     var price = value(entry, "price");
     var cover = images[0] || {};
+    // Cards fall through to the first photo, as cardImage() does on the site.
+    var still =
+      images.filter(function (i) {
+        return i && i.photo;
+      })[0] || cover;
 
     return h(
       "div",
@@ -229,9 +244,13 @@
               "dl",
               { className: "facts" },
               fact("Length", value(entry, "durationLabel") || ""),
-              fact("Group size", "Up to " + (value(entry, "maxGuests") || "")),
-              fact("Languages", value(entry, "languages") || ""),
-              fact("Meeting point", value(entry, "meetingPoint") || ""),
+              value(entry, "maxGuests")
+                ? fact("Group size", "Up to " + value(entry, "maxGuests"))
+                : null,
+              value(entry, "languages") ? fact("Languages", value(entry, "languages")) : null,
+              value(entry, "meetingPoint")
+                ? fact("Meeting point", value(entry, "meetingPoint"))
+                : null,
             ),
             h(
               "div",
@@ -268,7 +287,7 @@
               "div",
               { className: "shot" },
               h("span", { className: "tag" }, categoryName(category)),
-              shot(getAsset, cover, "Photo"),
+              shot(getAsset, still, "Photo"),
             ),
             h(
               "div",
@@ -278,8 +297,10 @@
                 "div",
                 { className: "cmeta" },
                 h("span", null, value(entry, "durationLabel") || ""),
-                h("span", null, "max " + (value(entry, "maxGuests") || "")),
-                h("span", null, value(entry, "languages") || ""),
+                value(entry, "maxGuests")
+                  ? h("span", null, "max " + value(entry, "maxGuests"))
+                  : null,
+                value(entry, "languages") ? h("span", null, value(entry, "languages")) : null,
               ),
               h(
                 "div",

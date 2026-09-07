@@ -2,7 +2,7 @@
 import type { GetStaticPaths } from "astro";
 import { getCollection, render } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import Shot from "../../components/Shot.astro";
+import Gallery from "../../components/Gallery.astro";
 import Rail from "../../components/Rail.astro";
 import BookingPanel from "../../components/BookingPanel.astro";
 import { cancellationDefault, categoryName } from "../../lib/site";
@@ -20,34 +20,26 @@ const related = all.filter((e) => e.data.category === d.category && e.id !== exp
 ---
 <Base title={`${d.title} — RomeSoMuch`} description={d.blurb} active={d.category}>
   <div class="wrap">
+    <header class="dhead">
+      <p class="crumb" style="opacity:1;color:var(--muted)">
+        <a href="/">Home</a> / <a href={`/experiences/${d.category}/`}>{categoryName(d.category)}</a>
+      </p>
+      <h1 style="font-size:clamp(28px,4.6vw,54px)">{d.title}</h1>
+      <p style="margin-top:10px;color:var(--muted);font-size:15px;font-weight:500">{d.blurb}</p>
+    </header>
+  </div>
+
+  <Gallery images={d.images} title={d.title} />
+
+  <div class="wrap">
     <div class="detail">
       <div>
-        <p class="crumb" style="opacity:1;color:var(--muted)">
-          <a href="/">Home</a> / <a href={`/experiences/${d.category}/`}>{categoryName(d.category)}</a>
-        </p>
-        <h1 style="font-size:clamp(28px,4.6vw,54px)">{d.title}</h1>
-        <p style="margin-top:10px;color:var(--muted);font-size:15px;font-weight:500">{d.blurb}</p>
-
-        <div class="gal" style="margin-top:20px">
-          <div class="main" id="galMain">
-            <Shot image={d.images[0]} alt={d.title} sizes="(max-width: 960px) 100vw, 760px" loading="eager" />
-          </div>
-          {d.images.length > 1 && (
-            <div class="thumbs">
-              {d.images.map((image, i) => (
-                <button class={i === 0 ? "on" : ""} data-i={i} aria-label={`Image ${i + 1}`}>
-                  <Shot image={image} alt="" sizes="96px" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
 
         <dl class="facts">
           <div><dt>Length</dt><dd>{d.durationLabel}</dd></div>
-          <div><dt>Group size</dt><dd>Up to {d.maxGuests}</dd></div>
-          <div><dt>Languages</dt><dd>{d.languages}</dd></div>
-          <div><dt>Meeting point</dt><dd>{d.meetingPoint}</dd></div>
+          {d.maxGuests && <div><dt>Group size</dt><dd>Up to {d.maxGuests}</dd></div>}
+          {d.languages && <div><dt>Languages</dt><dd>{d.languages}</dd></div>}
+          {d.meetingPoint && <div><dt>Meeting point</dt><dd>{d.meetingPoint}</dd></div>}
         </dl>
 
         <div class="prose">
@@ -69,14 +61,3 @@ const related = all.filter((e) => e.data.category === d.category && e.id !== exp
   )}
 </Base>
 
-<script>
-  const main = document.getElementById("galMain");
-  const thumbs = Array.from(document.querySelectorAll<HTMLButtonElement>(".thumbs button"));
-  thumbs.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (!main) return;
-      main.innerHTML = btn.innerHTML;
-      thumbs.forEach((b) => b.classList.toggle("on", b === btn));
-    });
-  });
-</script>

@@ -1,10 +1,12 @@
 ---
 import { Image } from "astro:assets";
+import { getCollection } from "astro:content";
 import logo from "../assets/logo.png";
-import { categories } from "../lib/site";
+import { liveCategories } from "../lib/site";
 
 interface Props { active?: string }
 const { active = "" } = Astro.props;
+const categories = liveCategories((await getCollection("experiences")).map((e) => e.data.category));
 ---
 <header>
   <div class="bar">

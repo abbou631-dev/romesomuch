@@ -106,12 +106,9 @@ labelled note instead — nothing breaks.
 Step-by-step guide for wiring a new tour to the calendar, in Italian, including the mobile `zoom`
 rule and the usual failure modes: [`docs/bokun-embed.md`](docs/bokun-embed.md).
 
-### Known issue: `bokunProductId: "PRODUCT_ID"` placeholder
-
-Five experiences (`aperitivo`, `pasta`, `streetfood`, `tivoli`, `vatican`) still carry the literal
-`PRODUCT_ID` placeholder, which the component reads as a valid id and will mount a widget for a
-product that does not exist as soon as `PUBLIC_BOKUN_CHANNEL` is set again. Details and the two-line
-fix are at the top of [`docs/bokun-embed.md`](docs/bokun-embed.md).
+All six experiences in the catalogue now carry a real `bokunEmbed`, so the calendars work whether or
+not `PUBLIC_BOKUN_CHANNEL` is set. The `PRODUCT_ID` placeholder that used to sit in five demo
+experiences went away with those files.
 
 ## Routes
 
@@ -144,10 +141,13 @@ It is read at build time, so changing it needs a redeploy (Deployments → Retry
 
 ## Still to do before launch
 
-- Bokun: replace the `PRODUCT_ID` placeholder in the five experiences listed above (see
-  [`docs/bokun-embed.md`](docs/bokun-embed.md)).
-- Real catalogue: names, prices, times, capacities, meeting points, copy.
-- Real photography — 8 experiences currently ship a poster tile placeholder.
+- Catalogue gaps: group sizes and languages are missing for most experiences, and the micromosaic
+  workshop has no meeting point. See [`docs/catalogo-live-cms.md`](docs/catalogo-live-cms.md).
+- Fiat 500 Tour: product 930927 renders an empty Bokun widget, so it is not on the site.
+- Photography: the six experiences use photos taken from romesomuch.com — five each, three for the
+  micromosaic workshop — plus the five vertical clips in `public/media/` (1080x1920, H.264/AAC).
+  The page opens on a full-width band of 9:16 tiles — four on desktop, one on a phone — with a
+  lightbox that shows each frame whole. A lead video autoplays muted and loops, with a sound toggle.
 - Legal documents: fill the bracketed company details and have them reviewed.
 - Decide where booking requests land (mailbox, CRM, or Bokun checkout everywhere).
 - Reviews: none are invented anywhere in this codebase; add real ones when they exist.
