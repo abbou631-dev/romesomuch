@@ -8,7 +8,7 @@ interface Props { active?: string }
 const { active = "" } = Astro.props;
 const categories = liveCategories((await getCollection("experiences")).map((e) => e.data.category));
 ---
-<header>
+<header class="site">
   <div class="bar">
     <a class="logo" href="/"><Image src={logo} alt="RomeSoMuch" width={220} densities={[1, 2]} loading="eager" /></a>
     <div class="navstrip">

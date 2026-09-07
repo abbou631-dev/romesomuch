@@ -32,8 +32,10 @@ p{margin:0}
 .badge{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
 .badge::before{content:"";width:8px;height:8px;border-radius:99px;background:var(--yellow-deep);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
 
+[hidden]{display:none !important}
+
 /* ---------- header ---------- */
-header{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--hair)}
+header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--hair)}
 .bar{max-width:var(--maxw);margin:0 auto;height:80px;padding-inline:var(--pad);display:flex;align-items:center;gap:26px}
 .logo{flex:none;display:flex;align-items:center}
 .logo img{height:26px;width:auto;filter:var(--logo-filter)}
@@ -162,6 +164,8 @@ header{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--paper
 /* rank numerals — decorative, top picks rail only */
 .rankcard{padding-left:28px}
 .picks .track{gap:8px;grid-auto-columns:calc(min(232px,43vw) + 28px)}
+/* top picks alone run tall, Fever-style; every other rail keeps the square crop */
+.picks .track .shot{aspect-ratio:3/4}
 .rank{position:absolute;left:-22px;bottom:-4px;z-index:3;pointer-events:none;font-family:var(--disp);font-size:72px;line-height:.72;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill}
 /* journal cards keep the wider crop */
 .jcard .shot{aspect-ratio:4/3}
@@ -427,7 +431,9 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
  .facts dd{font-size:13.5px}
  .prose p,.incl li{font-size:14px}
  .prose h2{font-size:20px;margin:20px 0 8px}
- .book{padding:16px;border-radius:12px}
+ /* On a phone the booking card runs to both screen edges, so the calendar gets the
+    full width instead of sitting inside two paddings. */
+ .book{margin-inline:calc(var(--pad) * -1);padding:16px 12px;border-radius:0;border-inline:0}
  .book h3{font-size:22px}
  /* The Bokun calendar lives in a cross-origin iframe, so its own typography and
     spacing are out of reach: only the container is ours. CSS zoom shrinks the
@@ -435,7 +441,7 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
     keeps writing on the iframe stays correct, and the widget still lays out
     against a wider internal viewport - which is what makes it show the per-day
     prices it hides in a narrow one. */
- .book .bokunEmbed{zoom:.85}
+ .book .bokunEmbed{zoom:.95;margin-inline:auto}
  .book .bokunEmbed .bokunWidget{margin-top:8px}
  .legal{padding:18px 0}
  .lsec{padding:16px 0}
