@@ -1,0 +1,220 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { categoryName, money } from "../lib/site";
+
+interface Props { items: CollectionEntry<"experiences">[] }
+const { items } = Astro.props;
+
+// The catalogue is small enough to travel with the page, so the search runs in the
+// browser with no request and no index to keep in sync.
+// The description carries the landmarks people actually type - Colosseum, Trevi,
+// Appian Way - so a trimmed copy of it is indexed alongside the title.
+const body = (raw: string) =>
+  raw.replace(/[#>*_`\[\]()]/g, " ").replace(/\s+/g, " ").trim().slice(0, 900);
+
+const index = items.map((e) => ({
+  id: e.id,
+  title: e.data.title,
+  category: categoryName(e.data.category),
+  blurb: e.data.blurb,
+  text: body(e.body ?? ""),
+  meta: `${e.data.durationLabel} · from ${money(e.data.price)} / ${e.data.unit}`,
+}));
+---
+<form class="hsearch" role="search" action="/experiences/all/" method="get" autocomplete="off">
+  <div class="hsearch-in">
+    <span class="hsearch-ico" aria-hidden="true">⌕</span>
+    <input
+      type="search"
+      id="q"
+      name="q"
+      placeholder="Search tours, classes…"
+      aria-label="Search experiences"
+      role="combobox"
+      aria-expanded="false"
+      aria-controls="qres"
+      aria-autocomplete="list"
+    />
+    <button class="btn yellow" type="submit">Search</button>
+  </div>
+  <ul class="hsearch-res" id="qres" role="listbox" aria-label="Search results" hidden></ul>
+</form>
+
+<script type="application/json" id="qdata" is:inline set:html={JSON.stringify(index)}></script>
+
+<script>
+  type Item = { id: string; title: string; category: string; blurb: string; text: string; meta: string };
+
+  const form = document.querySelector<HTMLFormElement>(".hsearch");
+  const input = document.getElementById("q") as HTMLInputElement | null;
+  const panel = document.getElementById("qres") as HTMLUListElement | null;
+  const data = document.getElementById("qdata");
+
+  if (form && input && panel && data) {
+    const items: Item[] = JSON.parse(data.textContent!);
+
+    // Everything is compared in a flattened form, so "Vespa Tour" and "vespa-tour"
+    // both reduce to the same words and accents never block a match.
+    const norm = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+
+    // Optimal string alignment: like Levenshtein, but a swapped pair of letters
+    // ("yatch" for "yacht") costs one edit, since that is how people mistype.
+    const distance = (a: string, b: string) => {
+      const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) =>
+        Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+      );
+      for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+          if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+            d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+          }
+        }
+      }
+      return d[a.length][b.length];
+    };
+
+    // A typed word scores against one catalogue word: whole match, prefix, or close
+    // enough that the difference reads as a typo. Fuzzy matching is only allowed where
+    // the caller says so: inside a description a short near-miss ("watch" for "yatch")
+    // is noise, while a nine-letter landmark off by one letter plainly is not.
+    const wordScore = (token: string, word: string, fuzzy: boolean) => {
+      if (token === word) return 1;
+      if (word.startsWith(token)) return token.length >= 3 ? 0.94 : 0.86;
+      if (word.includes(token) && token.length >= 4) return 0.82;
+      if (!fuzzy) return 0;
+      const d = distance(token, word);
+      const near = 1 - d / Math.max(token.length, word.length);
+      const shortest = Math.min(token.length, word.length);
+      if (d <= 1) return Math.max(near, 0.8);
+      if (d === 2 && shortest >= 6) return Math.max(near, 0.7);
+      if (d === 2 && shortest >= 5) return Math.max(near, 0.62);
+      return near > 0.72 ? near : 0;
+    };
+
+    // Title and category take a typo of any length; the description and the blurb only
+    // from six letters up, where a near-miss is unlikely to be a different word.
+    const fields = (item: Item): [string, number, number][] => [
+      [norm(item.title), 1, 0],
+      [norm(item.category), 0.8, 0],
+      [norm(item.blurb), 0.75, 6],
+      [norm(item.text), 0.7, 6],
+    ];
+
+    const tokenScore = (token: string, item: Item) => {
+      let best = 0;
+      for (const [text, weight, minFuzzy] of fields(item)) {
+        if (text.includes(token)) best = Math.max(best, weight);
+        const fuzzy = token.length >= minFuzzy;
+        for (const word of text.split(" ")) best = Math.max(best, wordScore(token, word, fuzzy) * weight);
+      }
+      return best;
+    };
+
+    const rank = (query: string) => {
+      const tokens = norm(query).split(" ").filter(Boolean);
+      if (!tokens.length) return { hits: [] as Item[], loose: false };
+      const scored = items
+        .map((item) => {
+          const scores = tokens.map((t) => tokenScore(t, item));
+          const total = scores.reduce((a, b) => a + b, 0) / tokens.length;
+          return { item, total, all: scores.every((s) => s >= 0.5) };
+        })
+        .sort((a, b) => b.total - a.total);
+      const solid = scored.filter((s) => s.all && s.total >= 0.5);
+      // Nothing clears the bar: still answer with whatever comes closest, flagged as such.
+      const loose = solid.length === 0;
+      const rows = (loose ? scored.filter((s) => s.total > 0.2) : solid).slice(0, 6);
+      return { hits: rows.map((r) => r.item), loose };
+    };
+
+    let active = -1;
+    let shown: Item[] = [];
+
+    const close = () => {
+      panel.hidden = true;
+      panel.replaceChildren();
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+      active = -1;
+      shown = [];
+    };
+
+    const highlight = (i: number) => {
+      active = i;
+      Array.from(panel.querySelectorAll("li")).forEach((li, n) => {
+        li.classList.toggle("on", n === i);
+        li.setAttribute("aria-selected", String(n === i));
+      });
+      if (i >= 0) input.setAttribute("aria-activedescendant", `qres-${i}`);
+      else input.removeAttribute("aria-activedescendant");
+    };
+
+    const render = (query: string) => {
+      const { hits, loose } = rank(query);
+      shown = hits;
+      panel.replaceChildren();
+      if (!query.trim()) return close();
+
+      if (!hits.length) {
+        const li = document.createElement("li");
+        li.className = "empty";
+        li.textContent = "Nothing matches that yet.";
+        panel.append(li);
+      } else {
+        if (loose) {
+          const li = document.createElement("li");
+          li.className = "empty";
+          li.textContent = "No exact match — closest experiences:";
+          panel.append(li);
+        }
+        hits.forEach((item, i) => {
+          const li = document.createElement("li");
+          li.id = `qres-${i}`;
+          li.setAttribute("role", "option");
+          li.setAttribute("aria-selected", "false");
+          const a = document.createElement("a");
+          a.href = `/experience/${item.id}/`;
+          a.innerHTML = `<span class="t"></span><span class="m"></span>`;
+          a.querySelector(".t")!.textContent = item.title;
+          a.querySelector(".m")!.textContent = `${item.category} · ${item.meta}`;
+          li.append(a);
+          li.addEventListener("mouseenter", () => highlight(i));
+          panel.append(li);
+        });
+      }
+      panel.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      highlight(-1);
+    };
+
+    const go = () => {
+      const item = shown[active >= 0 ? active : 0];
+      if (item) location.href = `/experience/${item.id}/`;
+    };
+
+    input.addEventListener("input", () => render(input.value));
+    input.addEventListener("focus", () => input.value && render(input.value));
+    form.addEventListener("submit", (ev) => {
+      if (!shown.length) return; // no JS answer to give: let the form fall through
+      ev.preventDefault();
+      go();
+    });
+    input.addEventListener("keydown", (ev) => {
+      if (panel.hidden) return;
+      if (ev.key === "ArrowDown") { ev.preventDefault(); highlight(Math.min(active + 1, shown.length - 1)); }
+      else if (ev.key === "ArrowUp") { ev.preventDefault(); highlight(Math.max(active - 1, -1)); }
+      else if (ev.key === "Escape") close();
+    });
+    document.addEventListener("click", (ev) => {
+      if (!form.contains(ev.target as Node)) close();
+    });
+  }
+</script>

@@ -84,17 +84,41 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 .btn[disabled]{opacity:.4;cursor:not-allowed;transform:none}
 
 /* ---------- home hero ---------- */
-.hero{position:relative;min-height:clamp(300px,30vw,420px);display:flex;align-items:flex-end;overflow:hidden;background:#0a0a0a}
+/* above the sticky quick-filter bar (40) and below the header (60), so the search
+   results drop over the page instead of behind it */
+.hero{position:relative;z-index:50;min-height:clamp(300px,30vw,420px);display:flex;align-items:flex-end;background:#0a0a0a}
 .hero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.62}
 .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,10,.55) 0%,rgba(10,10,10,.15) 45%,rgba(10,10,10,.85) 100%)}
 .hero-in{position:relative;z-index:2;width:100%;padding-block:0 clamp(30px,4vw,50px)}
 .hero h1{color:#fff;font-size:clamp(38px,8.4vw,92px)}
 .hero .kicker{color:#0a0a0a;margin:0 0 14px;font-size:11px}
 .hero p{color:#fff;opacity:.92;max-width:52ch;font-size:17px;margin-top:14px;font-weight:400}
+/* hero search: one field over the photo, results dropping onto the page below it */
+.hsearch{position:relative;z-index:3;margin-top:clamp(14px,1.8vw,18px);max-width:430px}
+.hsearch-in{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--surface);border-radius:999px;padding:5px 5px 5px 15px;box-shadow:0 10px 28px rgba(10,10,10,.26)}
+.hsearch-ico{font-size:17px;line-height:1;color:var(--muted);flex:none}
+.hsearch input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:15px;font-weight:500;color:var(--ink);padding:9px 0}
+.hsearch input::placeholder{color:var(--muted);font-weight:500}
+.hsearch input:focus{outline:none}
+.hsearch input::-webkit-search-cancel-button{-webkit-appearance:none}
+.hsearch-in:focus-within{border-color:var(--yellow-deep)}
+.hsearch .btn{flex:none;padding:9px 18px;font-size:14px;border-radius:999px}
+.hsearch-res{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:4;margin:0;padding:6px;list-style:none;background:var(--surface);border:1px solid var(--hair);border-radius:20px;box-shadow:var(--shadow);max-height:min(58vh,420px);overflow-y:auto}
+.hsearch-res li.empty{padding:10px 12px;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.hsearch-res li a{display:flex;flex-direction:column;gap:3px;padding:11px 12px;border-radius:11px}
+.hsearch-res li.on a,.hsearch-res li a:hover{background:var(--sunk)}
+.hsearch-res .t{font-size:15px;font-weight:700;color:var(--ink)}
+.hsearch-res .m{font-size:12.5px;color:var(--muted);font-weight:500}
 .kicker{display:inline-block;font-size:11px;line-height:1.1;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:#0a0a0a;background:var(--yellow);padding:4px 10px;border-radius:999px}
 @media(max-width:640px){
  .hero{min-height:268px}
  .hero p:not(.kicker){font-size:14px;margin-top:10px;max-width:36ch}
+ .hsearch{max-width:86%}
+ /* 16px keeps iOS from zooming the page when the field takes focus */
+ .hsearch-in{padding:4px 4px 4px 12px;gap:4px}
+ .hsearch input{font-size:16px;padding:7px 0}
+ .hsearch .btn{padding:7px 13px;font-size:12px}
+ .hsearch-ico{font-size:15px}
  .hero .kicker{font-size:10px;padding:3px 9px;letter-spacing:.18em;margin:0 0 10px}
 }
 
