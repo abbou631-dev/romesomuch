@@ -46,7 +46,7 @@
         ],
         [
           "Booking and confirmation",
-          "A booking is complete when you receive our written confirmation by email. Experiences with live availability are confirmed automatically at checkout; all others are requests, which we answer the same day and which become bookings only once confirmed."
+          "A booking is complete when you receive our written confirmation by email. Experiences with live availability are confirmed automatically at checkout; all others are requests, which we answer within 48 hours and which become bookings only once confirmed."
         ],
         [
           "Prices and payment",
@@ -134,5 +134,6 @@
     }
   },
   "cancellationDefault": "All sales are final unless otherwise noted.",
-  "contactEmail": "romesomuch@gmail.com"
+  "contactEmail": "romesomuch@gmail.com",
+  "whatsapp": "+39 351 401 4023"
 }
