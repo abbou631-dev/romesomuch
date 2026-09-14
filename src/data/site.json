@@ -133,5 +133,6 @@
       ]
     }
   },
-  "cancellationDefault": "All sales are final unless otherwise noted."
+  "cancellationDefault": "All sales are final unless otherwise noted.",
+  "contactEmail": "romesomuch@gmail.com"
 }

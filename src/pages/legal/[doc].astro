@@ -1,12 +1,16 @@
 ---
 import type { GetStaticPaths } from "astro";
 import Base from "../../layouts/Base.astro";
-import { legal } from "../../lib/site";
+import { contactEmail, legal } from "../../lib/site";
 
 export const getStaticPaths = (() =>
   Object.entries(legal).map(([doc, data]) => ({ params: { doc }, props: { data } }))) satisfies GetStaticPaths;
 
 const { data } = Astro.props;
+
+// The legal texts keep [email] as a token so the address lives in one place:
+// site.json owns it, every document reads the same value.
+const fill = (s: string) => s.replaceAll("[email]", contactEmail);
 ---
 <Base title={`${data.t} — RomeSoMuch`} description={data.l}>
   <section class="band">
@@ -22,7 +26,7 @@ const { data } = Astro.props;
       <div class="ph" style="margin:18px 0">
         <span class="k">Da completare prima della pubblicazione</span>
         <span class="d">
-          Le voci fra parentesi quadre — ragione sociale, indirizzo, P.IVA, email, tempi di risposta —
+          Le voci fra parentesi quadre — ragione sociale, indirizzo, P.IVA, tempi di risposta —
           vanno compilate con i dati reali e il testo va rivisto da chi di dovere. Questo è un impianto
           corretto, non un parere legale.
         </span>
@@ -30,7 +34,7 @@ const { data } = Astro.props;
       {data.s.map(([heading, body], i) => (
         <section class="lsec">
           <h2><span class="tnum">{String(i + 1).padStart(2, "0")}</span> {heading}</h2>
-          <p>{body}</p>
+          <p>{fill(body)}</p>
         </section>
       ))}
       <p class="fine">Domande su questo documento: <a href="/contact/">scrivici</a>.</p>
