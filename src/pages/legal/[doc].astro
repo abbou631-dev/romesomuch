@@ -23,14 +23,6 @@ const fill = (s: string) => s.replaceAll("[email]", contactEmail);
   <div class="wrap">
     <article class="legal">
       <p class="lbl">{data.u}</p>
-      <div class="ph" style="margin:18px 0">
-        <span class="k">Da completare prima della pubblicazione</span>
-        <span class="d">
-          Le voci fra parentesi quadre — ragione sociale, indirizzo, P.IVA, tempi di risposta —
-          vanno compilate con i dati reali e il testo va rivisto da chi di dovere. Questo è un impianto
-          corretto, non un parere legale.
-        </span>
-      </div>
       {data.s.map(([heading, body], i) => (
         <section class="lsec">
           <h2><span class="tnum">{String(i + 1).padStart(2, "0")}</span> {heading}</h2>
