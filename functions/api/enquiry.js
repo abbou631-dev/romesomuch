@@ -5,6 +5,11 @@
 // never in the bundle.
 
 const FORMS = {
+  contact: {
+    subject: "Message from the site",
+    required: ["name", "email", "message"],
+    fields: ["name", "email", "topic", "message"],
+  },
   creator: {
     subject: "Creator enquiry",
     required: ["name", "email", "message"],
@@ -24,6 +29,7 @@ const LABELS = {
   email: "Email",
   city: "City",
   website: "Website",
+  topic: "About",
   platforms: "Platforms",
   reach: "Audience",
   links: "Links",

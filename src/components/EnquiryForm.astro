@@ -9,7 +9,7 @@ type Field = {
   help?: string;
 };
 
-interface Props { kind: "creator" | "partner"; fields: Field[]; submit: string }
+interface Props { kind: "contact" | "creator" | "partner"; fields: Field[]; submit: string }
 const { kind, fields, submit } = Astro.props;
 ---
 <form class="enq" method="post" action="/api/enquiry">

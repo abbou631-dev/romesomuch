@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
-import { contactEmail, whatsapp } from "../lib/site";
+import EnquiryForm from "../components/EnquiryForm.astro";
+import { whatsapp } from "../lib/site";
 ---
 <Base title="Contact — RomeSoMuch" description="Email or WhatsApp, answered within 48 hours.">
   <section class="band">
@@ -10,14 +11,21 @@ import { contactEmail, whatsapp } from "../lib/site";
   <div class="wrap">
     <article class="legal">
       <section class="lsec">
-        <h2><span class="tnum">01</span> Email</h2>
+        <h2><span class="tnum">01</span> Write to us</h2>
         <p>
           Questions about an experience, a group booking, a date that is not on the calendar —
-          whatever it is, one address.
+          whatever it is, it lands in the same inbox.
         </p>
-        <p style="margin-top:18px">
-          <a class="btn" href={`mailto:${contactEmail}`}>{contactEmail}</a>
-        </p>
+        <EnquiryForm
+          kind="contact"
+          submit="Send message"
+          fields={[
+            { name: "name", label: "Name", required: true },
+            { name: "email", label: "Email", type: "email", required: true, help: "So we can answer you." },
+            { name: "topic", label: "What is it about", help: "An experience, a group, a date — or something else entirely." },
+            { name: "message", label: "Message", type: "textarea", required: true },
+          ]}
+        />
       </section>
       <section class="lsec">
         <h2><span class="tnum">02</span> WhatsApp</h2>
