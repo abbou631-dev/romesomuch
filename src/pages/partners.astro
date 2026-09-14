@@ -1,0 +1,52 @@
+---
+import Base from "../layouts/Base.astro";
+import EnquiryForm from "../components/EnquiryForm.astro";
+---
+<Base
+  title="Become a partner — RomeSoMuch"
+  description="Operators, venues and brands: propose a collaboration to Rome's largest community."
+>
+  <section class="band">
+    <div class="wrap"><p class="crumb">Home / Partners</p><h1>Become a partner</h1>
+      <p class="lede">
+        For companies with an experience to sell, a venue to fill, or a campaign to run.
+      </p></div>
+  </section>
+  <div class="wrap">
+    <article class="legal">
+      <section class="lsec">
+        <h2><span class="tnum">01</span> Who this is for</h2>
+        <p>
+          Tour operators and providers who want their experiences on this site. Restaurants, hotels
+          and venues looking to reach people planning their days in Rome. Brands with a campaign
+          that belongs in this city rather than anywhere.
+        </p>
+      </section>
+      <section class="lsec">
+        <h2><span class="tnum">02</span> What we can do together</h2>
+        <p>
+          We sell experiences through our own booking calendar, we produce content for the community
+          that follows us, and we run both together when it makes sense. Tell us which of the three
+          you have in mind — or describe the thing you want and we will say whether we are the right
+          people for it.
+        </p>
+      </section>
+      <section class="lsec">
+        <h2><span class="tnum">03</span> Send us the proposal</h2>
+        <EnquiryForm
+          kind="partner"
+          submit="Send proposal"
+          fields={[
+            { name: "company", label: "Company", required: true },
+            { name: "name", label: "Your name", required: true },
+            { name: "role", label: "Your role" },
+            { name: "email", label: "Email", type: "email", required: true },
+            { name: "website", label: "Website", type: "url" },
+            { name: "kindOfWork", label: "What you are proposing", help: "An experience to list, a campaign, a venue partnership, something else." },
+            { name: "message", label: "The proposal", type: "textarea", required: true, help: "What you have in mind, and what you would need from us." },
+          ]}
+        />
+      </section>
+    </article>
+  </div>
+</Base>

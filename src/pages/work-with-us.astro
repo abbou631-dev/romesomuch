@@ -1,0 +1,56 @@
+---
+import Base from "../layouts/Base.astro";
+import EnquiryForm from "../components/EnquiryForm.astro";
+---
+<Base
+  title="Work with us — RomeSoMuch"
+  description="Creators, guides and photographers who know Rome: tell us what you make."
+>
+  <section class="band">
+    <div class="wrap"><p class="crumb">Home / Work with us</p><h1>Work with us</h1>
+      <p class="lede">
+        We are looking for people who already show Rome the way we like to see it.
+      </p></div>
+  </section>
+  <div class="wrap">
+    <article class="legal">
+      <section class="lsec">
+        <h2><span class="tnum">01</span> Who we are looking for</h2>
+        <p>
+          Content creators above all — people filming, writing and photographing this city for an
+          audience that trusts them. Guides, hosts and photographers who want to run experiences
+          with us are just as welcome.
+        </p>
+        <p>
+          What matters is not the size of your following. It is whether you know the places that
+          are worth the walk, and whether you can bring people there.
+        </p>
+      </section>
+      <section class="lsec">
+        <h2><span class="tnum">02</span> How it works</h2>
+        <p>
+          Send us what you make and we will look at it properly. If there is something to build
+          together we come back with a concrete idea — a collaboration, a shoot, an experience of
+          your own on this site — rather than a generic yes.
+        </p>
+        <p>We answer within 48 hours, usually the same day.</p>
+      </section>
+      <section class="lsec">
+        <h2><span class="tnum">03</span> Tell us about yourself</h2>
+        <EnquiryForm
+          kind="creator"
+          submit="Send"
+          fields={[
+            { name: "name", label: "Name", required: true },
+            { name: "email", label: "Email", type: "email", required: true },
+            { name: "city", label: "Where you are based" },
+            { name: "platforms", label: "Where you publish", help: "Instagram, TikTok, YouTube, a blog — whatever you use." },
+            { name: "reach", label: "Audience", help: "Roughly how many people follow you, and where." },
+            { name: "links", label: "Links", help: "Profiles, portfolio, or the three things you are proudest of." },
+            { name: "message", label: "What you would like to do with us", type: "textarea", required: true },
+          ]}
+        />
+      </section>
+    </article>
+  </div>
+</Base>

@@ -1,0 +1,84 @@
+---
+// One form, two uses. The field list comes from the page, the posting and the
+// validation live in functions/api/enquiry.js.
+type Field = {
+  name: string;
+  label: string;
+  type?: "text" | "email" | "url" | "textarea";
+  required?: boolean;
+  help?: string;
+};
+
+interface Props { kind: "creator" | "partner"; fields: Field[]; submit: string }
+const { kind, fields, submit } = Astro.props;
+---
+<form class="enq" method="post" action="/api/enquiry">
+  <input type="hidden" name="kind" value={kind} />
+  {/* Bots fill everything in; people never see this. */}
+  <p class="enq-trap" aria-hidden="true">
+    <label>Leave this empty<input type="text" name="website_url" tabindex="-1" autocomplete="off" /></label>
+  </p>
+
+  {fields.map(({ name, label, type = "text", required, help }) => (
+    <p class="enq-row">
+      <label for={`${kind}-${name}`}>
+        {label}{required && <span class="enq-req" aria-hidden="true">*</span>}
+      </label>
+      {help && <span class="enq-help">{help}</span>}
+      {type === "textarea" ? (
+        <textarea id={`${kind}-${name}`} name={name} rows="6" required={required}></textarea>
+      ) : (
+        <input id={`${kind}-${name}`} name={name} type={type} required={required} />
+      )}
+    </p>
+  ))}
+
+  <p class="enq-fine">
+    We use what you send only to answer you. See the <a href="/legal/privacy/">privacy policy</a>.
+  </p>
+  <p class="enq-actions">
+    <button class="btn" type="submit">{submit}</button>
+    <span class="enq-msg" role="status" aria-live="polite"></span>
+  </p>
+</form>
+
+<script>
+  document.querySelectorAll<HTMLFormElement>("form.enq").forEach((form) => {
+    const button = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
+    const msg = form.querySelector<HTMLElement>(".enq-msg")!;
+    const label = button.textContent;
+
+    form.addEventListener("submit", async (ev) => {
+      // Without JavaScript the browser posts the form itself and the endpoint
+      // answers with a page, so this only takes over when it can do better.
+      ev.preventDefault();
+      button.disabled = true;
+      button.textContent = "Sending…";
+      msg.textContent = "";
+      msg.classList.remove("bad");
+
+      try {
+        const res = await fetch(form.action, {
+          method: "POST",
+          body: new FormData(form),
+          headers: { Accept: "application/json" },
+        });
+        const data = await res.json();
+        msg.textContent = data.message;
+        if (data.ok) {
+          form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea").forEach((f) => {
+            if (f.type !== "hidden") f.value = "";
+          });
+        } else {
+          msg.classList.add("bad");
+        }
+      } catch {
+        msg.textContent = "Something went wrong. Please email us instead.";
+        msg.classList.add("bad");
+      } finally {
+        button.disabled = false;
+        button.textContent = label;
+      }
+    });
+  });
+</script>
