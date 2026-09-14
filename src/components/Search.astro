@@ -2,8 +2,8 @@
 import type { CollectionEntry } from "astro:content";
 import { categoryName, money } from "../lib/site";
 
-interface Props { items: CollectionEntry<"experiences">[] }
-const { items } = Astro.props;
+interface Props { items: CollectionEntry<"experiences">[]; id?: string }
+const { items, id = "q" } = Astro.props;
 
 // The catalogue is small enough to travel with the page, so the search runs in the
 // browser with no request and no index to keep in sync.
@@ -26,31 +26,30 @@ const index = items.map((e) => ({
     <span class="hsearch-ico" aria-hidden="true">⌕</span>
     <input
       type="search"
-      id="q"
+      id={id}
       name="q"
       placeholder="Search tours, classes…"
       aria-label="Search experiences"
       role="combobox"
       aria-expanded="false"
-      aria-controls="qres"
+      aria-controls={`${id}res`}
       aria-autocomplete="list"
     />
     <button class="btn yellow" type="submit">Search</button>
   </div>
-  <ul class="hsearch-res" id="qres" role="listbox" aria-label="Search results" hidden></ul>
+  <ul class="hsearch-res" id={`${id}res`} role="listbox" aria-label="Search results" hidden></ul>
+  <script type="application/json" class="qdata" is:inline set:html={JSON.stringify(index)}></script>
 </form>
-
-<script type="application/json" id="qdata" is:inline set:html={JSON.stringify(index)}></script>
 
 <script>
   type Item = { id: string; title: string; category: string; blurb: string; text: string; meta: string };
 
-  const form = document.querySelector<HTMLFormElement>(".hsearch");
-  const input = document.getElementById("q") as HTMLInputElement | null;
-  const panel = document.getElementById("qres") as HTMLUListElement | null;
-  const data = document.getElementById("qdata");
-
-  if (form && input && panel && data) {
+  // The same field can appear twice on a page - in the hero and in the header panel
+  // on a phone - so each form is wired up on its own, from the data it carries.
+  document.querySelectorAll<HTMLFormElement>("form.hsearch").forEach((form) => {
+    const input = form.querySelector<HTMLInputElement>("input[type=search]")!;
+    const panel = form.querySelector<HTMLUListElement>(".hsearch-res")!;
+    const data = form.querySelector<HTMLScriptElement>("script.qdata")!;
     const items: Item[] = JSON.parse(data.textContent!);
 
     // Everything is compared in a flattened form, so "Vespa Tour" and "vespa-tour"
@@ -153,7 +152,7 @@ const index = items.map((e) => ({
         li.classList.toggle("on", n === i);
         li.setAttribute("aria-selected", String(n === i));
       });
-      if (i >= 0) input.setAttribute("aria-activedescendant", `qres-${i}`);
+      if (i >= 0) input.setAttribute("aria-activedescendant", `${panel.id}-${i}`);
       else input.removeAttribute("aria-activedescendant");
     };
 
@@ -177,7 +176,7 @@ const index = items.map((e) => ({
         }
         hits.forEach((item, i) => {
           const li = document.createElement("li");
-          li.id = `qres-${i}`;
+          li.id = `${panel.id}-${i}`;
           li.setAttribute("role", "option");
           li.setAttribute("aria-selected", "false");
           const a = document.createElement("a");
@@ -216,5 +215,5 @@ const index = items.map((e) => ({
     document.addEventListener("click", (ev) => {
       if (!form.contains(ev.target as Node)) close();
     });
-  }
+  });
 </script>

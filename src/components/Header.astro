@@ -2,11 +2,13 @@
 import { Image } from "astro:assets";
 import { getCollection } from "astro:content";
 import logo from "../assets/logo.png";
+import Search from "./Search.astro";
 import { liveCategories } from "../lib/site";
 
 interface Props { active?: string }
 const { active = "" } = Astro.props;
-const categories = liveCategories((await getCollection("experiences")).map((e) => e.data.category));
+const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
+const categories = liveCategories(all.map((e) => e.data.category));
 ---
 <header class="site">
   <div class="bar">
@@ -27,6 +29,9 @@ const categories = liveCategories((await getCollection("experiences")).map((e) =
           ))}
         </nav>
       </div>
+      <button class="searchbtn" type="button" id="search-toggle" aria-expanded="false" aria-controls="search-panel" aria-label="Search experiences">
+        <span aria-hidden="true">🔍</span>
+      </button>
       <nav class="sec">
         <a href="/journal/">Journal</a>
         <a href="/about/">About</a>
@@ -35,9 +40,37 @@ const categories = liveCategories((await getCollection("experiences")).map((e) =
       </nav>
     </div>
   </div>
+  <!-- Phone only: the hero is hidden there, so this is where the search lives. -->
+  <div class="search-panel" id="search-panel" hidden>
+    <div class="wrap"><Search items={all} id="qm" /></div>
+  </div>
 </header>
 
 <script>
+  const panel = document.getElementById("search-panel");
+  const toggle = document.getElementById("search-toggle");
+  if (panel && toggle) {
+    const open = (on: boolean) => {
+      panel.hidden = !on;
+      toggle.setAttribute("aria-expanded", String(on));
+      if (on) panel.querySelector<HTMLInputElement>("input[type=search]")?.focus();
+    };
+    toggle.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      open(panel.hidden);
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape" && !panel.hidden) {
+        open(false);
+        toggle.focus();
+      }
+    });
+    document.addEventListener("click", (ev) => {
+      const target = ev.target as Node;
+      if (!panel.hidden && !panel.contains(target) && target !== toggle) open(false);
+    });
+  }
+
   const wrap = document.getElementById("cat-wrap");
   const btn = document.getElementById("cat-toggle");
   if (wrap && btn) {

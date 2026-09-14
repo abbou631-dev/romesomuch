@@ -66,7 +66,17 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
  .cats a{min-height:44px;padding:0 14px;border-color:transparent;border-radius:10px;font-size:14px}
  .cats a:hover{border-color:var(--hair);background:var(--sunk)}
 }
+/* The magnifier and its panel exist only where the hero is hidden. */
+.searchbtn{display:none;flex:none;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:1px solid var(--edge);border-radius:99px;background:none;font-size:15px;line-height:1;cursor:pointer;transition:var(--dur) var(--ease)}
+.searchbtn:hover{border-color:var(--ink);background:var(--sunk)}
+.search-panel{border-top:1px solid var(--hair);background:var(--paper);padding:12px 0 14px}
+.search-panel[hidden]{display:none}
+.search-panel .hsearch{max-width:none;margin-top:0}
+.search-panel .hsearch-in{box-shadow:none;border-color:var(--edge)}
+
 @media(max-width:720px){
+ .searchbtn{display:inline-flex}
+
  :root{--header-h:67px}
  .bar{gap:14px;height:66px}
  .navstrip{gap:10px}
@@ -91,6 +101,8 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,10,.55) 0%,rgba(10,10,10,.15) 45%,rgba(10,10,10,.85) 100%)}
 .hero-in{position:relative;z-index:2;width:100%;padding-block:0 clamp(30px,4vw,50px)}
 .hero h1{color:#fff;font-size:clamp(38px,8.4vw,92px)}
+/* Phone: no hero at all. The page opens on the picks, and search moves into the header. */
+@media(max-width:720px){.hero{display:none}}
 .hero .kicker{color:#0a0a0a;margin:0 0 14px;font-size:11px}
 .hero p{color:#fff;opacity:.92;max-width:52ch;font-size:17px;margin-top:14px;font-weight:400}
 /* hero search: one field over the photo, results dropping onto the page below it */
