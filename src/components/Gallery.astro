@@ -90,7 +90,8 @@ const label = [photos && `${photos} photo${photos > 1 ? "s" : ""}`, clips && `${
       document.body.style.overflow = "";
     };
 
-    document.querySelectorAll<HTMLElement>(".mosaic .tile, .mosaic .seeall").forEach((btn) => {
+    // The counter button sits in .mosaic-actions, beside the grid and not inside it.
+    document.querySelectorAll<HTMLElement>(".mosaic .tile, .mosaic-actions .seeall").forEach((btn) => {
       btn.addEventListener("click", () => open(Number(btn.dataset.i ?? 0)));
     });
 
