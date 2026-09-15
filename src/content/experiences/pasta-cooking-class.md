@@ -8,6 +8,7 @@ unit: person
 duration: 2
 durationLabel: 2h
 meetingPoint: Chinappi, Via Augusto Valenziani, 00187 Rome
+meetingCoords: "41.9099027,12.4987236"
 images:
   - type: video
     video: /media/pasta-cooking-class.mp4

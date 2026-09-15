@@ -10,6 +10,7 @@ durationLabel: 2h30
 maxGuests: 6
 languages: EN
 meetingPoint: In front of the Basilica of San Clemente, Via Labicana 95, 00184 Rome
+meetingCoords: "41.8891952,12.4975379"
 images:
   - type: photo
     photo: catacomb-gallery

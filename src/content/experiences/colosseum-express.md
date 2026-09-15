@@ -10,6 +10,7 @@ durationLabel: 1h
 maxGuests: 6
 languages: English
 meetingPoint: Largo Gaetana Agnesi, Piazza del Colosseo, 00184 Rome
+meetingCoords: "41.8917227,12.4913340"
 images:
   - type: photo
     photo: colosseum-arena-tiers
@@ -29,7 +30,7 @@ included:
 cancellationPolicy: Refund if cancelled at least 1 day before the event.
 bokunEmbed: |-
   <script type="text/javascript" src="https://widgets.bokun.io/assets/javascripts/apps/build/BokunWidgetsLoader.js?bookingChannelUUID=c384e702-8c33-44e5-af7b-70c076667f51" async></script>
-  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/c384e702-8c33-44e5-af7b-70c076667f51/experience/707237"></div>
+  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/c384e702-8c33-44e5-af7b-70c076667f51/experience-calendar/707237"></div>
   <noscript>Please enable javascript in your browser to book</noscript>
 ---
 

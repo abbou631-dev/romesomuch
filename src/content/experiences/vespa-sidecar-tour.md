@@ -8,6 +8,7 @@ unit: person
 duration: 3
 durationLabel: 3h
 meetingPoint: Piazza di San Pantaleo, 00186 Rome
+meetingCoords: "41.8971390,12.4726873"
 images:
   - type: video
     video: /media/vespa-sidecar-tour.mp4

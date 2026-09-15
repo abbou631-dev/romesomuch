@@ -9,6 +9,7 @@ duration: 3
 durationLabel: 3h
 languages: EN
 meetingPoint: Piazza della Repubblica, in front of the Anantara Palazzo Naiadi
+meetingCoords: "41.9026992,12.4964179"
 images:
   - type: photo
     photo: golfcart-colosseum

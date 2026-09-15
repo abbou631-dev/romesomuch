@@ -8,6 +8,7 @@ unit: person
 duration: 2.5
 durationLabel: 2h30
 meetingPoint: Lungotevere delle Armi 44, 00195 Rome
+meetingCoords: "41.9159476,12.4695069"
 images:
   - type: photo
     photo: borghese-lake

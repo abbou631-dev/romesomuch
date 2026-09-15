@@ -8,6 +8,7 @@ unit: person
 duration: 4
 durationLabel: 4h
 meetingPoint: In front of Lolita clothing store, Viale Giulio Cesare 138, 00192 Rome
+meetingCoords: "41.9120717,12.4695598"
 images:
   - type: photo
     photo: vatican-statue-gallery
@@ -28,7 +29,7 @@ included:
 cancellationPolicy: Cancellations 7 days or less before the event are charged in full.
 bokunEmbed: |-
   <script type="text/javascript" src="https://widgets.bokun.io/assets/javascripts/apps/build/BokunWidgetsLoader.js?bookingChannelUUID=c384e702-8c33-44e5-af7b-70c076667f51" async></script>
-  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/c384e702-8c33-44e5-af7b-70c076667f51/experience/901972"></div>
+  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/c384e702-8c33-44e5-af7b-70c076667f51/experience-calendar/901972"></div>
   <noscript>Please enable javascript in your browser to book</noscript>
 ---
 

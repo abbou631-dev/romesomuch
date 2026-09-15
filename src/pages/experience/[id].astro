@@ -5,6 +5,7 @@ import Base from "../../layouts/Base.astro";
 import Gallery from "../../components/Gallery.astro";
 import Rail from "../../components/Rail.astro";
 import BookingPanel from "../../components/BookingPanel.astro";
+import MeetingMap from "../../components/MeetingMap.astro";
 import { cancellationDefault, categoryName } from "../../lib/site";
 
 export const getStaticPaths = (async () => {
@@ -49,6 +50,9 @@ const related = all.filter((e) => e.data.category === d.category && e.id !== exp
           <ul class="incl">{d.included.map((i) => <li>{i}</li>)}</ul>
           <h2>Cancellation</h2>
           <p>{d.cancellationPolicy ?? cancellationDefault}</p>
+          {d.meetingCoords && d.meetingPoint && (
+            <MeetingMap coords={d.meetingCoords} address={d.meetingPoint} title={d.title} />
+          )}
         </div>
       </div>
 

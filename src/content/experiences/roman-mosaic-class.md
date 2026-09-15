@@ -8,6 +8,7 @@ unit: person
 duration: 2.5
 durationLabel: 2h30
 meetingPoint: Via Urbana 98, 00184 Rome
+meetingCoords: "41.8959550,12.4937535"
 images:
   - type: video
     video: /media/roman-mosaic-class.mp4

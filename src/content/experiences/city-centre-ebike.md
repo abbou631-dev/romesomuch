@@ -8,6 +8,7 @@ unit: person
 duration: 4
 durationLabel: 4h
 meetingPoint: Lungotevere delle Armi 44, 00195 Rome
+meetingCoords: "41.9159476,12.4695069"
 images:
   - type: photo
     photo: ebike-colosseum

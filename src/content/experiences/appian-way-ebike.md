@@ -9,6 +9,7 @@ duration: 3
 durationLabel: 3h
 languages: EN · IT · FR · ES
 meetingPoint: Via dei Cerchi 59, 00186 Rome
+meetingCoords: "41.8879895,12.4838807"
 images:
   - type: photo
     photo: appia-cyclist

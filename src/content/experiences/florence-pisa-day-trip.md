@@ -8,6 +8,7 @@ unit: person
 duration: 12
 durationLabel: Full day
 meetingPoint: Roma Termini station
+meetingCoords: "41.9005815,12.5025272"
 images:
   - type: photo
     photo: pisa-tower-piazza

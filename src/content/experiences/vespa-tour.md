@@ -9,6 +9,7 @@ duration: 1.5
 durationLabel: 90min
 languages: EN · IT · RU
 meetingPoint: Via Cavour 207, 00184 Rome
+meetingCoords: "41.8947745,12.4931693"
 images:
   - type: video
     video: /media/vespa-tour.mp4

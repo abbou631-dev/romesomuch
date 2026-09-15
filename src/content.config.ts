@@ -22,6 +22,9 @@ const experiences = defineCollection({
     maxGuests: z.number().int().positive().nullable().default(null),
     languages: z.string().nullable().default(null),
     meetingPoint: z.string().nullable().default(null),
+    // Coordinates of the meeting point, "lat,lon". Absent where the experience has
+    // no fixed spot — a hotel pickup has nothing to put on a map.
+    meetingCoords: z.string().regex(/^-?\d+\.\d+,-?\d+\.\d+$/).nullable().default(null),
     images: z.array(picture).min(1),
     included: z.array(z.string()).min(1),
     cancellationPolicy: z.string().nullable().default(null),

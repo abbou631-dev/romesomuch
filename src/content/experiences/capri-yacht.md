@@ -9,6 +9,7 @@ duration: 10
 durationLabel: Full day
 languages: EN
 meetingPoint: Roma Termini, in front of track 1
+meetingCoords: "41.9011950,12.5016713"
 images:
   - type: photo
     photo: capri-island

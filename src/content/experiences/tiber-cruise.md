@@ -9,6 +9,7 @@ duration: 1
 durationLabel: 1h
 maxGuests: 6
 meetingPoint: Ponte Regina Margherita — The Boat by Gregory's
+meetingCoords: "41.9097280,12.4723682"
 images:
   - type: photo
     photo: cruise-castel-santangelo

@@ -1,0 +1,40 @@
+---
+// Where to turn up, on a map. OpenStreetMap's own embed: no API key, no account,
+// no tracking cookies — which matters on a site that carries no consent banner —
+// and no JavaScript of ours to keep working.
+interface Props { coords: string; address: string; title: string }
+const { coords, address, title } = Astro.props;
+
+const [lat, lon] = coords.split(",").map(Number);
+
+// The embed fits the whole box into the frame, so the box has to have roughly the
+// frame's shape or the map zooms out to fit and the marker drifts off centre.
+// A degree of longitude is shorter than a degree of latitude at this latitude,
+// which is the other half of the correction.
+// The frame is wider than it is tall, but how much wider depends on the screen,
+// so 2.4 is a compromise: no width turns the map into a postage stamp, and none
+// zooms it out past the neighbourhood.
+const latPad = 0.0018; // about 200m north and south
+const lonPad = (latPad * 2.4) / Math.cos((lat * Math.PI) / 180);
+const bbox = [lon - lonPad, lat - latPad, lon + lonPad, lat + latPad].map((n) => n.toFixed(6)).join(",");
+const embed = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
+const directions = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+const larger = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`;
+---
+<section class="meet">
+  <h2>Where you meet</h2>
+  <p class="meet-addr">{address}</p>
+  <div class="meet-map">
+    <iframe
+      src={embed}
+      title={`Map showing the meeting point for ${title}: ${address}`}
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+    ></iframe>
+  </div>
+  <p class="meet-links">
+    <a href={directions} target="_blank" rel="noopener">Open in Maps</a>
+    <span aria-hidden="true">·</span>
+    <a href={larger} target="_blank" rel="noopener">Larger map</a>
+  </p>
+</section>

@@ -9,6 +9,7 @@ duration: 2
 durationLabel: 2h
 languages: EN · IT · FR · ES · PT
 meetingPoint: Piazza di Spagna, in front of Babington's Tea Room
+meetingCoords: "41.9056392,12.4823580"
 images:
   - type: photo
     photo: spanish-steps
