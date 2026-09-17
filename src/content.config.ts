@@ -25,6 +25,9 @@ const experiences = defineCollection({
     // Coordinates of the meeting point, "lat,lon". Absent where the experience has
     // no fixed spot — a hotel pickup has nothing to put on a map.
     meetingCoords: z.string().regex(/^-?\d+\.\d+,-?\d+\.\d+$/).nullable().default(null),
+    // Flags the card while an experience is worth pointing at. Set by hand, and
+    // meant to be taken off by hand — nothing stays new on its own.
+    isNew: z.boolean().default(false),
     images: z.array(picture).min(1),
     included: z.array(z.string()).min(1),
     cancellationPolicy: z.string().nullable().default(null),

@@ -196,6 +196,10 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 .price .f{font-weight:500}
 .price .v{font-weight:800;margin-inline:3px}
 .price .u{color:var(--muted);font-weight:500}
+/* Sits opposite the category so the two never collide, whatever the card width.
+   Two classes deliberately: the narrow-screen rules below re-set .tag's left, and
+   a single class would lose to them and stretch this pill across the card. */
+.tag.tag-new{left:auto;right:9px;background:var(--ink);color:#fff}
 .shotwrap{position:relative}
 /* rank numerals — decorative, top picks rail only */
 .rankcard{padding-left:28px}

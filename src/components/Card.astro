@@ -18,6 +18,7 @@ const d = exp.data;
     {rank && <span class="rank" aria-hidden="true">{rank}</span>}
     <div class="shot">
       <span class="tag">{categoryName(d.category)}</span>
+      {d.isNew && <span class="tag tag-new">New</span>}
       <Shot image={cardImage(d.images)} alt={d.title} loading={loading} />
     </div>
   </div>
