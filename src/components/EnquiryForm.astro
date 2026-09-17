@@ -4,22 +4,32 @@
 type Field = {
   name: string;
   label: string;
-  type?: "text" | "email" | "url" | "textarea";
+  type?: "text" | "email" | "url" | "textarea" | "date";
   required?: boolean;
   help?: string;
+  // Date fields only: earliest day offered, and whether weekdays are refused.
+  min?: string;
+  weekendsOnly?: boolean;
 };
 
-interface Props { kind: "contact" | "creator" | "partner"; fields: Field[]; submit: string }
-const { kind, fields, submit } = Astro.props;
+interface Props {
+  kind: "contact" | "creator" | "partner" | "booking";
+  fields: Field[];
+  submit: string;
+  // Values the visitor never types — which experience they are asking about.
+  hidden?: Record<string, string>;
+}
+const { kind, fields, submit, hidden = {} } = Astro.props;
 ---
 <form class="enq" method="post" action="/api/enquiry">
   <input type="hidden" name="kind" value={kind} />
+  {Object.entries(hidden).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
   {/* Bots fill everything in; people never see this. */}
   <p class="enq-trap" aria-hidden="true">
     <label>Leave this empty<input type="text" name="website_url" tabindex="-1" autocomplete="off" /></label>
   </p>
 
-  {fields.map(({ name, label, type = "text", required, help }) => (
+  {fields.map(({ name, label, type = "text", required, help, min, weekendsOnly }) => (
     <p class="enq-row">
       <label for={`${kind}-${name}`}>
         {label}{required && <span class="enq-req" aria-hidden="true">*</span>}
@@ -28,7 +38,14 @@ const { kind, fields, submit } = Astro.props;
       {type === "textarea" ? (
         <textarea id={`${kind}-${name}`} name={name} rows="6" required={required}></textarea>
       ) : (
-        <input id={`${kind}-${name}`} name={name} type={type} required={required} />
+        <input
+          id={`${kind}-${name}`}
+          name={name}
+          type={type}
+          required={required}
+          min={min}
+          data-weekends={weekendsOnly ? "" : undefined}
+        />
       )}
     </p>
   ))}
@@ -43,6 +60,20 @@ const { kind, fields, submit } = Astro.props;
 </form>
 
 <script>
+  // A date input cannot grey out weekdays on its own, so the field says no itself
+  // rather than letting someone ask for a Tuesday and hear about it two days later.
+  document.querySelectorAll<HTMLInputElement>("input[type=date][data-weekends]").forEach((input) => {
+    const check = () => {
+      if (!input.value) return input.setCustomValidity("");
+      // Parsed as UTC, which is what the value already is — no timezone drift.
+      const day = new Date(`${input.value}T00:00:00Z`).getUTCDay();
+      const weekend = day === 0 || day === 6;
+      input.setCustomValidity(weekend ? "" : "We run this on Saturdays and Sundays only.");
+      input.reportValidity();
+    };
+    input.addEventListener("change", check);
+  });
+
   document.querySelectorAll<HTMLFormElement>("form.enq").forEach((form) => {
     const button = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
     const msg = form.querySelector<HTMLElement>(".enq-msg")!;

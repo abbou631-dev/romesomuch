@@ -5,6 +5,14 @@
 // never in the bundle.
 
 const FORMS = {
+  booking: {
+    subject: "Booking request",
+    required: ["experience", "name", "email"],
+    fields: ["experience", "name", "email", "date", "guests", "message"],
+    // The studio runs this at weekends. The date field enforces it in the browser,
+    // which anyone can skip, so it is enforced here too.
+    weekendOnly: "date",
+  },
   contact: {
     subject: "Message from the site",
     required: ["name", "email", "message"],
@@ -23,6 +31,9 @@ const FORMS = {
 };
 
 const LABELS = {
+  experience: "Experience",
+  date: "Preferred date",
+  guests: "Guests",
   company: "Company",
   name: "Name",
   role: "Role",
@@ -85,6 +96,15 @@ export const onRequestPost = async ({ request, env }) => {
     return reply(request, 400, "That email address does not look right.");
   }
 
+  const dated = form.weekendOnly && values[form.weekendOnly];
+  if (dated) {
+    const day = new Date(`${dated}T00:00:00Z`).getUTCDay();
+    if (Number.isNaN(day)) return reply(request, 400, "That date does not look right.");
+    if (day !== 0 && day !== 6) {
+      return reply(request, 400, "We run this on Saturdays and Sundays only — please pick a weekend date.");
+    }
+  }
+
   if (!env.RESEND_API_KEY) {
     // Nothing was delivered, so never tell the sender it was.
     return reply(request, 500, "The form is not configured yet. Please email us instead.");
@@ -104,7 +124,7 @@ export const onRequestPost = async ({ request, env }) => {
       from: env.ENQUIRY_FROM ?? "RomeSoMuch site <forms@romesomuch.com>",
       to: [env.ENQUIRY_TO ?? "romesomuch@gmail.com"],
       reply_to: values.email,
-      subject: `${form.subject} — ${values.company || values.name}`,
+      subject: `${form.subject} — ${values.experience || values.company || values.name}`,
       text: `${lines.join("\n\n")}\n\nSent from the ${form.subject.toLowerCase()} form on romesomuch.com.`,
     }),
   });

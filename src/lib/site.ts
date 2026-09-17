@@ -11,6 +11,19 @@ export const legal = site.legal as unknown as Record<string, LegalDoc>;
 
 export type LegalDoc = { t: string; l: string; u: string; s: [string, string][] };
 
+// An experience books itself only when Bokun is actually wired to it: either the
+// pasted snippet carries its own channel, or a product id meets the channel from
+// the environment. Everything else takes a request instead, and the page has to
+// say so rather than promising instant confirmation.
+export const bokunChannel = (embed?: string | null) =>
+  embed?.match(/bookingChannelUUID=([\w-]+)/)?.[1] ?? import.meta.env.PUBLIC_BOKUN_CHANNEL ?? "";
+
+export const hasLiveCalendar = (d: { bokunEmbed?: string | null; bokunProductId?: string | null }) => {
+  const channel = bokunChannel(d.bokunEmbed);
+  if (!channel) return false;
+  return Boolean(d.bokunEmbed?.trim()) || Boolean(d.bokunProductId);
+};
+
 export const categoryName = (slug: string) =>
   categories.find((c) => c.slug === slug)?.name ?? slug;
 

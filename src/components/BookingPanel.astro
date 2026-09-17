@@ -1,19 +1,34 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import Bokun from "./Bokun.astro";
-import { cancellationDefault, money } from "../lib/site";
+import { cancellationDefault, hasLiveCalendar, money } from "../lib/site";
 
 interface Props { exp: CollectionEntry<"experiences"> }
 const { exp } = Astro.props;
 const d = exp.data;
+// The bar has to make the same promise the panel does, or it sends people down
+// the page expecting a calendar that is not there.
+const live = hasLiveCalendar(d);
 ---
 <aside>
-  <Bokun productId={d.bokunProductId} embed={d.bokunEmbed} price={d.price} unit={d.unit} durationLabel={d.durationLabel} policy={d.cancellationPolicy ?? cancellationDefault} />
+  <Bokun
+    productId={d.bokunProductId}
+    embed={d.bokunEmbed}
+    price={d.price}
+    unit={d.unit}
+    durationLabel={d.durationLabel}
+    policy={d.cancellationPolicy ?? cancellationDefault}
+    title={d.title}
+  />
 </aside>
 
 <div class="mbar" id="mbar">
-  <div class="p"><span>From · live availability</span><b class="tnum">{money(d.price)}</b></div>
-  <button class="btn" type="button" id="mbarCta">See calendar</button>
+  <div class="p">
+    <span>{live ? "From · live availability" : "From · on request"}</span>
+    <b class="tnum">{money(d.price)}<em>/ {d.unit}</em></b>
+    <small>{d.durationLabel} · {live ? "confirmed straight away" : "answer within 48 hours"}</small>
+  </div>
+  <button class="btn" type="button" id="mbarCta">{live ? "See calendar" : "Ask for a date"}</button>
 </div>
 
 <script>
