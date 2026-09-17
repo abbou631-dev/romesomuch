@@ -421,14 +421,16 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 .enq-msg{font-size:14px;font-weight:600;color:var(--yellow-deep)}
 .enq-msg.bad{color:#b3261e}
 .enq button[disabled]{opacity:.5}
-.mbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:none;align-items:center;justify-content:space-between;gap:14px;background:var(--ink);color:#fff;padding:12px var(--pad);padding-bottom:calc(12px + env(safe-area-inset-bottom))}
-.mbar .p{display:flex;flex-direction:column;line-height:1.15}
-.mbar .p b{font-family:var(--disp);font-size:22px;font-weight:400}
-.mbar .p span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--sage)}
-.mbar .btn{padding:13px 22px;background:var(--yellow);border-color:var(--yellow);color:#0a0a0a}
+.mbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:none;align-items:center;justify-content:space-between;gap:16px;background:var(--ink);color:#fff;padding:16px var(--pad);padding-bottom:calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px -12px rgba(10,10,10,.6)}
+.mbar .p{display:flex;flex-direction:column;gap:3px;line-height:1.1;min-width:0}
+.mbar .p b{font-family:var(--disp);font-size:30px;font-weight:400;display:flex;align-items:baseline;gap:5px}
+.mbar .p b em{font-family:var(--body);font-style:normal;font-size:13px;font-weight:600;color:var(--sage)}
+.mbar .p span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--sage)}
+.mbar .p small{font-size:11.5px;font-weight:500;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mbar .btn{flex:none;padding:17px 26px;font-size:16px;background:var(--yellow);border-color:var(--yellow);color:#0a0a0a}
 @media(max-width:960px){
  .book{position:static}
- body.has-bar{padding-bottom:84px}
+ body.has-bar{padding-bottom:120px}
  body.has-bar .mbar{display:flex}
 }
 @media(max-width:640px){
@@ -510,11 +512,13 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
  .lsec{padding:16px 0}
  .lsec h2{font-size:17px;gap:10px}
  .lsec p{font-size:13.5px;margin-top:8px}
- .mbar{padding:10px var(--pad);padding-bottom:calc(10px + env(safe-area-inset-bottom))}
- .mbar .p b{font-size:19px}
+ .mbar{padding:14px var(--pad);padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+ .mbar .p b{font-size:26px}
+ .mbar .p b em{font-size:12px}
  .mbar .p span{font-size:10px}
- .mbar .btn{padding:11px 16px}
- body.has-bar{padding-bottom:74px}
+ .mbar .p small{font-size:11px}
+ .mbar .btn{padding:15px 20px;font-size:15px}
+ body.has-bar{padding-bottom:116px}
  .fcta{padding:32px var(--pad)}
  .fcta p{font-size:14.5px;margin:12px auto 20px;max-width:32ch}
  .fcta .btn{padding:12px 22px;font-size:14px}
