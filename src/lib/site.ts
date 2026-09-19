@@ -11,6 +11,24 @@ export const legal = site.legal as unknown as Record<string, LegalDoc>;
 
 export type LegalDoc = { t: string; l: string; u: string; s: [string, string][] };
 
+// Journal dates are written the way they are read — "19 September 2026" — so
+// sorting needs them parsed. An unreadable date sorts last rather than throwing,
+// because a typo in the CMS should not take the page down.
+const MONTHS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+];
+
+export const postTime = (date: string) => {
+  const [day, month, year] = date.trim().split(/\s+/);
+  const index = MONTHS.indexOf((month ?? "").toLowerCase());
+  if (index < 0 || !Number(day) || !Number(year)) return -Infinity;
+  return Date.UTC(Number(year), index, Number(day));
+};
+
+export const newestFirst = <T extends { data: { date: string } }>(posts: T[]) =>
+  [...posts].sort((a, b) => postTime(b.data.date) - postTime(a.data.date));
+
 // An experience books itself only when Bokun is actually wired to it: either the
 // pasted snippet carries its own channel, or a product id meets the channel from
 // the environment. Everything else takes a request instead, and the page has to
