@@ -1,6 +1,7 @@
 ---
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
+import Consent from "../components/Consent.astro";
 import "../styles/global.css";
 
 interface Props { title: string; description?: string; active?: string }
@@ -24,6 +25,7 @@ const { title, description = "Tours, food and day trips in Rome, booked in a cou
     <Header active={active} />
     <main><slot /></main>
     <Footer />
+    <Consent />
     <slot name="after" />
   </body>
 </html>

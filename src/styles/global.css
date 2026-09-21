@@ -417,6 +417,22 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 .meet-links{margin-top:10px;display:flex;gap:10px;font-size:13px;font-weight:600;color:var(--muted)}
 .meet-links a{border-bottom:2px solid var(--yellow-deep);color:var(--ink-2)}
 
+/* ---------- cookie consent ---------- */
+/* Above the sticky booking bar, which is 70, so a choice can always be made. */
+.cbar{position:fixed;left:0;right:0;bottom:0;z-index:90;background:var(--ink);color:#fff;border-top:1px solid rgba(255,255,255,.14);box-shadow:0 -10px 30px -14px rgba(10,10,10,.7)}
+.cbar-in{max-width:var(--maxw);margin:0 auto;padding:16px var(--pad);padding-bottom:calc(16px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:22px}
+.cbar p{font-size:13.5px;line-height:1.55;font-weight:500;color:rgba(255,255,255,.82);max-width:74ch}
+.cbar a{color:#fff;border-bottom:2px solid var(--yellow-deep);white-space:nowrap}
+.cbar-act{display:flex;gap:10px;flex:none}
+.cbar .btn{padding:12px 22px;font-size:15px}
+.cbar .btn.ghost{color:#fff;border-color:rgba(255,255,255,.45)}
+.cbar .btn.ghost:hover{background:#fff;color:var(--ink);border-color:#fff}
+@media(max-width:820px){
+ .cbar-in{flex-direction:column;align-items:stretch;gap:14px}
+ .cbar-act{justify-content:stretch}
+ .cbar-act .btn{flex:1}
+}
+
 /* ---------- enquiry forms ---------- */
 .enq{max-width:56ch;margin-top:26px}
 .enq-trap{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}

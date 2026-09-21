@@ -1,0 +1,81 @@
+---
+import { metaPixelId } from "../lib/site";
+---
+{/* Nothing about advertising loads until someone says yes. The banner is the gate,
+    and it renders for everyone: the script below hides it again if a choice is
+    already stored, which costs one frame and keeps the page cacheable. */}
+<div class="cbar" id="cbar" hidden>
+  <div class="cbar-in">
+    <p>
+      We use cookies to run the booking calendar, and, only if you allow it, to
+      measure and advertise this site on Facebook and Instagram.
+      <a href="/legal/cookies/">Cookie policy</a>
+    </p>
+    <div class="cbar-act">
+      <button class="btn ghost" type="button" data-consent="no">Decline</button>
+      <button class="btn" type="button" data-consent="yes">Accept</button>
+    </div>
+  </div>
+</div>
+
+<script is:inline define:vars={{ pixelId: metaPixelId }}>
+  (() => {
+    const KEY = "rsm-consent";
+    const bar = document.getElementById("cbar");
+
+    // Browsers with storage switched off must still be able to refuse, so a
+    // failed read is treated as "not asked yet" rather than as consent.
+    const read = () => {
+      try {
+        return localStorage.getItem(KEY);
+      } catch {
+        return null;
+      }
+    };
+    const write = (value) => {
+      try {
+        localStorage.setItem(KEY, value);
+      } catch {
+        /* a session that cannot remember will simply ask again */
+      }
+    };
+
+    const loadPixel = () => {
+      if (!pixelId || window.fbq) return;
+      /* eslint-disable */
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+      n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+      document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      /* eslint-enable */
+      window.fbq("init", pixelId);
+      window.fbq("track", "PageView");
+    };
+
+    const show = () => {
+      bar.hidden = false;
+    };
+    const decide = (value) => {
+      write(value);
+      bar.hidden = true;
+      if (value === "yes") loadPixel();
+    };
+
+    const stored = read();
+    if (stored === "yes") loadPixel();
+    else if (stored !== "no") show();
+
+    bar.querySelectorAll("[data-consent]").forEach((button) => {
+      button.addEventListener("click", () => decide(button.dataset.consent));
+    });
+
+    // Withdrawing has to be as easy as giving, so the footer link reopens this.
+    document.querySelectorAll("[data-consent-reopen]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        show();
+      });
+    });
+  })();
+</script>

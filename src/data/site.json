@@ -39,7 +39,7 @@
     "terms": {
       "t": "Terms of Service",
       "l": "The rules that apply when you book an experience through RomeSoMuch.",
-      "u": "Last updated: 2 September 2026",
+      "u": "Last updated: 21 September 2026",
       "s": [
         [
           "Who we are",
@@ -78,7 +78,7 @@
     "privacy": {
       "t": "Privacy Policy",
       "l": "What personal data we collect when you book, why, and how long we keep it.",
-      "u": "Last updated: 2 September 2026",
+      "u": "Last updated: 21 September 2026",
       "s": [
         [
           "Data controller",
@@ -86,15 +86,15 @@
         ],
         [
           "What we collect",
-          "Booking data: name, email, phone, date, number of guests and any notes you send us. Enquiry data: if you write through the work-with-us or partnership forms, the name, contact details, links and text you choose to send. Payment data is handled by our payment provider — we never see or store card numbers. Technical data: the pages you visit on this site, in aggregate."
+          "Booking data: name, email, phone, date, number of guests and any notes you send us. Enquiry data: if you write through the work-with-us or partnership forms, the name, contact details, links and text you choose to send. Payment data is handled by our payment provider, and we never see or store card numbers. Technical data: the pages you visit on this site, in aggregate. Advertising data, only if you accept it: the fact that your browser visited this site, sent to Meta so that we can show you our experiences again on Facebook and Instagram."
         ],
         [
           "Why we use it",
-          "To confirm and run your booking (performance of a contract), to answer your messages (legitimate interest), to meet tax and accounting obligations (legal obligation), and — only with your consent — to send you occasional emails about new experiences."
+          "To confirm and run your booking (performance of a contract), to answer your messages (legitimate interest), to meet tax and accounting obligations (legal obligation), and, only with your consent, to send you occasional emails about new experiences and to advertise this site to you on Facebook and Instagram. Consent is asked for on your first visit and can be withdrawn at any time from the Cookie settings link at the foot of any page."
         ],
         [
           "Who else sees it",
-          "Only the people who need it to deliver your experience: the guide, chef or driver assigned to you, our booking system provider, our payment provider, and our accountant. We do not sell data and we do not share it for anyone else's marketing."
+          "The people who need it to deliver your experience: the guide, chef or driver assigned to you, our booking system provider, our payment provider, and our accountant. If, and only if, you accept advertising cookies, Meta Platforms Ireland also receives the fact that your browser visited this site, which is what lets us advertise to you again; Meta acts as an independent controller for that data under its own policy, and transfers outside the European Union rely on its standard contractual clauses. We never sell your data, and we share it with nobody else for their own marketing."
         ],
         [
           "How long we keep it",
@@ -109,7 +109,7 @@
     "cookies": {
       "t": "Cookie Policy",
       "l": "Which cookies this site sets, what they do, and how to refuse them.",
-      "u": "Last updated: 2 September 2026",
+      "u": "Last updated: 21 September 2026",
       "s": [
         [
           "What cookies are",
@@ -120,8 +120,8 @@
           "Always active, no consent needed. They keep your session, your language and the state of the booking form. Deleting them logs you out of an unfinished booking."
         ],
         [
-          "Analytics cookies",
-          "Used only if you accept them. They tell us which experiences people look at and where they leave the page, in aggregate. They can be refused without losing any function of the site."
+          "Advertising cookies",
+          "Set only if you accept them. We use the Meta Pixel, which tells Meta that your browser visited this site so that we can show you our experiences again on Facebook and Instagram, and so that we can see how many people who saw an advert went on to book. Refusing them costs you nothing: every part of this site, the booking calendar included, works exactly the same."
         ],
         [
           "Third-party cookies",
@@ -129,12 +129,13 @@
         ],
         [
           "Managing your choices",
-          "Use the cookie banner to accept or refuse non-essential cookies, and your browser settings to delete cookies already stored. Refusing analytics has no effect on booking."
+          "The banner that appears on your first visit lets you accept or refuse advertising cookies, and nothing of that kind loads before you choose. To change your mind later, use the Cookie settings link at the foot of any page: your choice is stored in your own browser, so clearing your browsing data resets it and the banner returns. Your browser settings will also delete cookies already stored."
         ]
       ]
     }
   },
   "cancellationDefault": "All sales are final unless otherwise noted.",
   "contactEmail": "romesomuch@gmail.com",
-  "whatsapp": "+39 351 401 4023"
+  "whatsapp": "+39 351 401 4023",
+  "metaPixelId": "1540946811405508"
 }

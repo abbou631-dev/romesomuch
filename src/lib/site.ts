@@ -7,6 +7,9 @@ export const topPicks = site.topPicks as string[];
 export const cancellationDefault = site.cancellationDefault as string;
 export const contactEmail = site.contactEmail as string;
 export const whatsapp = site.whatsapp as string;
+// A pixel id is public by nature: it ships in the page for anyone to read. It
+// lives here, not in a secret, and an empty value simply loads no pixel at all.
+export const metaPixelId = (site.metaPixelId ?? "") as string;
 export const legal = site.legal as unknown as Record<string, LegalDoc>;
 
 export type LegalDoc = { t: string; l: string; u: string; s: [string, string][] };
