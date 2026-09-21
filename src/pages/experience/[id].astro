@@ -60,6 +60,20 @@ const related = all.filter((e) => e.data.category === d.category && e.id !== exp
     </div>
   </div>
 
+  <script
+    is:inline
+    define:vars={{ id: exp.id, name: d.title, category: d.category, price: d.price }}
+  >
+    window.rsmTrack?.("ViewContent", {
+      content_type: "product",
+      content_ids: [id],
+      content_name: name,
+      content_category: category,
+      value: price,
+      currency: "EUR",
+    });
+  </script>
+
   {related.length > 0 && (
     <Rail title={`More ${categoryName(d.category)}`} items={related} href={`/experiences/${d.category}/`} tone="tone" />
   )}

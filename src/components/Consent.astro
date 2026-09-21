@@ -40,8 +40,16 @@ import { metaPixelId } from "../lib/site";
       }
     };
 
+    let granted = false;
+    // Events raised before a choice is made wait here. They are sent only if the
+    // visitor accepts while still on this page, and discarded otherwise: nothing
+    // survives a page load unsent.
+    let pending = [];
+    // Hashed identifiers for advanced matching, collected the same way.
+    let identity = null;
+
     const loadPixel = () => {
-      if (!pixelId || window.fbq) return;
+      if (!pixelId || window.fbq) return false;
       /* eslint-disable */
       !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
       n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -49,8 +57,64 @@ import { metaPixelId } from "../lib/site";
       t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
       document,'script','https://connect.facebook.net/en_US/fbevents.js');
       /* eslint-enable */
-      window.fbq("init", pixelId);
+      return true;
+    };
+
+    const start = () => {
+      if (!pixelId) return;
+      loadPixel();
+      // Advanced matching goes in at init, so it applies to every later event.
+      if (identity) window.fbq("init", pixelId, identity);
+      else window.fbq("init", pixelId);
       window.fbq("track", "PageView");
+      granted = true;
+      pending.forEach(([name, params]) => window.fbq("track", name, params));
+      pending = [];
+    };
+
+    // Hashing happens here, in the browser, so a plain address never leaves the
+    // page. Meta expects SHA-256 of the trimmed, lower-cased value.
+    const hash = async (value) => {
+      const clean = String(value ?? "").trim().toLowerCase();
+      if (!clean || !crypto?.subtle) return null;
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(clean));
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    };
+
+    // What the rest of the site calls. Both are silent without consent.
+    window.rsmTrack = (name, params) => {
+      if (!pixelId) return;
+      if (granted) window.fbq("track", name, params);
+      else pending.push([name, params]);
+    };
+
+    window.rsmIdentify = async (person) => {
+      if (!pixelId) return;
+      const [em, fn, ln] = await Promise.all([
+        hash(person.email),
+        hash(person.firstName),
+        hash(person.lastName),
+      ]);
+      const next = {};
+      if (em) next.em = em;
+      if (fn) next.fn = fn;
+      if (ln) next.ln = ln;
+      if (!Object.keys(next).length) return;
+      identity = { ...(identity ?? {}), ...next };
+      // Someone who has already consented gets the details attached from now on.
+      if (granted) window.fbq("init", pixelId, identity);
+    };
+
+    // Whatever the page reported while only the stubs existed.
+    const drain = () => {
+      const queued = window.rsmQ ?? [];
+      window.rsmQ = [];
+      queued.forEach(([kind, a, b]) => {
+        if (kind === "track") window.rsmTrack(a, b);
+        else window.rsmIdentify(a);
+      });
     };
 
     const show = () => {
@@ -59,12 +123,15 @@ import { metaPixelId } from "../lib/site";
     const decide = (value) => {
       write(value);
       bar.hidden = true;
-      if (value === "yes") loadPixel();
+      if (value === "yes") start();
+      else pending = [];
     };
 
     const stored = read();
-    if (stored === "yes") loadPixel();
+    if (stored === "yes") start();
     else if (stored !== "no") show();
+    // After start(), so an accepted visitor's queued events go straight out.
+    drain();
 
     bar.querySelectorAll("[data-consent]").forEach((button) => {
       button.addEventListener("click", () => decide(button.dataset.consent));

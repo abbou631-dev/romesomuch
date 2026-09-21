@@ -97,6 +97,20 @@ const { kind, fields, submit, hidden = {} } = Astro.props;
         const data = await res.json();
         msg.textContent = data.message;
         if (data.ok) {
+          // Only a delivered enquiry counts as a lead, and the details are
+          // hashed inside rsmIdentify before anything leaves the page.
+          const name = (form.querySelector<HTMLInputElement>("input[name=name]")?.value ?? "").trim();
+          const space = name.indexOf(" ");
+          await (window as any).rsmIdentify?.({
+            email: form.querySelector<HTMLInputElement>("input[name=email]")?.value,
+            firstName: space > 0 ? name.slice(0, space) : name,
+            lastName: space > 0 ? name.slice(space + 1) : "",
+          });
+          const kind = form.querySelector<HTMLInputElement>("input[name=kind]")?.value ?? "enquiry";
+          (window as any).rsmTrack?.("Lead", {
+            content_name: form.querySelector<HTMLInputElement>("input[name=experience]")?.value || kind,
+            content_category: kind,
+          });
           form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea").forEach((f) => {
             if (f.type !== "hidden") f.value = "";
           });

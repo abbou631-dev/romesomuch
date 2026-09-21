@@ -20,6 +20,15 @@ const { title, description = "Tours, food and day trips in Rome, booked in a cou
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     />
+    <script is:inline>
+      // The consent gate lives at the end of the body, so anything the page
+      // wants to report happens before it exists. These stubs take the calls and
+      // hold them; the gate drains the queue when it loads, and sends nothing
+      // unless the visitor has said yes.
+      window.rsmQ = [];
+      window.rsmTrack = (name, params) => window.rsmQ.push(["track", name, params]);
+      window.rsmIdentify = (person) => window.rsmQ.push(["identify", person]);
+    </script>
   </head>
   <body>
     <Header active={active} />

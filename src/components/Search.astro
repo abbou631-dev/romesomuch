@@ -199,7 +199,24 @@ const index = items.map((e) => ({
       if (item) location.href = `/experience/${item.id}/`;
     };
 
-    input.addEventListener("input", () => render(input.value));
+    // A search is worth reporting once the typing stops, and once per query:
+    // firing per keystroke would send "v", "ve", "ves" and call them searches.
+    const reported = new Set<string>();
+    let settle: number | undefined;
+    const reportSearch = (raw: string) => {
+      const query = raw.trim().toLowerCase();
+      window.clearTimeout(settle);
+      if (query.length < 3 || reported.has(query)) return;
+      settle = window.setTimeout(() => {
+        reported.add(query);
+        (window as any).rsmTrack?.("Search", { search_string: query, content_type: "product" });
+      }, 1200);
+    };
+
+    input.addEventListener("input", () => {
+      render(input.value);
+      reportSearch(input.value);
+    });
     input.addEventListener("focus", () => input.value && render(input.value));
     form.addEventListener("submit", (ev) => {
       if (!shown.length) return; // no JS answer to give: let the form fall through
