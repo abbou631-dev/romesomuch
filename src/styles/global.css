@@ -373,6 +373,9 @@ select.sort{position:absolute;inset-inline:0;top:50%;transform:translateY(-50%);
 .article .shot{aspect-ratio:16/9;border-radius:14px;margin:22px 0}
 /* Pictures written into the body of a post, as opposed to the cover above it. */
 .article p img{border-radius:14px;margin:22px 0;width:100%}
+/* A credit written on the line straight after the image lands in the same
+   paragraph, which is what makes this pair selectable. */
+.article p img+em{display:block;margin-top:-14px;font-size:12.5px;font-style:normal;font-weight:500;color:var(--muted)}
 .article h2{margin-top:38px;font-size:clamp(24px,3.4vw,34px)}
 .article h2+p img{margin-top:18px}
 .article p{color:var(--ink-2);line-height:1.75;margin-bottom:16px}
