@@ -64,6 +64,16 @@ const related = all.filter((e) => e.data.category === d.category && e.id !== exp
     is:inline
     define:vars={{ id: exp.id, name: d.title, category: d.category, price: d.price }}
   >
+    // Remembered for the rest of the session so a message sent later from the
+    // contact page still says which experience the visitor had been reading.
+    // It lives here rather than in the form, because a page with a working
+    // calendar carries no form at all.
+    try {
+      sessionStorage.setItem("rsm-last", `${name} (/experience/${id}/)`);
+    } catch {
+      /* storage switched off simply means less context in the email */
+    }
+
     window.rsmTrack?.("ViewContent", {
       content_type: "product",
       content_ids: [id],

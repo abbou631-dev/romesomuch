@@ -1,7 +1,26 @@
 ---
+import { getCollection } from "astro:content";
 import Base from "../layouts/Base.astro";
 import EnquiryForm from "../components/EnquiryForm.astro";
-import { whatsapp } from "../lib/site";
+import { categoryName, whatsapp } from "../lib/site";
+
+// A free text box asking "what is it about" gets skipped, and the message that
+// arrives could be about any of twenty one experiences. Picking from a list
+// costs the sender one tap and tells us exactly what to answer.
+const reasons = [
+  { value: "Booking an experience", label: "Booking an experience" },
+  { value: "A date that is not on the calendar", label: "A date that is not on the calendar" },
+  { value: "A private or group booking", label: "A private or group booking" },
+  { value: "An existing booking", label: "An existing booking" },
+  { value: "Something else", label: "Something else" },
+];
+
+const experiences = (await getCollection("experiences"))
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((exp) => ({
+    value: `${exp.data.title} (${categoryName(exp.data.category)})`,
+    label: exp.data.title,
+  }));
 ---
 <Base title="Contact — RomeSoMuch" description="Email or WhatsApp, answered within 48 hours.">
   <section class="band">
@@ -22,7 +41,22 @@ import { whatsapp } from "../lib/site";
           fields={[
             { name: "name", label: "Name", required: true },
             { name: "email", label: "Email", type: "email", required: true, help: "So we can answer you." },
-            { name: "topic", label: "What is it about", help: "An experience, a group, a date — or something else entirely." },
+            {
+              name: "topic",
+              label: "What is it about",
+              type: "select",
+              required: true,
+              options: reasons,
+              placeholder: "Pick the closest one",
+            },
+            {
+              name: "experience",
+              label: "Which experience",
+              type: "select",
+              options: experiences,
+              placeholder: "Not about a particular one",
+              help: "Leave this if your message is not about a specific experience.",
+            },
             { name: "message", label: "Message", type: "textarea", required: true },
           ]}
         />

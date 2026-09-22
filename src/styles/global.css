@@ -440,10 +440,13 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 .enq-row label{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
 .enq-req{color:var(--yellow-deep);margin-left:4px}
 .enq-help{font-size:13px;color:var(--muted);font-weight:500;margin-top:-2px}
-.enq input,.enq textarea{width:100%;padding:13px 14px;border:1px solid var(--edge);border-radius:10px;background:var(--paper);color:var(--ink-2);font-size:15.5px;transition:var(--dur) var(--ease)}
+.enq input,.enq textarea,.enq select{width:100%;padding:13px 14px;border:1px solid var(--edge);border-radius:10px;background:var(--paper);color:var(--ink-2);font-size:15.5px;transition:var(--dur) var(--ease)}
+/* The native arrow is hidden so the control matches the text inputs beside it,
+   and drawn back with a background chevron that follows the text colour. */
+.enq select{-webkit-appearance:none;appearance:none;padding-right:40px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) calc(50% + 1px),calc(100% - 14px) calc(50% + 1px);background-size:6px 6px,6px 6px;background-repeat:no-repeat}
 .enq textarea{resize:vertical;line-height:1.6}
-.enq input:hover,.enq textarea:hover{border-color:var(--ink)}
-.enq input:focus-visible,.enq textarea:focus-visible{outline:none;border-color:var(--yellow-deep);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
+.enq input:hover,.enq textarea:hover,.enq select:hover{border-color:var(--ink)}
+.enq input:focus-visible,.enq textarea:focus-visible,.enq select:focus-visible{outline:none;border-color:var(--yellow-deep);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
 .enq-fine{font-size:12.5px;color:var(--muted);line-height:1.55;font-weight:500;margin-bottom:18px}
 .enq-fine a{border-bottom:2px solid var(--yellow-deep)}
 .enq-actions{display:flex;flex-wrap:wrap;align-items:center;gap:16px}

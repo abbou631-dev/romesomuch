@@ -4,12 +4,16 @@
 type Field = {
   name: string;
   label: string;
-  type?: "text" | "email" | "url" | "textarea" | "date";
+  type?: "text" | "email" | "url" | "textarea" | "date" | "select";
   required?: boolean;
   help?: string;
   // Date fields only: earliest day offered, and whether weekdays are refused.
   min?: string;
   weekendsOnly?: boolean;
+  // Select fields only. A reader picks from these rather than typing, which is
+  // the difference between knowing why someone wrote and guessing.
+  options?: { value: string; label: string }[];
+  placeholder?: string;
 };
 
 interface Props {
@@ -29,7 +33,13 @@ const { kind, fields, submit, hidden = {} } = Astro.props;
     <label>Leave this empty<input type="text" name="website_url" tabindex="-1" autocomplete="off" /></label>
   </p>
 
-  {fields.map(({ name, label, type = "text", required, help, min, weekendsOnly }) => (
+  {/* Filled in by the script below: which page the form was sent from, and the
+      last experience the visitor opened. Without them a message from the contact
+      page arrives with no idea what it is about. */}
+  <input type="hidden" name="page" value="" />
+  <input type="hidden" name="lastViewed" value="" />
+
+  {fields.map(({ name, label, type = "text", required, help, min, weekendsOnly, options, placeholder }) => (
     <p class="enq-row">
       <label for={`${kind}-${name}`}>
         {label}{required && <span class="enq-req" aria-hidden="true">*</span>}
@@ -37,6 +47,11 @@ const { kind, fields, submit, hidden = {} } = Astro.props;
       {help && <span class="enq-help">{help}</span>}
       {type === "textarea" ? (
         <textarea id={`${kind}-${name}`} name={name} rows="6" required={required}></textarea>
+      ) : type === "select" ? (
+        <select id={`${kind}-${name}`} name={name} required={required}>
+          <option value="">{placeholder ?? "Choose one"}</option>
+          {(options ?? []).map((option) => <option value={option.value}>{option.label}</option>)}
+        </select>
       ) : (
         <input
           id={`${kind}-${name}`}
@@ -75,6 +90,17 @@ const { kind, fields, submit, hidden = {} } = Astro.props;
   });
 
   document.querySelectorAll<HTMLFormElement>("form.enq").forEach((form) => {
+    const page = form.querySelector<HTMLInputElement>("input[name=page]");
+    if (page) page.value = `${document.title.replace(/ . RomeSoMuch$/, "")} (${location.pathname})`;
+    const last = form.querySelector<HTMLInputElement>("input[name=lastViewed]");
+    if (last) {
+      try {
+        last.value = sessionStorage.getItem("rsm-last") ?? "";
+      } catch {
+        last.value = "";
+      }
+    }
+
     const button = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
     const msg = form.querySelector<HTMLElement>(".enq-msg")!;
     const label = button.textContent;

@@ -15,8 +15,8 @@ const FORMS = {
   },
   contact: {
     subject: "Message from the site",
-    required: ["name", "email", "message"],
-    fields: ["name", "email", "topic", "message"],
+    required: ["name", "email", "topic", "message"],
+    fields: ["topic", "experience", "name", "email", "message"],
   },
   creator: {
     subject: "Creator enquiry",
@@ -29,6 +29,11 @@ const FORMS = {
     fields: ["company", "name", "role", "email", "website", "kindOfWork", "message"],
   },
 };
+
+// Context every form carries without the sender typing it: the page the message
+// was sent from, and the last experience they had opened. Kept apart from the
+// declared fields so no form has to list them.
+const CONTEXT = ["page", "lastViewed"];
 
 const LABELS = {
   experience: "Experience",
@@ -46,6 +51,9 @@ const LABELS = {
   links: "Links",
   kindOfWork: "What they propose",
   message: "Message",
+  topic: "Reason",
+  page: "Sent from",
+  lastViewed: "Last experience they opened",
 };
 
 // Long enough for anything a person writes, short enough that nobody can post a novel.
@@ -110,9 +118,21 @@ export const onRequestPost = async ({ request, env }) => {
     return reply(request, 500, "The form is not configured yet. Please email us instead.");
   }
 
-  const lines = form.fields
+  for (const field of CONTEXT) values[field] = clean(body[field]);
+
+  // The answer comes first, then who wrote it, then where they were. Reading the
+  // subject line alone should already say what this is about.
+  const lines = [...form.fields, ...CONTEXT]
     .filter((field) => values[field])
     .map((field) => `${LABELS[field]}: ${values[field]}`);
+
+  // What this message is about, in order of how specific it is.
+  const about =
+    values.experience ||
+    values.topic ||
+    values.company ||
+    values.kindOfWork ||
+    values.name;
 
   const sent = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -124,8 +144,8 @@ export const onRequestPost = async ({ request, env }) => {
       from: env.ENQUIRY_FROM ?? "RomeSoMuch site <forms@romesomuch.com>",
       to: [env.ENQUIRY_TO ?? "romesomuch@gmail.com"],
       reply_to: values.email,
-      subject: `${form.subject} — ${values.experience || values.company || values.name}`,
-      text: `${lines.join("\n\n")}\n\nSent from the ${form.subject.toLowerCase()} form on romesomuch.com.`,
+      subject: `${form.subject}: ${about}`,
+      text: `${lines.join("\n\n")}\n\nReply to this email and it goes straight back to ${values.name || "the sender"}.`,
     }),
   });
 
