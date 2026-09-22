@@ -18,8 +18,10 @@ const reasons = [
 const experiences = (await getCollection("experiences"))
   .sort((a, b) => a.data.order - b.data.order)
   .map((exp) => ({
-    value: `${exp.data.title} (${categoryName(exp.data.category)})`,
-    label: exp.data.title,
+    // The value is what lands in the subject line, so it stays clean; the
+    // category rides along in the label, where it helps the sender find the row.
+    value: exp.data.title,
+    label: `${exp.data.title} (${categoryName(exp.data.category)})`,
   }));
 ---
 <Base title="Contact — RomeSoMuch" description="Email or WhatsApp, answered within 48 hours.">
