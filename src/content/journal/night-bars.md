@@ -18,11 +18,11 @@ These seven rooms are that second kind. They are not secret, and we are not pret
 
 An intimate and sophisticated cocktail bar with a late night atmosphere, offering cocktails and Champagne in a more secluded setting.
 
-It sits on Piazza di San Martino ai Monti, in Monti, which is the part of this list you could most plausibly stumble into rather than plan. The room is very dark: mauve velvet, polished concrete, a wall of backlit bottles doing most of the illuminating.
+It sits just off Piazza di San Martino ai Monti, with its own door on Via Giovanni Lanza next to Drink Kong, in Monti, which is the part of this list you could most plausibly stumble into rather than plan. The room is very dark: mauve velvet, polished concrete, a wall of backlit bottles doing most of the illuminating.
 
 Sit at the counter if you want to watch the work, or take one of the curved sofas if you have come to talk. There is a Champagne cabinet lit like a vitrine, which tells you what sort of evening is on offer.
 
-**Piazza di San Martino ai Monti 8, 00184 Rome**
+**Via Giovanni Lanza 111, 00184 Rome** · [Website](https://nitekong.com/)
 
 ## Ocra at Corinthia Rome
 
@@ -33,9 +33,9 @@ An elegant cocktail bar inside Corinthia Rome, with warm lighting, signature coc
 
 The ceiling does the talking here, a canopy of gold hexagonal tiles that throws the light back down amber, so everyone in the room looks like the best version of themselves. It is the busiest of the seven, and the most sociable, a bar that hums rather than whispers.
 
-Via Piemonte is a quiet street a few minutes off Via Veneto, which is exactly the right distance from Via Veneto.
+The hotel occupies the old Bank of Italy building on Piazza del Parlamento, a few minutes from the Pantheon and just off Via del Corso, so it is an easy last stop after dinner anywhere in the centre.
 
-**Via Piemonte 62, 00187 Rome**
+**Piazza del Parlamento 18, 00186 Rome** · [Website](https://www.corinthia.com/en-gb/rome/restaurants-bars/)
 
 ## Nomos Bar
 
@@ -48,7 +48,7 @@ The opposite mood to the two above: pale, quiet, almost monastic. Stone tables, 
 
 Rione Regola is the tangle of lanes between Campo de' Fiori and the river, so this is the one to keep in mind if you have eaten in the centro storico and want to stay there.
 
-**Via di San Paolo alla Regola 3, 00186 Rome**
+**Via di San Paolo alla Regola 3, 00186 Rome** · [Website](https://nomoshotel.com/)
 
 ## Bar della Musa at Palazzo Talìa
 
@@ -61,7 +61,7 @@ A sixteenth century vault, painted and still showing its age, sitting directly a
 
 It is off Largo del Nazareno, a minute from the Trevi Fountain and a world away from the crowd around it.
 
-**Largo del Nazareno 25, 00187 Rome**
+**Largo del Nazareno 25, 00187 Rome** · [Website](https://www.palazzotalia.com/en/drink-and-dine/il-bar-della-musa.html)
 
 ## Akwa Bar at Anantara Palazzo Naiadi
 
@@ -72,7 +72,7 @@ A sophisticated bar in the spectacular lobby of Anantara Palazzo Naiadi, surroun
 
 A curved bar set under a domed rotunda, fluted columns, inlaid marble underfoot. It is the grandest of the seven by some margin, and the easiest to find: Piazza della Repubblica, five minutes from Termini, which makes it a good first or last drink of a trip.
 
-**Piazza della Repubblica 48, 00185 Rome**
+**Piazza della Repubblica 48-49, 00185 Rome** · [Website](https://www.anantara.com/en/palazzo-naiadi-rome/dining/akwa-bar)
 
 ## Bar La Minerva
 
@@ -83,7 +83,7 @@ The lobby bar of Orient Express La Minerva, and a winter garden rather than a ba
 
 It is the softest room on this list, all cream boucle and cane chairs, and the one where a drink most easily turns into two hours. Two minutes from the Pantheon, which means you can walk out of it straight into one of the best squares in Rome at midnight, when it is finally empty.
 
-**Piazza della Minerva 69, 00186 Rome**
+**Piazza della Minerva 69, 00186 Rome** · [Website](https://www.orient-express.com/en/hotel/europe/italy/rome/la-minerva)
 
 ## Le Jardin
 
@@ -94,7 +94,7 @@ The only one of the seven that is outdoors, and the reason to keep it for a warm
 
 Come for the last hour of light rather than full dark. The garden does something to the noise of the city that has to be experienced rather than described.
 
-**Via del Babuino 9, 00187 Rome**
+**Via del Babuino 9, 00187 Rome** · [Website](https://www.roccofortehotels.com/hotels-and-resorts/hotel-de-russie/dining/le-jardin/)
 
 ## Going out, practically
 
