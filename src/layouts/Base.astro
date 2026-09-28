@@ -4,8 +4,15 @@ import Footer from "../components/Footer.astro";
 import Consent from "../components/Consent.astro";
 import "../styles/global.css";
 
-interface Props { title: string; description?: string; active?: string }
-const { title, description = "Tours, food and day trips in Rome, booked in a couple of taps.", active = "" } = Astro.props;
+interface Props {
+  title: string;
+  description?: string;
+  active?: string;
+  // Link-only pages: kept out of search engines, and shown without the site's
+  // navigation so the page has one way forward.
+  unlisted?: boolean;
+}
+const { title, description = "Tours, food and day trips in Rome, booked in a couple of taps.", active = "", unlisted = false } = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
@@ -14,6 +21,7 @@ const { title, description = "Tours, food and day trips in Rome, booked in a cou
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {unlisted && <meta name="robots" content="noindex, nofollow" />}
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -34,9 +42,9 @@ const { title, description = "Tours, food and day trips in Rome, booked in a cou
     </script>
   </head>
   <body>
-    <Header active={active} />
+    {!unlisted && <Header active={active} />}
     <main><slot /></main>
-    <Footer />
+    {!unlisted && <Footer />}
     <Consent />
     <slot name="after" />
   </body>

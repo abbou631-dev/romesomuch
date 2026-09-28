@@ -23,6 +23,11 @@ const FORMS = {
     required: ["name", "email", "message"],
     fields: ["name", "email", "city", "platforms", "reach", "links", "message"],
   },
+  itinerary: {
+    subject: "Bespoke itinerary",
+    required: ["name", "email", "dates", "message"],
+    fields: ["name", "email", "dates", "travellers", "pace", "budget", "message"],
+  },
   partner: {
     subject: "Partnership enquiry",
     required: ["company", "name", "email", "message"],
@@ -50,6 +55,10 @@ const LABELS = {
   reach: "Audience",
   links: "Links",
   kindOfWork: "What they propose",
+  dates: "Dates in Rome",
+  travellers: "Who is travelling",
+  pace: "Pace",
+  budget: "Daily budget",
   message: "Message",
   topic: "Reason",
   page: "Sent from",
