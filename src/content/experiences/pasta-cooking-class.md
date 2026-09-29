@@ -11,8 +11,8 @@ meetingPoint: Cantiere Gastronomico, Via della Cordonata 4, 00187 Rome
 meetingCoords: "41.8970093,12.4867366"
 images:
   - type: video
-    video: /media/pasta-cooking-class.mp4
-    videoPoster: /media/pasta-cooking-class-poster.jpg
+    video: /media/pasta-cantiere.mp4
+    videoPoster: /media/pasta-cantiere-poster.jpg
   - type: photo
     photo: pasta-eggs-flour
   - type: photo
