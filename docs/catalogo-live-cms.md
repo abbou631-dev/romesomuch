@@ -207,7 +207,7 @@ Altri dati dal widget: cut-off 1 giorno, difficoltà "Easy".
 | Duration label | 2h |
 | Max guests | *da confermare* |
 | Languages | *da confermare* |
-| Meeting point | Chinappi Seafood Restaurant, Via Augusto Valenziani, 00187 Roma |
+| Meeting point | Cantiere Gastronomico, Via della Cordonata 4, 00187 Roma (aggiornato il 29 settembre 2026) |
 | Cancellation policy | Refund if cancelled at least 2 days before the event |
 | Bokun product ID | 1020096 |
 
