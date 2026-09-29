@@ -14,15 +14,17 @@ images:
     video: /media/pasta-cooking-class.mp4
     videoPoster: /media/pasta-cooking-class-poster.jpg
   - type: photo
-    photo: pasta-class-rolling
+    photo: pasta-tagliatelle-parmesan
   - type: photo
-    photo: pasta-tagliatelle-guests
+    photo: pasta-eggs-flour
   - type: photo
-    photo: pasta-ravioli-plate
+    photo: pasta-chef-pepper
   - type: photo
-    photo: pasta-dinner-guests
+    photo: pasta-class-counter
   - type: photo
-    photo: pasta-chef
+    photo: pasta-guests-dancing
+  - type: photo
+    photo: pasta-tagliatelle-pan
 included:
   - Light welcome aperitivo
   - Hands-on pasta class
