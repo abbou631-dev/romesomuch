@@ -14,17 +14,17 @@ images:
     video: /media/pasta-cantiere.mp4
     videoPoster: /media/pasta-cantiere-poster.jpg
   - type: photo
-    photo: pasta-eggs-flour
-  - type: photo
     photo: pasta-chef-pepper
+  - type: photo
+    photo: pasta-tagliatelle-parmesan
   - type: photo
     photo: pasta-class-counter
   - type: photo
-    photo: pasta-guests-dancing
-  - type: photo
     photo: pasta-tagliatelle-pan
   - type: photo
-    photo: pasta-tagliatelle-parmesan
+    photo: pasta-guests-dancing
+  - type: photo
+    photo: pasta-eggs-flour
 included:
   - Light welcome aperitivo
   - Hands-on pasta class
