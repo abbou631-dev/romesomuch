@@ -1,0 +1,89 @@
+---
+import Base from "../layouts/Base.astro";
+import EnquiryForm from "../components/EnquiryForm.astro";
+
+// Arrival can't be in the past; the form checks the rest server-side.
+const today = new Date().toISOString().slice(0, 10);
+---
+<Base
+  title="Become a RomeSoMuch UGC"
+  description="Coming to Rome and making content? Apply to try our experiences and restaurants for free in exchange for content."
+>
+  <section class="band">
+    <div class="wrap"><p class="crumb">Home / UGC</p><h1>Become a RomeSoMuch UGC</h1></div>
+  </section>
+  <div class="wrap">
+    <article class="legal">
+      <section class="lsec">
+        <h2><span class="tnum">01</span> How it works</h2>
+        <p>
+          Coming to Rome and making content? Tell us when you are here and what you make. If we are a
+          good fit, you try our experiences and restaurants for free, in exchange for content we can
+          use. We propose what to try, with dates and what we would like in return, before anything
+          is booked.
+        </p>
+        <p>We answer within 48 hours, usually the same day.</p>
+      </section>
+      <section class="lsec">
+        <h2><span class="tnum">02</span> Apply</h2>
+        <EnquiryForm
+          kind="ugc"
+          submit="Send application"
+          fields={[
+            { name: "name", label: "Name", required: true },
+            { name: "email", label: "Email", type: "email", required: true },
+            { name: "country", label: "Where you are from" },
+            { name: "instagram", label: "Instagram", required: true, help: "Your handle or profile link." },
+            { name: "tiktok", label: "TikTok", help: "Your handle or profile link, if you have one." },
+            { name: "portfolio", label: "Your best work", required: true, help: "Links to two or three videos you are proudest of, or a portfolio." },
+            {
+              name: "followers", label: "Followers on your biggest account", type: "select", required: true,
+              options: [
+                { value: "Under 5k", label: "Under 5k" },
+                { value: "5k–20k", label: "5k–20k" },
+                { value: "20k–100k", label: "20k–100k" },
+                { value: "100k–500k", label: "100k–500k" },
+                { value: "Over 500k", label: "Over 500k" },
+              ],
+            },
+            { name: "views", label: "Average views per video", help: "Roughly, from your last ten." },
+            {
+              name: "niche", label: "What you mostly make", type: "select", required: true,
+              options: [
+                { value: "Travel", label: "Travel" },
+                { value: "Food", label: "Food" },
+                { value: "Lifestyle", label: "Lifestyle" },
+                { value: "Couples", label: "Couples" },
+                { value: "Family", label: "Family" },
+                { value: "Luxury", label: "Luxury" },
+                { value: "Other", label: "Other" },
+              ],
+            },
+            { name: "languages", label: "Languages you film in" },
+            { name: "arrival", label: "Arriving in Rome", type: "date", required: true, min: today },
+            { name: "departure", label: "Leaving Rome", type: "date", required: true, min: today },
+            { name: "group", label: "Who is coming", help: "Just you, a partner, a friend who films — and how many." },
+            {
+              name: "interest", label: "What you would like to try", type: "select", required: true,
+              options: [
+                { value: "Experiences", label: "Experiences" },
+                { value: "Restaurants", label: "Restaurants" },
+                { value: "Both", label: "Both" },
+              ],
+            },
+            { name: "deliverables", label: "What you would deliver", help: "For example: one reel and three stories per experience, plus raw footage." },
+            {
+              name: "rights", label: "Can we use your content?", type: "select", required: true,
+              options: [
+                { value: "Reposts on RomeSoMuch channels", label: "Reposts on our channels" },
+                { value: "Reposts and paid ads", label: "Reposts and paid ads" },
+                { value: "To discuss", label: "Let's discuss" },
+              ],
+            },
+            { name: "message", label: "Anything else", type: "textarea" },
+          ]}
+        />
+      </section>
+    </article>
+  </div>
+</Base>

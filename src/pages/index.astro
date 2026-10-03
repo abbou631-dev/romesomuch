@@ -1,90 +1,76 @@
 ---
+// Home: full-screen video with two doors (Experiences, Journal),
+// then Top picks, then every Journal article.
 import { getCollection } from "astro:content";
-import { Image } from "astro:assets";
 import Base from "../layouts/Base.astro";
-import { photo } from "../lib/images";
-import Rail from "../components/Rail.astro";
 import Card from "../components/Card.astro";
 import JournalCard from "../components/JournalCard.astro";
-import HowItWorks from "../components/HowItWorks.astro";
-import Search from "../components/Search.astro";
-import { categoryName, liveCategories, newestFirst, topPicks } from "../lib/site";
+import { newestFirst, topPicks } from "../lib/site";
 
 const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
 const picks = topPicks.map((id) => all.find((e) => e.id === id)!).filter(Boolean);
-const categories = liveCategories(all.map((e) => e.data.category));
 const posts = newestFirst(await getCollection("journal"));
-const tones = ["", "tone", "", "tone-2"] as const;
-const quick = [
-  { label: "All experiences", href: "/experiences/all/" },
-  { label: categoryName("tours"), href: "/experiences/tours/" },
-  { label: categoryName("food"), href: "/experiences/food/" },
-  { label: categoryName("activities"), href: "/experiences/activities/" },
-];
 ---
 <Base title="RomeSoMuch — experiences in Rome">
-  <section class="hero">
-    <Image
-      src={photo("colosseum-hero")}
-      alt="The Colosseum from the street on a clear afternoon"
-      widths={[640, 1024, 1600, 2000, 2800]}
-      sizes="100vw"
-      loading="eager"
-    />
-    <div class="hero-in wrap">
-      <p class="kicker">This month</p>
-      <h1>Live it, love it</h1>
-      <Search items={all} />
+  <section class="vhero">
+    <video autoplay muted loop playsinline preload="auto" poster="/media/vespa-tour-poster.jpg" aria-hidden="true">
+      <source src="/media/vespa-tour.mp4" type="video/mp4" />
+    </video>
+    <div class="vhero-in wrap">
+      <p class="trust">Trusted by 1.5 million people online</p>
+      <h1>When in <br class="m" />Rome, <br />do it <br class="m" />so much</h1>
+      <nav class="doors" aria-label="Start here">
+        <a href="/experiences/all/">Experiences <span aria-hidden="true">→</span></a>
+        <a href="/journal/">Journal <span aria-hidden="true">→</span></a>
+      </nav>
     </div>
+    <a class="vhero-down" href="#top-picks" aria-label="Scroll to top picks">↓</a>
   </section>
 
-  <section class="picks">
+  <section class="picks picks-body" id="top-picks">
     <div class="wrap">
       <div class="picks-head">
-        <div>
-          <h2>Top picks in <span class="hl">Rome</span></h2>
-        </div>
+        <h2 class="sec-title">Top picks in <span class="hl">Rome</span></h2>
         <a class="see" href="/experiences/all/">See all {all.length}</a>
       </div>
-    </div>
-  </section>
-
-  <div class="qfbar">
-    <div class="wrap">
-      <div class="qf">{quick.map((q) => <a href={q.href}>{q.label}</a>)}</div>
-    </div>
-  </div>
-
-  <section class="picks picks-body">
-    <div class="wrap">
       <div class="track">{picks.map((exp, i) => <Card exp={exp} rank={i + 1} loading={i < 3 ? "eager" : "lazy"} />)}</div>
     </div>
   </section>
 
-  <div id="categories">
-    {categories.filter((c) => c.slug !== "all").map((c, i) => (
-      <Rail
-        title={c.name}
-        sub={c.blurb}
-        href={`/experiences/${c.slug}/`}
-        items={all.filter((e) => e.data.category === c.slug)}
-        tone={tones[i] ?? ""}
-      />
-    ))}
-  </div>
-
-  <HowItWorks />
-
-  <section class="rail tone">
+  <section class="rail">
     <div class="wrap">
       <div class="rail-head">
-        <div>
-          <h2>From the Journal</h2>
-          <p class="sub">Where to eat, what is on this month, and how to spend three days here without queueing.</p>
-        </div>
+        <h2 class="sec-title">From the Journal</h2>
         <a class="see" href="/journal/">All articles</a>
       </div>
       <div class="grid">{posts.map((post) => <JournalCard post={post} />)}</div>
     </div>
   </section>
 </Base>
+
+<style>
+  .vhero{position:relative;height:calc(100svh - var(--header-h));min-height:440px;display:flex;align-items:center;justify-content:center;text-align:center;background:#0a0a0a;overflow:hidden}
+  .vhero video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .vhero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,10,.35),rgba(10,10,10,.55))}
+  .vhero-in{position:relative;z-index:2}
+  .vhero h1 br.m{display:none}
+  .vhero h1{color:#fff;font-size:clamp(44px,8vw,104px);line-height:.95}
+  .trust{margin:0 0 16px;color:#fff;font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;opacity:.85}
+  .doors{display:flex;gap:clamp(28px,4vw,48px);justify-content:center;margin-top:30px}
+  .doors a{display:inline-flex;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.5);color:#fff;font-size:15px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;transition:var(--dur) var(--ease)}
+  .doors a span{transition:transform var(--dur) var(--ease)}
+  .doors a:hover{border-color:var(--yellow)}
+  .doors a:hover span{transform:translateX(4px)}
+  .vhero-down{position:absolute;z-index:2;bottom:22px;left:50%;transform:translateX(-50%);color:#fff;font-size:24px;line-height:1;opacity:.8}
+  .picks-body{padding-top:clamp(28px,4vw,54px);scroll-margin-top:var(--header-h)}
+  .picks-head{margin-bottom:clamp(16px,2vw,24px)}
+  /* Both section titles share one size at every width. */
+  h2.sec-title{font-size:clamp(30px,4.2vw,54px)}
+  @media(max-width:480px){
+    .trust{font-size:10.5px;letter-spacing:.14em}
+    .vhero h1{font-size:21vw;line-height:.88}
+    .vhero h1 br.m{display:inline}
+    h2.sec-title{font-size:34px}
+  }
+  @media(prefers-reduced-motion:reduce){.vhero video{display:none}.vhero{background:#0a0a0a url(/media/vespa-tour-poster.jpg) center/cover}}
+</style>

@@ -28,6 +28,31 @@ const FORMS = {
     required: ["name", "email", "dates", "message"],
     fields: ["name", "email", "dates", "travellers", "pace", "budget", "message"],
   },
+  ugc: {
+    subject: "UGC application",
+    required: ["name", "email", "instagram", "portfolio", "followers", "niche", "arrival", "departure", "interest", "rights"],
+    fields: [
+      "name", "email", "country", "instagram", "tiktok", "portfolio", "followers", "views", "niche",
+      "languages", "arrival", "departure", "group", "interest", "deliverables", "rights", "message",
+    ],
+    // Arrival and departure must be real dates, in that order.
+    stay: ["arrival", "departure"],
+    // Each application also becomes a row in the Notion database
+    // "RomeSoMuch — UGC applications", where the team sets its Status.
+    notion: {
+      database: "51ca3303d8cf4966860fef42cc7f6702",
+      title: "name",
+      email: "email",
+      text: {
+        country: "From", instagram: "Instagram", tiktok: "TikTok", portfolio: "Best work",
+        views: "Average views", languages: "Languages", group: "Who is coming",
+        deliverables: "Would deliver", message: "Message",
+      },
+      select: { followers: "Followers", niche: "Niche", interest: "Wants to try", rights: "Usage rights" },
+      range: { property: "In Rome", from: "arrival", to: "departure" },
+      status: { property: "Status", value: "New" },
+    },
+  },
   partner: {
     subject: "Partnership enquiry",
     required: ["company", "name", "email", "message"],
@@ -59,6 +84,20 @@ const LABELS = {
   travellers: "Who is travelling",
   pace: "Pace",
   budget: "Daily budget",
+  country: "From",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  portfolio: "Best work",
+  followers: "Followers",
+  views: "Average views",
+  niche: "Niche",
+  languages: "Languages",
+  arrival: "Arriving",
+  departure: "Leaving",
+  group: "Who is coming",
+  interest: "Wants to try",
+  deliverables: "Would deliver",
+  rights: "Usage rights",
   message: "Message",
   topic: "Reason",
   page: "Sent from",
@@ -71,6 +110,37 @@ const LIMIT = 4000;
 const clean = (value) => String(value ?? "").trim().slice(0, LIMIT);
 
 const looksLikeEmail = (value) => /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(value);
+
+// Notion caps a single text run at 2000 characters; LIMIT allows 4000.
+const richText = (value) =>
+  (value.match(/[\s\S]{1,2000}/g) ?? []).map((content) => ({ type: "text", text: { content } }));
+
+// Turns a submission into a Notion page in the form's database. Returns whether it landed.
+const saveToNotion = async (map, values, token) => {
+  const properties = {
+    Name: { title: richText(values[map.title]) },
+    Email: { email: values[map.email] },
+    [map.status.property]: { select: { name: map.status.value } },
+    [map.range.property]: { date: { start: values[map.range.from], end: values[map.range.to] || null } },
+  };
+  for (const [field, property] of Object.entries(map.text)) {
+    if (values[field]) properties[property] = { rich_text: richText(values[field]) };
+  }
+  for (const [field, property] of Object.entries(map.select)) {
+    if (values[field]) properties[property] = { select: { name: values[field] } };
+  }
+  const saved = await fetch("https://api.notion.com/v1/pages", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Notion-Version": "2022-06-28",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ parent: { database_id: map.database }, properties }),
+  });
+  if (!saved.ok) console.log("notion rejected the enquiry", saved.status, await saved.text());
+  return saved.ok;
+};
 
 const reply = (request, status, message) => {
   // With JavaScript the page reads the JSON; without it, the browser lands here
@@ -122,7 +192,14 @@ export const onRequestPost = async ({ request, env }) => {
     }
   }
 
-  if (!env.RESEND_API_KEY) {
+  if (form.stay) {
+    const [from, to] = form.stay.map((field) => Date.parse(`${values[field]}T00:00:00Z`));
+    if (Number.isNaN(from) || Number.isNaN(to)) return reply(request, 400, "Those dates do not look right.");
+    if (to < from) return reply(request, 400, "The day you leave Rome comes before the day you arrive.");
+  }
+
+  const notionToken = form.notion && env.NOTION_TOKEN;
+  if (!env.RESEND_API_KEY && !notionToken) {
     // Nothing was delivered, so never tell the sender it was.
     return reply(request, 500, "The form is not configured yet. Please email us instead.");
   }
@@ -141,25 +218,34 @@ export const onRequestPost = async ({ request, env }) => {
     values.topic ||
     values.company ||
     values.kindOfWork ||
+    (values.instagram && `${values.name} (${values.instagram})`) ||
     values.name;
 
-  const sent = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: env.ENQUIRY_FROM ?? "RomeSoMuch site <forms@romesomuch.com>",
-      to: [env.ENQUIRY_TO ?? "romesomuch@gmail.com"],
-      reply_to: values.email,
-      subject: `${form.subject}: ${about}`,
-      text: `${lines.join("\n\n")}\n\nReply to this email and it goes straight back to ${values.name || "the sender"}.`,
-    }),
-  });
+  // Either destination is enough: the row and the email each carry the whole
+  // application, so one failing alone loses nothing.
+  const saved = notionToken ? await saveToNotion(form.notion, values, notionToken) : false;
 
-  if (!sent.ok) {
-    console.log("resend rejected the enquiry", sent.status, await sent.text());
+  let mailed = false;
+  if (env.RESEND_API_KEY) {
+    const sent = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.ENQUIRY_FROM ?? "RomeSoMuch site <forms@romesomuch.com>",
+        to: [env.ENQUIRY_TO ?? "romesomuch@gmail.com"],
+        reply_to: values.email,
+        subject: `${form.subject}: ${about}`,
+        text: `${lines.join("\n\n")}\n\nReply to this email and it goes straight back to ${values.name || "the sender"}.`,
+      }),
+    });
+    if (!sent.ok) console.log("resend rejected the enquiry", sent.status, await sent.text());
+    mailed = sent.ok;
+  }
+
+  if (!saved && !mailed) {
     return reply(request, 502, "We could not send that just now. Please email us instead.");
   }
 
