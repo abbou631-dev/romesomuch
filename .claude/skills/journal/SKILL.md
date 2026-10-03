@@ -35,9 +35,20 @@ Do **not** take images from Google Images, other creators, photographers or stoc
 
 A reverse image search (Google Lens) is fine to find **who owns** a frame used in the post, so it can be credited or asked for, not to fetch a copy.
 
+**Every image in an article is landscape 16:9**, the same shape as the cover at the top of the page (`.article .shot`, `aspect-ratio:16/9`). Crop the file itself with PIL: full width, height `width × 9/16`, the crop window placed so the **subject sits in the middle** — look at the photo first (a contact sheet with the crop box drawn on it) and move the window up or down rather than taking the dead centre blindly; a dish with a topping needs the topping in frame. Keep the downloaded original until the crop is checked, and never upscale it (`sips -Z` enlarges smaller files: resize only when wider than 1800px).
+
 Images go in `src/assets/experiences/<name>.jpeg` and are referenced from the article as `../../assets/experiences/<name>.jpeg` with descriptive alt text.
 
-## 5. Preview, then publish on approval
+## 5. Instagram story in Canva
+
+Every article gets a new page in the Canva design **"STORIES BLOG"** (`DAHW88kFYDw`, link https://canva.link/bodi31g2nw3n3jd). Same format as the existing pages, only the photo and the headline change. Never make a separate copy of the design.
+
+1. `merge-designs` with `modify_existing_design` on `DAHW88kFYDw`: `insert_pages` from the same design, source = the last page, after the last page. This duplicates the format.
+2. Import the cover photo with `upload-asset-from-url`. It needs a public URL that answers 200 directly: an Instagram `/p/<code>/media/?size=l` link redirects, so resolve it first with `curl -sL -o /dev/null -w '%{url_effective}'`; once the article is live, its image on romesomuch.com works too.
+3. Open a transaction on the new page, `update_fill` the full-bleed photo rectangle and `find_and_replace_text` the headline with the article title over three lines, as on the other pages.
+4. Show the thumbnail; commit once the user approves, and give the design link.
+
+## 6. Preview, then publish on approval
 
 1. Run `npm run dev`, screenshot the article and the Journal card at ~390px and ~1200px, and open the article in Chrome.
 2. Report: the article URL, the sources used for each fact, each image's source and credit, and anything left out.
