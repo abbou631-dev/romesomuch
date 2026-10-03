@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": ["/_astro/*", "/media/*", "/favicon.ico", "/favicon-32.png", "/favicon-192.png", "/apple-touch-icon.png"]
+}

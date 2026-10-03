@@ -13,6 +13,23 @@ interface Props {
   unlisted?: boolean;
 }
 const { title, description = "Tours, food and day trips in Rome, booked in a couple of taps.", active = "", unlisted = false } = Astro.props;
+
+// Every page names its one address on the bare domain, so the www copy never
+// counts as a second site.
+const canonical = new URL(Astro.url.pathname, Astro.site);
+
+// The home tells search engines the site's name and logo; Google uses them
+// next to the result.
+const identity = Astro.url.pathname === "/" && JSON.stringify([
+  { "@context": "https://schema.org", "@type": "WebSite", name: "RomeSoMuch", url: Astro.site },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "RomeSoMuch",
+    url: Astro.site,
+    logo: new URL("/favicon-192.png", Astro.site),
+  },
+]);
 ---
 <!doctype html>
 <html lang="en">
@@ -22,9 +39,12 @@ const { title, description = "Tours, food and day trips in Rome, booked in a cou
     <title>{title}</title>
     <meta name="description" content={description} />
     {unlisted && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192" />
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {identity && <script type="application/ld+json" set:html={identity} />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
