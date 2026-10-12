@@ -6,11 +6,10 @@
 // Offer structure after Hormozi (promise, cost of the alternative, the stack,
 // risk reversal, limited capacity, objections, one repeated action), laid out in
 // the light, comparison-led style of hirewinning.com.
-import { Image } from "astro:assets";
 import Base from "../layouts/Base.astro";
 import EnquiryForm from "../components/EnquiryForm.astro";
 import Shot from "../components/Shot.astro";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo.svg";
 
 // DRAFT: price, turnaround and guarantee are proposals until the owner confirms them.
 const PRICE = "€149";
@@ -109,7 +108,7 @@ const Arrow = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" strok
 >
   <div class="bs">
     <nav class="bs-nav wrap">
-      <a href="/" class="bs-logo"><Image src={logo} alt="RomeSoMuch" width={140} densities={[1, 2]} loading="eager" /></a>
+      <a href="/" class="bs-logo"><img src={logo.src} alt="RomeSoMuch" width={140} height={Math.round(140 * logo.height / logo.width)} loading="eager" /></a>
       <div class="bs-links">
         <a href="#inside">What you get</a>
         <a href="#compare">Compare</a>

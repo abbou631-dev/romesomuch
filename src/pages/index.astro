@@ -13,8 +13,8 @@ const posts = newestFirst(await getCollection("journal"));
 ---
 <Base title="RomeSoMuch — experiences in Rome">
   <section class="vhero">
-    <video autoplay muted loop playsinline preload="auto" poster="/media/vespa-tour-poster.jpg" aria-hidden="true">
-      <source src="/media/vespa-tour.mp4" type="video/mp4" />
+    <video autoplay muted loop playsinline preload="auto" poster="/media/home-hero-poster.jpg" aria-hidden="true">
+      <source src="/media/home-hero.mp4" type="video/mp4" />
     </video>
     <div class="vhero-in wrap">
       <p class="trust">Trusted by 1.5 million people online</p>
@@ -24,13 +24,13 @@ const posts = newestFirst(await getCollection("journal"));
         <a href="/journal/">Journal <span aria-hidden="true">→</span></a>
       </nav>
     </div>
-    <a class="vhero-down" href="#top-picks" aria-label="Scroll to top picks">↓</a>
+    <a class="vhero-down" href="#top-picks" aria-label="Scroll to top activities">↓</a>
   </section>
 
   <section class="picks picks-body" id="top-picks">
     <div class="wrap">
       <div class="picks-head">
-        <h2 class="sec-title">Top picks in <span class="hl">Rome</span></h2>
+        <h2 class="sec-title">Top activities in <span class="hl">Rome</span></h2>
         <a class="see" href="/experiences/all/">See all {all.length}</a>
       </div>
       <div class="track">{picks.map((exp, i) => <Card exp={exp} rank={i + 1} loading={i < 3 ? "eager" : "lazy"} />)}</div>
@@ -72,5 +72,5 @@ const posts = newestFirst(await getCollection("journal"));
     .vhero h1 br.m{display:inline}
     h2.sec-title{font-size:34px}
   }
-  @media(prefers-reduced-motion:reduce){.vhero video{display:none}.vhero{background:#0a0a0a url(/media/vespa-tour-poster.jpg) center/cover}}
+  @media(prefers-reduced-motion:reduce){.vhero video{display:none}.vhero{background:#0a0a0a url(/media/home-hero-poster.jpg) center/cover}}
 </style>

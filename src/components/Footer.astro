@@ -1,6 +1,5 @@
 ---
-import { Image } from "astro:assets";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo.svg";
 ---
 <footer>
   <div class="fcta wrap">
@@ -11,7 +10,7 @@ import logo from "../assets/logo.png";
   <div class="wrap">
     <div class="fgrid">
       <div class="fcol">
-        <Image src={logo} alt="RomeSoMuch" width={200} densities={[1, 2]} />
+        <img src={logo.src} alt="RomeSoMuch" width={200} height={Math.round(200 * logo.height / logo.width)} />
         <p style="font-size:13px;color:var(--muted);margin-top:12px;max-width:32ch;font-weight:500">
           Experiences, tours and day trips in Rome, run by people who live here.
         </p>

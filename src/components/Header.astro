@@ -1,7 +1,6 @@
 ---
-import { Image } from "astro:assets";
 import { getCollection } from "astro:content";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo.svg";
 import Search from "./Search.astro";
 import { liveCategories } from "../lib/site";
 
@@ -12,7 +11,7 @@ const categories = liveCategories(all.map((e) => e.data.category));
 ---
 <header class="site">
   <div class="bar">
-    <a class="logo" href="/"><Image src={logo} alt="RomeSoMuch" width={220} densities={[1, 2]} loading="eager" /></a>
+    <a class="logo" href="/"><img src={logo.src} alt="RomeSoMuch" width={220} height={Math.round(220 * logo.height / logo.width)} loading="eager" /></a>
     <div class="navstrip">
       <div class="catwrap" id="cat-wrap">
         <button class="catbtn" type="button" id="cat-toggle" aria-expanded="false" aria-controls="cat-list">
