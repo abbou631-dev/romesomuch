@@ -338,7 +338,7 @@ async function reportsView() {
       <td class="num">~${num(Math.round(r.month.views / 5000))}</td>
       <td>${r.people.length ? r.people.map((p: Row) => esc(p.name || p.email)).join(", ") : '<span class="mute">nessuno con accesso</span>'}</td>
       <td>${r.sent_at ? badge("pagato", `Inviato ${day(r.sent_at.slice(0, 10))}`) : r.people.length ? badge("da_pagare", "Da inviare") : '<span class="mute">—</span>'}</td>
-      <td class="row-actions"><button class="link" data-preview="${r.id}">Anteprima</button>${r.people.length ? `<button class="btn small${r.sent_at ? "" : " primary"}" data-send="${r.id}">${r.sent_at ? "Rimanda" : "Manda"}</button>` : ""}</td></tr>`;
+      <td class="row-actions"><button class="link" data-preview="${r.id}">Anteprima</button><button class="link" data-copy-report="${r.id}">Copia per WhatsApp</button>${r.people.length ? `<button class="btn small${r.sent_at ? "" : " primary"}" data-send="${r.id}">${r.sent_at ? "Rimanda" : "Manda"}</button>` : ""}</td></tr>`;
   });
   view.innerHTML = `${head("Report mensili", `<label class="inline">Mese <input type="month" data-report-month value="${reportMonth}" /></label>${due.length ? `<button class="btn primary" data-send-all>Manda a tutti (${due.length})</button>` : ""}`,
       "Un'email per ogni persona con accesso all'area clienti, con i numeri del mese. Non parte nulla finché non premi Manda.")}
@@ -352,9 +352,22 @@ function previewReport(id: number) {
   dialog.innerHTML = `<div class="sheet"><header><h2>Anteprima</h2><button type="button" class="link" data-close aria-label="Chiudi">✕</button></header>
     <div class="fields"><p><small class="mute">A: ${r.people.map((p: Row) => esc(p.email)).join(", ") || "nessuno"}</small><br /><strong>${esc(r.subject)}</strong></p>
     <pre class="mail">${esc(r.preview)}</pre></div>
-    <footer><button type="button" class="btn" data-close>Chiudi</button></footer></div>`;
+    <footer><button type="button" class="btn" data-copy-report="${r.id}">Copia per WhatsApp</button><button type="button" class="btn" data-close>Chiudi</button></footer></div>`;
   dialog.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => dialog.close()));
+  dialog.querySelector("[data-copy-report]")!.addEventListener("click", () => copyReport(r.id));
   dialog.showModal();
+}
+
+// The recap as a chat message, for a WhatsApp group or a client without area access.
+async function copyReport(id: number) {
+  const r = reports.find((x) => x.id === id);
+  if (!r) return;
+  try {
+    await navigator.clipboard.writeText(r.whatsapp);
+    say("Report copiato: incollalo su WhatsApp");
+  } catch {
+    prompt("Copia il report:", r.whatsapp);
+  }
 }
 
 async function sendReports(ids: number[]) {
@@ -421,6 +434,8 @@ view.addEventListener("click", (event) => {
     });
   } else if (d.pay) {
     act(() => api(`charges/${d.pay}`, { method: "PATCH", data: { paid_at: d.paid === "1" ? null : today() } }), d.paid === "1" ? "Segnato da pagare" : "Segnato pagato");
+  } else if (d.copyReport) {
+    copyReport(Number(d.copyReport));
   } else if (d.preview) {
     previewReport(Number(d.preview));
   } else if (d.send) {

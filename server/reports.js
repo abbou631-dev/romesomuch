@@ -50,13 +50,15 @@ const change = (now, before) => {
   return pct ? ` (${pct > 0 ? "+" : ""}${pct}% sul mese prima)` : " (come il mese prima)";
 };
 
-// The email text for one person of one client.
-export function reportText(r, person, origin) {
+// The email text for one person of one client. With `whatsapp`, the same
+// recap for a chat: no name in the greeting, headings in *bold*.
+export function reportText(r, person, origin, { whatsapp = false } = {}) {
   const m = r.month;
+  const bold = (text) => (whatsapp ? `*${text}*` : text);
   const lines = [
-    `Ciao${person?.name ? ` ${person.name.split(" ")[0]}` : ""},`,
+    whatsapp ? "Ciao!" : `Ciao${person?.name ? ` ${person.name.split(" ")[0]}` : ""},`,
     "",
-    `ecco come sono andati i video di ${r.name} a ${monthName(r.period)}:`,
+    bold(`Ecco come sono andati i video di ${r.name} a ${monthName(r.period)}:`),
     "",
     `• Video pubblicati: ${m.videos}`,
     `• Visualizzazioni: ${count.format(m.views)}${change(m.views, r.before.views)}`,
@@ -65,7 +67,7 @@ export function reportText(r, person, origin) {
     `• Possibili nuovi clienti: circa ${count.format(Math.round(m.views / VIEWS_PER_CUSTOMER))} (stima: in media 1 ogni ${count.format(VIEWS_PER_CUSTOMER)} visualizzazioni)`,
   ];
   if (r.videos.length) {
-    lines.push("", "I video del mese:");
+    lines.push("", bold("I video del mese:"));
     for (const v of r.videos) lines.push(`– ${v.title || "Video"} · ${count.format(v.views ?? 0)} visualizzazioni · ${v.url}`);
   }
   const pack = [r.videos_total ? `${r.done} di ${r.videos_total} video pubblicati` : "", r.end_date ? `contratto fino al ${dayName(r.end_date)}` : ""]

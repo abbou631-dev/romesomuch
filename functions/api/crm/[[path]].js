@@ -320,7 +320,10 @@ async function api(request, env, path) {
   if (table === "reports" && method === "GET") {
     const period = isMonth(url.searchParams.get("month")) ? url.searchParams.get("month") : addMonths(today().slice(0, 7), -1);
     const list = await reportList(env, period);
-    return json(list.map((r) => ({ ...r, subject: reportSubject(r), preview: reportText(r, r.people[0], url.origin) })));
+    return json(list.map((r) => ({
+      ...r, subject: reportSubject(r), preview: reportText(r, r.people[0], url.origin),
+      whatsapp: reportText(r, null, url.origin, { whatsapp: true }),
+    })));
   }
   if (table === "reports" && method === "POST") {
     const body = await request.json();
