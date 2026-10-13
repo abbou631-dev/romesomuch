@@ -2,10 +2,11 @@
 // opens it; the pages under /crm are gated by functions/crm/_middleware.js.
 
 import {
-  Invalid, json, redirect, today, lastDayOf, isMonth, values, guarded, sameOrigin,
+  Invalid, json, redirect, today, lastDayOf, isMonth, addMonths, values, guarded, sameOrigin,
   sign, verify, setCookie, same, throttled, failed, succeeded,
 } from "../../../server/common.js";
 import { randomToken, sendLinks } from "../../../server/access.js";
+import { reportList, reportText, reportSubject, sendReport } from "../../../server/reports.js";
 import { STAFF_COOKIE, VIEW_COOKIE, staffSignedIn } from "../../../server/sessions.js";
 import { connections, refresh, tiktokAuthorizeUrl, tiktokExchange } from "../../../server/platforms.js";
 import { upload, download, removeFiles } from "../../../server/files.js";
@@ -269,6 +270,12 @@ async function summary(env, url) {
   return json({
     today: now, month, clients: clients.results, unpaid: unpaid.results, recent: recent.results.map(withClients),
     totals: totals.results[0], requests: requests.results,
+    // Last month's recaps not sent yet, for clients someone can receive them.
+    reportsDue: (await db.prepare(
+      `SELECT count(*) AS n FROM clients c WHERE c.status = 'attivo'
+         AND EXISTS (SELECT 1 FROM client_users WHERE client_id = c.id AND status = 'approvato')
+         AND NOT EXISTS (SELECT 1 FROM monthly_reports WHERE client_id = c.id AND period = ?)`,
+    ).bind(addMonths(now.slice(0, 7), -1)).first()).n,
     trend: trend.results, connections: await connections(env),
   });
 }
@@ -309,6 +316,17 @@ async function api(request, env, path) {
   if (table === "files" && id && method === "GET") return download(env, id);
   if (table === "documents" && !id && method === "POST") return upload(env, request);
   if (table === "users") return people(request, env, url, id, action);
+  // Monthly recaps: the list with a preview, then one send per client.
+  if (table === "reports" && method === "GET") {
+    const period = isMonth(url.searchParams.get("month")) ? url.searchParams.get("month") : addMonths(today().slice(0, 7), -1);
+    const list = await reportList(env, period);
+    return json(list.map((r) => ({ ...r, subject: reportSubject(r), preview: reportText(r, r.people[0], url.origin) })));
+  }
+  if (table === "reports" && method === "POST") {
+    const body = await request.json();
+    if (!isMonth(body.month)) throw new Invalid("Mese non valido.");
+    return json(await sendReport(env, url.origin, Number(body.client_id), body.month));
+  }
   if (table === "clients" && id && action === "invite" && method === "POST") return newInvite(env, id);
   // "Vedi come cliente": the client area, as this client sees it, for 2 hours.
   if (table === "clients" && id && action === "view" && method === "POST") {

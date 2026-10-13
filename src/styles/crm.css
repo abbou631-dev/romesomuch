@@ -360,3 +360,4 @@ body.portal td:first-child { white-space: nowrap; }
 .panel-head.gap { margin: 20px 0 4px; }
 .panel h3 { font-size: 13px; margin: 0; }
 .requests { border-color: var(--amber); }
+.mail { white-space: pre-wrap; font: 13px/1.55 var(--font); background: var(--wash); padding: 14px 16px; border-radius: 8px; margin: 0; }

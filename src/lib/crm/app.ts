@@ -167,6 +167,7 @@ async function dashboard() {
   view.innerHTML = `
     ${head("Visibilità costante", `${monthPicker(selected)}${add("videos", "+ Video")}`, `Panoramica di ${esc(month(selected))}`)}
     ${connected ? "" : `<p class="note warn">Nessuna piattaforma collegata: le metriche vanno inserite a mano. <a href="#/collegamenti">Collega Instagram, Facebook e TikTok →</a></p>`}
+    ${s.reportsDue ? `<p class="note warn">I report di ${esc(month(addMonths(thisMonth(), -1)))} non sono ancora partiti per ${s.reportsDue} ${s.reportsDue === 1 ? "cliente" : "clienti"}. <a href="#/report">Controllali e mandali →</a></p>` : ""}
     ${s.requests.length ? `<section class="panel requests"><h2>Richieste d'accesso all'area clienti</h2><ul class="list">${s.requests.map((u: Row) => `<li>
       <div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)} · per ${clientLink(u.client_id)} · ${day(u.requested_at)}</small></div>
       <div class="end">${userActions(u)}</div></li>`).join("")}</ul></section>` : ""}
@@ -315,6 +316,60 @@ async function connectionsView() {
     </div>`;
 }
 
+// Monthly recap emails: a preview of each client's email, then nothing goes
+// out until the agency presses Manda. One request per client keeps each send
+// small and shows progress.
+let reportMonth = addMonths(thisMonth(), -1);
+let reports: Row[] = [];
+async function reportsView() {
+  // The reminder email links here with ?mese=YYYY-MM.
+  const asked = new URLSearchParams(location.hash.split("?")[1] ?? "").get("mese");
+  if (asked && /^\d{4}-\d{2}$/.test(asked)) {
+    reportMonth = asked;
+    history.replaceState(null, "", "#/report");
+  }
+  reports = await api<Row[]>(`reports?month=${reportMonth}`);
+  const due = reports.filter((r) => !r.sent_at && r.people.length);
+  const rows = reports.map((r) => {
+    const change = r.before.views ? Math.round(((r.month.views - r.before.views) / r.before.views) * 100) : null;
+    return `<tr><td><a href="#/cliente/${r.id}"><strong>${esc(r.name)}</strong></a></td>
+      <td class="num">${r.month.videos}</td>
+      <td class="num">${num(r.month.views)}${change === null ? "" : ` <small class="${change >= 0 ? "pos" : "neg"}">${change > 0 ? "+" : ""}${change}%</small>`}</td>
+      <td class="num">~${num(Math.round(r.month.views / 5000))}</td>
+      <td>${r.people.length ? r.people.map((p: Row) => esc(p.name || p.email)).join(", ") : '<span class="mute">nessuno con accesso</span>'}</td>
+      <td>${r.sent_at ? badge("pagato", `Inviato ${day(r.sent_at.slice(0, 10))}`) : r.people.length ? badge("da_pagare", "Da inviare") : '<span class="mute">—</span>'}</td>
+      <td class="row-actions"><button class="link" data-preview="${r.id}">Anteprima</button>${r.people.length ? `<button class="btn small${r.sent_at ? "" : " primary"}" data-send="${r.id}">${r.sent_at ? "Rimanda" : "Manda"}</button>` : ""}</td></tr>`;
+  });
+  view.innerHTML = `${head("Report mensili", `<label class="inline">Mese <input type="month" data-report-month value="${reportMonth}" /></label>${due.length ? `<button class="btn primary" data-send-all>Manda a tutti (${due.length})</button>` : ""}`,
+      "Un'email per ogni persona con accesso all'area clienti, con i numeri del mese. Non parte nulla finché non premi Manda.")}
+    <section class="panel">${table(["Cliente", "Video", "Visualizzazioni", "Possibili clienti", "Destinatari", "Stato", ""], rows, "Nessun cliente attivo.")}</section>`;
+}
+
+function previewReport(id: number) {
+  const r = reports.find((x) => x.id === id);
+  if (!r) return;
+  const dialog = document.getElementById("dialog") as HTMLDialogElement;
+  dialog.innerHTML = `<div class="sheet"><header><h2>Anteprima</h2><button type="button" class="link" data-close aria-label="Chiudi">✕</button></header>
+    <div class="fields"><p><small class="mute">A: ${r.people.map((p: Row) => esc(p.email)).join(", ") || "nessuno"}</small><br /><strong>${esc(r.subject)}</strong></p>
+    <pre class="mail">${esc(r.preview)}</pre></div>
+    <footer><button type="button" class="btn" data-close>Chiudi</button></footer></div>`;
+  dialog.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => dialog.close()));
+  dialog.showModal();
+}
+
+async function sendReports(ids: number[]) {
+  let mails = 0;
+  let expected = 0;
+  for (const [i, id] of ids.entries()) {
+    say(`Invio ${i + 1} di ${ids.length}…`);
+    const result = await api(`reports`, { method: "POST", data: { client_id: id, month: reportMonth } });
+    mails += result.sent;
+    expected += result.of ?? 0;
+  }
+  if (mails < expected) throw new Error(`Inviate ${mails} email su ${expected}: le altre non sono partite, riprova.`);
+  return `${mails} email inviate per ${month(reportMonth)}`;
+}
+
 // ---- routing and events ------------------------------------------------------------
 
 async function render() {
@@ -330,6 +385,7 @@ async function render() {
     else if (route === "video") await videosView();
     else if (route === "pagamenti") await paymentsView();
     else if (route === "collegamenti") await connectionsView();
+    else if (route === "report") await reportsView();
     else await dashboard();
   } catch (error) {
     view.innerHTML = `<p class="empty">Impossibile caricare: ${esc((error as Error).message)}</p>`;
@@ -365,6 +421,17 @@ view.addEventListener("click", (event) => {
     });
   } else if (d.pay) {
     act(() => api(`charges/${d.pay}`, { method: "PATCH", data: { paid_at: d.paid === "1" ? null : today() } }), d.paid === "1" ? "Segnato da pagare" : "Segnato pagato");
+  } else if (d.preview) {
+    previewReport(Number(d.preview));
+  } else if (d.send) {
+    const r = reports.find((x) => x.id === Number(d.send));
+    if (!r || !confirm(`Mandare il report di ${month(reportMonth)} a ${r.people.length} ${r.people.length === 1 ? "persona" : "persone"} di ${r.name}?`)) return;
+    act(() => sendReports([r.id]), "");
+  } else if ("sendAll" in d) {
+    const due = reports.filter((r) => !r.sent_at && r.people.length);
+    const people = due.reduce((t, r) => t + r.people.length, 0);
+    if (!confirm(`Mandare il report di ${month(reportMonth)} a ${people} persone di ${due.length} clienti?`)) return;
+    act(() => sendReports(due.map((r) => r.id)), "");
   } else if (d.approve) {
     act(() => api(`users/${d.approve}/approve`, { method: "POST", data: {} }), "Approvato: gli abbiamo mandato l'email per entrare");
   } else if (d.reject) {
@@ -408,6 +475,7 @@ view.addEventListener("click", (event) => {
 view.addEventListener("change", (event) => {
   const el = event.target as HTMLInputElement | HTMLSelectElement;
   if ("month" in el.dataset && el.value) { selected = el.value; render(); }
+  else if ("reportMonth" in el.dataset && el.value) { reportMonth = el.value; render(); }
   else if ("videoClient" in el.dataset) { videoClient = el.value; render(); }
   else if ("payState" in el.dataset) { payState = el.value; render(); }
 });
