@@ -150,6 +150,18 @@ let selected = thisMonth();
 
 // ---- views -------------------------------------------------------------------
 
+// Reminders on the Panoramica can be closed. The choice is remembered in this
+// browser; the report reminder is keyed by month, so the next one shows again.
+const DISMISSED = "crm-dismissed";
+const dismissed = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(DISMISSED) ?? "[]"); } catch { return []; }
+};
+const dismiss = (key: string) => {
+  try { localStorage.setItem(DISMISSED, JSON.stringify([...new Set([...dismissed(), key])])); } catch { /* not remembered */ }
+};
+const notice = (key: string, html: string) => dismissed().includes(key) ? ""
+  : `<p class="note warn closable"><span>${html}</span><button type="button" class="close" data-dismiss="${esc(key)}" aria-label="Chiudi avviso">✕</button></p>`;
+
 async function dashboard() {
   const s = await api(`summary?month=${selected}`);
   const active = s.clients.filter((c: Row) => c.status === "attivo");
@@ -169,8 +181,8 @@ async function dashboard() {
 
   view.innerHTML = `
     ${head("Visibilità costante", `${monthPicker(selected)}${add("videos", "+ Video")}`, `Panoramica di ${esc(month(selected))}`)}
-    ${connected ? "" : `<p class="note warn">Nessuna piattaforma collegata: le metriche vanno inserite a mano. <a href="#/collegamenti">Collega Instagram, Facebook e TikTok →</a></p>`}
-    ${s.reportsDue ? `<p class="note warn">I report di ${esc(month(addMonths(thisMonth(), -1)))} non sono ancora partiti per ${s.reportsDue} ${s.reportsDue === 1 ? "cliente" : "clienti"}. <a href="#/report">Controllali e mandali →</a></p>` : ""}
+    ${connected ? "" : notice("piattaforme", `Nessuna piattaforma collegata: le metriche vanno inserite a mano. <a href="#/collegamenti">Collega Instagram, Facebook e TikTok →</a>`)}
+    ${s.reportsDue ? notice(`report:${addMonths(thisMonth(), -1)}`, `I report di ${esc(month(addMonths(thisMonth(), -1)))} non sono ancora partiti per ${s.reportsDue} ${s.reportsDue === 1 ? "cliente" : "clienti"}. <a href="#/report">Controllali e mandali →</a>`) : ""}
     ${s.requests.length ? `<section class="panel requests"><h2>Richieste d'accesso all'area clienti</h2><ul class="list">${s.requests.map((u: Row) => `<li>
       <div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)} · per ${clientLink(u.client_id)} · ${day(u.requested_at)}</small></div>
       <div class="end">${userActions(u)}</div></li>`).join("")}</ul></section>` : ""}
@@ -496,6 +508,9 @@ view.addEventListener("click", (event) => {
     });
   } else if (d.pay) {
     act(() => api(`charges/${d.pay}`, { method: "PATCH", data: { paid_at: d.paid === "1" ? null : today() } }), d.paid === "1" ? "Segnato da pagare" : "Segnato pagato");
+  } else if (d.dismiss) {
+    dismiss(d.dismiss);
+    el.closest(".note")?.remove();
   } else if ("addMember" in d) {
     addMember();
   } else if (d.removeMember) {
