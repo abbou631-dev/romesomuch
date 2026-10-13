@@ -2,4 +2,4 @@
 import { staffSignedIn } from "../../server/sessions.js";
 import { gate } from "../../server/gate.js";
 
-export const onRequest = (context) => gate(context, "/crm/login", (request, env) => staffSignedIn(request, env));
+export const onRequest = (context) => gate(context, ["/crm/login"], (request, env) => staffSignedIn(request, env));
