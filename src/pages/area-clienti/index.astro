@@ -7,14 +7,9 @@ import logo from "../../assets/logo.svg";
 <Shell title="Area clienti · RomeSoMuch" bodyClass="portal">
   <header class="portal-bar">
     <div class="who"><img class="logo" src={logo.src} alt="RomeSoMuch" /><span id="who"></span></div>
-    <div class="end">
-      <button type="button" class="link" id="change">Cambia password</button>
-      <form method="post" action="/api/portal/logout"><button type="submit" class="link">Esci</button></form>
-    </div>
+    <form method="post" action="/api/portal/logout"><button type="submit" class="link">Esci</button></form>
   </header>
   <main id="view" aria-live="polite"></main>
-  <dialog id="dialog"></dialog>
-  <div id="toast" role="status"></div>
   <script>
     import { start } from "../../lib/crm/portal";
     start();

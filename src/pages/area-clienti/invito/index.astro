@@ -1,0 +1,57 @@
+---
+// The venue's private invite link lands here (?t=…): name and email, then the
+// agency approves. Already approved emails get their sign-in link at once.
+import Shell from "../../../components/private/Shell.astro";
+import logo from "../../../assets/logo.svg";
+---
+<Shell title="Invito · Area clienti RomeSoMuch" bodyClass="login">
+  <form method="post" action="/api/portal/request" class="login-box" id="form" hidden>
+    <img class="logo" src={logo.src} alt="RomeSoMuch" />
+    <h1>Area clienti</h1>
+    <p><strong id="venue"></strong></p>
+    <p class="mute">Qui trovi i video che pubblichiamo per il tuo locale, le metriche, i documenti e le previsioni. Scrivi nome ed email: il team ti dà l'accesso e ti arriva un'email per entrare.</p>
+    <input type="hidden" name="t" id="token" />
+    <label>Nome<input type="text" name="name" autocomplete="name" required autofocus /></label>
+    <label>Email<input type="email" name="email" autocomplete="email" required /></label>
+    <p class="login-error" id="error" role="alert" hidden></p>
+    <button type="submit" class="btn primary">Chiedi accesso</button>
+  </form>
+  <div class="login-box" id="done" hidden>
+    <img class="logo" src={logo.src} alt="RomeSoMuch" />
+    <h1 id="done-title"></h1>
+    <p id="done-text"></p>
+  </div>
+  <script>
+    const query = new URLSearchParams(location.search);
+    const token = query.get("t") ?? "";
+    const result = query.get("r");
+    const done = (title: string, text: string) => {
+      document.getElementById("done-title")!.textContent = title;
+      document.getElementById("done-text")!.textContent = text;
+      document.getElementById("done")!.hidden = false;
+    };
+    const answers: Record<string, [string, string]> = {
+      inviata: ["Richiesta inviata", "Il team RomeSoMuch la vede adesso. Appena approvata ti arriva un'email con il link per entrare."],
+      approvato: ["Hai già accesso", "Ti abbiamo mandato un'email con il link per entrare (vale 30 minuti). Guarda anche nello spam."],
+      link: ["Link non valido", "Questo link d'invito non è più attivo. Chiedine uno nuovo al team RomeSoMuch."],
+    };
+    if (result && answers[result]) {
+      done(...answers[result]);
+    } else {
+      fetch(`/api/portal/invite?t=${encodeURIComponent(token)}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then(({ name }) => {
+          document.getElementById("venue")!.textContent = name;
+          (document.getElementById("token") as HTMLInputElement).value = token;
+          document.getElementById("form")!.hidden = false;
+          const errors: Record<string, string> = { dati: "Scrivi nome ed email validi.", troppi: "Troppe richieste. Riprova tra 15 minuti." };
+          if (result && errors[result]) {
+            const box = document.getElementById("error")!;
+            box.textContent = errors[result];
+            box.hidden = false;
+          }
+        })
+        .catch(() => done(...answers.link));
+    }
+  </script>
+</Shell>

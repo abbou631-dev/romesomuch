@@ -25,7 +25,6 @@ export const addMonths = (period, n) => {
 
 const encoder = new TextEncoder();
 const hex = (buffer) => [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
-const unhex = (text) => new Uint8Array(text.match(/../g).map((h) => parseInt(h, 16)));
 
 export const hmac = async (secret, text) => {
   const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -35,22 +34,6 @@ export const hmac = async (secret, text) => {
 export const same = async (a, b) => {
   const [x, y] = await Promise.all([a, b].map((s) => crypto.subtle.digest("SHA-256", encoder.encode(String(s)))));
   return crypto.subtle.timingSafeEqual(x, y);
-};
-
-// Client passwords: PBKDF2-SHA256, 100,000 rounds (the Workers maximum).
-const ROUNDS = 100000;
-const derive = async (password, salt, rounds) => {
-  const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations: rounds }, key, 256));
-};
-export const hashPassword = async (password) => {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  return `pbkdf2$${ROUNDS}$${hex(salt)}$${await derive(password, salt, ROUNDS)}`;
-};
-export const checkPassword = async (password, stored) => {
-  const [scheme, rounds, salt, hash] = String(stored ?? "").split("$");
-  if (scheme !== "pbkdf2" || !hash) return false;
-  return same(await derive(password, unhex(salt), Number(rounds)), hash);
 };
 
 // ---- sessions ----------------------------------------------------------------

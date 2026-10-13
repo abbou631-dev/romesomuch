@@ -1,4 +1,39 @@
 ---
-import Login from "../../../components/private/Login.astro";
+// Client sign-in without passwords: the email, then a link in the inbox.
+import Shell from "../../../components/private/Shell.astro";
+import logo from "../../../assets/logo.svg";
 ---
-<Login title="Area clienti · RomeSoMuch" action="/api/portal/login" heading="Area clienti" email forgot="/area-clienti/password-dimenticata/" />
+<Shell title="Area clienti · RomeSoMuch" bodyClass="login">
+  <form method="post" action="/api/portal/login" class="login-box" id="form">
+    <img class="logo" src={logo.src} alt="RomeSoMuch" />
+    <h1>Area clienti</h1>
+    <p class="mute">Scrivi la tua email: ti mandiamo un link per entrare. Niente password.</p>
+    <label>Email<input type="email" name="email" autocomplete="email" required autofocus /></label>
+    <p class="login-error" id="error" role="alert" hidden></p>
+    <button type="submit" class="btn primary">Mandami il link</button>
+  </form>
+  <div class="login-box" id="sent" hidden>
+    <img class="logo" src={logo.src} alt="RomeSoMuch" />
+    <h1>Controlla la tua email</h1>
+    <p>Se la tua email ha accesso, ti abbiamo appena mandato il link per entrare (vale 30 minuti). Guarda anche nello spam.</p>
+    <p class="mute">Non hai ancora accesso? Chiedi al team RomeSoMuch il link d'invito del tuo locale.</p>
+    <a class="link" href="/area-clienti/login/">Usa un'altra email</a>
+  </div>
+  <script>
+    const query = new URLSearchParams(location.search);
+    if (query.get("inviata")) {
+      document.getElementById("form")!.hidden = true;
+      document.getElementById("sent")!.hidden = false;
+    }
+    const messages: Record<string, string> = {
+      troppi: "Troppe richieste. Riprova tra 15 minuti.",
+      scaduto: "Il link è scaduto o non è valido. Chiedine uno nuovo qui sotto.",
+    };
+    const code = query.get("e");
+    const box = document.getElementById("error")!;
+    if (code && messages[code]) {
+      box.textContent = messages[code];
+      box.hidden = false;
+    }
+  </script>
+</Shell>

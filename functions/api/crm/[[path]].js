@@ -3,8 +3,9 @@
 
 import {
   Invalid, json, redirect, today, lastDayOf, isMonth, values, guarded, sameOrigin,
-  sign, verify, setCookie, same, throttled, failed, succeeded, hashPassword,
+  sign, verify, setCookie, same, throttled, failed, succeeded,
 } from "../../../server/common.js";
+import { randomToken, sendLinks } from "../../../server/access.js";
 import { STAFF_COOKIE, VIEW_COOKIE, staffSignedIn } from "../../../server/sessions.js";
 import { connections, refresh, tiktokAuthorizeUrl, tiktokExchange } from "../../../server/platforms.js";
 import { upload, download, removeFiles } from "../../../server/files.js";
@@ -31,11 +32,12 @@ const ORDER = {
   videos: "published_on DESC, id DESC",
   documents: "doc_date IS NULL, doc_date DESC, uploaded_at DESC",
 };
-// The password hash never leaves the server; the CRM only learns whether
-// the client can log in.
+// Clients come with who can open their area: approved people and pending requests.
 const SELECT = {
   clients: `SELECT id, name, contact, email, phone, instagram, tiktok, vat, fee, videos_per_month, videos_total, billing_day,
-    start_date, end_date, status, notes, created_at, password IS NOT NULL AS has_access FROM clients`,
+    start_date, end_date, status, notes, created_at, invite_token,
+    (SELECT count(*) FROM client_users WHERE client_id = clients.id AND status = 'approvato') AS people,
+    (SELECT count(*) FROM client_users WHERE client_id = clients.id AND status = 'in_attesa') AS pending FROM clients`,
   documents: "SELECT * FROM documents",
   charges: "SELECT * FROM charges",
   // The clients a video features, as a JSON array (see withClients).
@@ -140,15 +142,64 @@ async function remove(env, table, id) {
   return json({ ok: true });
 }
 
-// Sets (or, with an empty password, revokes) a client's area access.
-async function setAccess(env, id, body) {
-  const password = String(body?.password ?? "");
-  if (password && password.length < 8) throw new Invalid("La password deve avere almeno 8 caratteri.");
-  const client = await env.CRM_DB.prepare("SELECT email FROM clients WHERE id = ?").bind(id).first();
-  if (!client) return json({ error: "Non trovato." }, 404);
-  if (password && !client.email) throw new Invalid("Prima inserisci l'email del cliente: è il suo nome utente.");
-  await env.CRM_DB.prepare("UPDATE clients SET password = ? WHERE id = ?").bind(password ? await hashPassword(password) : null, id).run();
-  return json({ ok: true, has_access: Boolean(password) });
+// ---- people with access to the client area ------------------------------------
+
+// Approving (or adding) someone emails them a sign-in link valid a week.
+const welcome = async (env, origin, userId) => {
+  const user = await env.CRM_DB.prepare(
+    "SELECT u.*, c.name AS client_name FROM client_users u JOIN clients c ON c.id = u.client_id WHERE u.id = ?",
+  ).bind(userId).first();
+  await sendLinks(env, origin, [user], {
+    minutes: 7 * 1440,
+    intro: `il team RomeSoMuch ti ha dato accesso all'area clienti di ${user.client_name}: video, metriche, documenti e previsioni.`,
+  });
+};
+
+async function people(request, env, url, id, action) {
+  const db = env.CRM_DB;
+  const method = request.method;
+  const origin = url.origin;
+  if (!id && method === "GET") {
+    const client = Number(url.searchParams.get("client_id"));
+    const { results } = await db.prepare(
+      `SELECT * FROM client_users WHERE client_id = ? ORDER BY status = 'in_attesa' DESC, status = 'approvato' DESC, requested_at DESC`,
+    ).bind(client).all();
+    return json(results);
+  }
+  if (!id && method === "POST") {
+    const body = await request.json();
+    const email = String(body.email ?? "").trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email)) throw new Invalid("Email non valida.");
+    const { id: created } = await db.prepare(
+      `INSERT INTO client_users (client_id, name, email, status, approved_at) VALUES (?, ?, ?, 'approvato', datetime('now'))
+       ON CONFLICT(client_id, email) DO UPDATE SET status = 'approvato', approved_at = datetime('now'), name = coalesce(excluded.name, name)
+       RETURNING id`,
+    ).bind(Number(body.client_id), String(body.name ?? "").trim() || null, email).first();
+    await welcome(env, origin, created);
+    return json({ ok: true }, 201);
+  }
+  if (id && action === "approve" && method === "POST") {
+    await db.prepare("UPDATE client_users SET status = 'approvato', approved_at = datetime('now') WHERE id = ?").bind(id).run();
+    await welcome(env, origin, id);
+    return json({ ok: true });
+  }
+  if (id && action === "reject" && method === "POST") {
+    // Raising the version also ends any session the person already had.
+    await db.prepare("UPDATE client_users SET status = 'rifiutato', session_version = session_version + 1 WHERE id = ?").bind(id).run();
+    return json({ ok: true });
+  }
+  if (id && !action && method === "DELETE") {
+    await db.prepare("DELETE FROM client_users WHERE id = ?").bind(id).run();
+    return json({ ok: true });
+  }
+  return json({ error: "Non trovato." }, 404);
+}
+
+// A new private invite link for the client; the old one stops working.
+async function newInvite(env, id) {
+  const token = randomToken(12);
+  await env.CRM_DB.prepare("UPDATE clients SET invite_token = ? WHERE id = ?").bind(token, id).run();
+  return json({ invite_token: token });
 }
 
 // ---- money and the package ---------------------------------------------------------
@@ -182,9 +233,10 @@ async function summary(env, url) {
   if (month === now.slice(0, 7)) await chargeOnce(env, month);
   const db = env.CRM_DB;
   const like = `${month}-%`;
-  const [clients, unpaid, recent, trend, totals] = await db.batch([
+  const [clients, unpaid, recent, trend, totals, requests] = await db.batch([
     db.prepare(
-      `SELECT c.id, c.name, c.status, c.fee, c.videos_total, c.end_date, c.email, c.password IS NOT NULL AS has_access,
+      `SELECT c.id, c.name, c.status, c.fee, c.videos_total, c.end_date, c.invite_token,
+         (SELECT count(*) FROM client_users WHERE client_id = c.id AND status = 'approvato') AS people,
          (SELECT count(*) FROM video_clients WHERE client_id = c.id) AS videos_all,
          (SELECT count(*) FROM videos v JOIN video_clients l ON l.video_id = v.id
             WHERE l.client_id = c.id AND v.published_on LIKE ?1) AS videos,
@@ -209,10 +261,14 @@ async function summary(env, url) {
          coalesce(sum(likes), 0) + coalesce(sum(comments), 0) + coalesce(sum(shares), 0) + coalesce(sum(saves), 0) AS interactions
        FROM videos WHERE published_on LIKE ?`,
     ).bind(like),
+    db.prepare(
+      `SELECT u.*, c.name AS client_name FROM client_users u JOIN clients c ON c.id = u.client_id
+       WHERE u.status = 'in_attesa' ORDER BY u.requested_at`,
+    ),
   ]);
   return json({
     today: now, month, clients: clients.results, unpaid: unpaid.results, recent: recent.results.map(withClients),
-    totals: totals.results[0],
+    totals: totals.results[0], requests: requests.results,
     trend: trend.results, connections: await connections(env),
   });
 }
@@ -252,7 +308,8 @@ async function api(request, env, path) {
   }
   if (table === "files" && id && method === "GET") return download(env, id);
   if (table === "documents" && !id && method === "POST") return upload(env, request);
-  if (table === "clients" && id && action === "access" && method === "POST") return setAccess(env, id, await request.json());
+  if (table === "users") return people(request, env, url, id, action);
+  if (table === "clients" && id && action === "invite" && method === "POST") return newInvite(env, id);
   // "Vedi come cliente": the client area, as this client sees it, for 2 hours.
   if (table === "clients" && id && action === "view" && method === "POST") {
     return new Response(JSON.stringify({ ok: true }), {

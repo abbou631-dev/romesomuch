@@ -353,3 +353,10 @@ fieldset.field small { color: var(--mute); }
   body.portal .head .sub { line-height: 1.5; }
 }
 body.portal td:first-child { white-space: nowrap; }
+[hidden] { display: none !important; }
+.login-box p { margin: 0; }
+.invite { margin: 8px 0; }
+.invite code { display: block; background: var(--wash); padding: 8px 10px; border-radius: 8px; font-size: 12px; overflow-wrap: anywhere; }
+.panel-head.gap { margin: 20px 0 4px; }
+.panel h3 { font-size: 13px; margin: 0; }
+.requests { border-color: var(--amber); }

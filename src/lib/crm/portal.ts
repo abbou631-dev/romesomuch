@@ -3,7 +3,7 @@
 // older than 15 minutes are read again from the platforms when a month opens.
 
 import {
-  type Row, apiFor, form, say, esc, eur, num, short, day, month, shortMonth, ago, thisMonth, head, kpi, table, bars, platform,
+  type Row, apiFor, esc, eur, num, short, day, month, shortMonth, ago, thisMonth, head, kpi, table, bars, platform,
 } from "./ui";
 
 const api = apiFor("/api/portal", "/area-clienti/login/");
@@ -24,7 +24,8 @@ const delta = (now: number, before: number) => {
 };
 const interactionsOf = (m: Row) => (m.likes ?? 0) + (m.comments ?? 0) + (m.shares ?? 0) + (m.saves ?? 0);
 
-// "Ciao Marco", then the venue and its package.
+// "Ciao Marco" (the person signed in, else the venue's contact), then the
+// venue and its package.
 function greeting() {
   const c = data.client;
   const done = data.totals.videos;
@@ -33,7 +34,8 @@ function greeting() {
     c.videos_total ? `Visibilità costante: ${done} di ${c.videos_total} video pubblicati` : `Visibilità costante: ${done} video pubblicati`,
     c.end_date ? `contratto fino al ${day(c.end_date)}` : "",
   ].filter(Boolean);
-  return head(`Ciao ${esc(c.contact || c.name)}`, "", parts.join(" · "));
+  const first = String(c.user_name || c.contact || c.name).split(" ")[0];
+  return head(`Ciao ${esc(first)}`, "", parts.join(" · "));
 }
 
 const tabs = (on: string) => `<nav class="tabs" aria-label="Sezioni">${[
@@ -155,13 +157,6 @@ view.addEventListener("click", (event) => {
   overview().catch(fail);
 });
 
-// Signed in: the current password and a new one.
-const changePassword = () =>
-  form("Cambia password", [
-    { name: "current", label: "Password attuale", type: "password", required: true },
-    { name: "password", label: "Nuova password", type: "password", required: true, hint: "Almeno 8 caratteri" },
-  ], {}, (d) => api("password", { method: "POST", data: d }), () => say("Password cambiata"));
-
 export async function start() {
   try {
     data = await api("overview");
@@ -173,9 +168,7 @@ export async function start() {
       bar.innerHTML = `<span>Anteprima: stai vedendo l'area clienti di <strong>${esc(data.client.name)}</strong> come la vede il cliente.</span>
         <form method="post" action="/api/portal/logout"><button type="submit" class="link">Torna al CRM</button></form>`;
       document.body.prepend(bar);
-      document.getElementById("change")?.remove();
     }
-    document.getElementById("change")?.addEventListener("click", changePassword);
     addEventListener("hashchange", render);
     render();
   } catch (error) {

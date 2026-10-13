@@ -30,7 +30,7 @@ const clientFields = (): Field[] => [
   { name: "start_date", label: "Inizio contratto", type: "date" },
   { name: "end_date", label: "Fine contratto", type: "date", hint: "Il cliente la vede nella sua area" },
   { name: "contact", label: "Referente", hint: "Nome della persona: l'area clienti la saluta così" },
-  { name: "email", label: "Email", type: "email", hint: "È anche il nome utente dell'area clienti" },
+  { name: "email", label: "Email", type: "email" },
   { name: "phone", label: "Telefono / WhatsApp", type: "tel" },
   { name: "instagram", label: "Instagram del locale" },
   { name: "tiktok", label: "TikTok del locale" },
@@ -93,25 +93,29 @@ const fresh = (table: string, clientId?: number): Row => {
   return { client_id: clientId ?? clients[0]?.id, kind: "extra", period: thisMonth(), due_date: today() };
 };
 
-// A client's area password: typed or generated, then copied with an invite
-// ready to paste into WhatsApp, since it is never shown again.
-const generate = () => {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  return [...crypto.getRandomValues(new Uint8Array(12))].map((b) => alphabet[b % alphabet.length]).join("");
-};
-const access = (c: Row) =>
-  form("Accesso all'area clienti", [
-    { name: "password", label: `Password per ${c.email}`, required: true, hint: "Almeno 8 caratteri. Già generata: puoi tenerla o cambiarla." },
-  ], { password: generate() }, async (d) => {
-    await api(`clients/${c.id}/access`, { method: "POST", data: d });
-    const invite = `Ciao! Da oggi trovi i video che pubblichiamo per ${c.name} e le loro metriche nella tua area riservata RomeSoMuch:\n${location.origin}/area-clienti/\nEmail: ${c.email}\nPassword: ${d.password}`;
-    try {
-      await navigator.clipboard.writeText(invite);
-      setTimeout(() => say("Password salvata. Invito copiato: incollalo su WhatsApp"), 50);
-    } catch {
-      setTimeout(() => say("Password salvata"), 50);
-    }
-  }, render);
+// ---- client-area access ------------------------------------------------------
+
+const inviteUrl = (token: string) => `${location.origin}/area-clienti/invito/?t=${token}`;
+// The invite, ready to paste into WhatsApp.
+async function copyInvite(c: Row, token = c.invite_token) {
+  const text = `Ciao! Da oggi trovi i video che pubblichiamo per ${c.name}, le metriche, i documenti e le previsioni nella vostra area riservata RomeSoMuch.\nApri questo link, scrivi nome ed email e ti diamo l'accesso (niente password):\n${inviteUrl(token)}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    say("Invito copiato: incollalo su WhatsApp");
+  } catch {
+    prompt("Copia l'invito:", text);
+  }
+}
+const addPerson = (clientId: number) =>
+  form("Aggiungi persona", [
+    { name: "name", label: "Nome" },
+    { name: "email", label: "Email", type: "email", required: true, hint: "Riceve subito un'email con il link per entrare (vale 7 giorni)" },
+  ], {}, (d) => api("users", { method: "POST", data: { ...d, client_id: clientId } }), render);
+
+const USER = { in_attesa: "In attesa", approvato: "Approvato", rifiutato: "Rifiutato" } as Record<string, string>;
+const userActions = (u: Row) => u.status === "in_attesa"
+  ? `<button class="btn small primary" data-approve="${u.id}">Approva</button><button class="link danger" data-reject="${u.id}">Rifiuta</button>`
+  : `${u.status === "rifiutato" ? `<button class="link" data-approve="${u.id}">Approva</button>` : ""}<button class="link danger" data-remove-user="${u.id}">Rimuovi</button>`;
 
 // ---- shared pieces --------------------------------------------------------------
 
@@ -158,11 +162,14 @@ async function dashboard() {
     <td class="num">${c.videos}</td><td>${quota(c.videos_all, c.videos_total)}</td><td class="num">${num(c.views)}</td><td class="num">${num(c.interactions)}</td>
     <td>${day(c.last_video)}</td><td${c.end_date && c.end_date < addDays(s.today, 30) ? ' class="warn"' : ""}>${day(c.end_date)}</td>
     <td>${c.fee ? (c.paid === null ? '<span class="mute">—</span>' : c.paid ? badge("pagato", "Pagato") : badge("da_pagare", "Da pagare")) : '<span class="mute">—</span>'}</td>
-    <td>${c.has_access ? badge("yes", "Attiva") : c.email ? badge("no", "Da attivare") : badge("no", "Manca email")}</td></tr>`);
+    <td>${c.people ? badge("yes", `${c.people} ${c.people === 1 ? "persona" : "persone"}`) : badge("no", "Nessuno")}</td></tr>`);
 
   view.innerHTML = `
     ${head("Visibilità costante", `${monthPicker(selected)}${add("videos", "+ Video")}`, `Panoramica di ${esc(month(selected))}`)}
     ${connected ? "" : `<p class="note warn">Nessuna piattaforma collegata: le metriche vanno inserite a mano. <a href="#/collegamenti">Collega Instagram, Facebook e TikTok →</a></p>`}
+    ${s.requests.length ? `<section class="panel requests"><h2>Richieste d'accesso all'area clienti</h2><ul class="list">${s.requests.map((u: Row) => `<li>
+      <div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)} · per ${clientLink(u.client_id)} · ${day(u.requested_at)}</small></div>
+      <div class="end">${userActions(u)}</div></li>`).join("")}</ul></section>` : ""}
     <section class="kpis">
       ${kpi("Clienti attivi", String(active.length), `${s.clients.length} in totale`)}
       ${kpi("Canoni al mese", eur(sum(active, "fee")))}
@@ -195,7 +202,7 @@ async function clientsView() {
   const s = await api(`summary?month=${thisMonth()}`);
   const rows = s.clients.map((c: Row) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a></td>
     <td>${badge(c.status, STATUS[c.status])}</td><td class="num">${eur(c.fee)}</td><td>${quota(c.videos_all, c.videos_total)}</td><td>${day(c.end_date)}</td>
-    <td class="num ${c.outstanding ? "warn" : ""}">${eur(c.outstanding)}</td><td>${c.has_access ? badge("yes", "Attiva") : badge("no", "No")}</td></tr>`);
+    <td class="num ${c.outstanding ? "warn" : ""}">${eur(c.outstanding)}</td><td>${c.people ? badge("yes", String(c.people)) : badge("no", "—")}${c.pending ? ` ${badge("da_pagare", `${c.pending} in attesa`)}` : ""}</td></tr>`);
   view.innerHTML = `${head("Clienti", add("clients", "+ Nuovo cliente"))}
     <section class="panel">${table(["Cliente", "Stato", "Canone", "Pacchetto", "Fine contratto", "Da incassare", "Area clienti"], rows, "Nessun cliente. Aggiungi il primo.")}</section>`;
 }
@@ -203,8 +210,9 @@ async function clientsView() {
 async function clientView(id: number) {
   const c = clients.find((x) => x.id === id);
   if (!c) return void (view.innerHTML = head("Cliente non trovato") + '<p><a href="#/clienti">← Clienti</a></p>');
-  const [videos, charges, docs] = await Promise.all([
+  const [videos, charges, docs, people] = await Promise.all([
     api<Row[]>(`videos?client_id=${id}`), api<Row[]>(`charges?client_id=${id}`), api<Row[]>(`documents?client_id=${id}`),
+    api<Row[]>(`users?client_id=${id}`),
   ]);
   const now = videos.filter((v) => v.published_on.startsWith(thisMonth()));
   const views = (rows: Row[]) => rows.reduce((t, v) => t + (v.views ?? 0), 0);
@@ -231,12 +239,17 @@ async function clientView(id: number) {
     <div class="grid2">
       <section class="panel"><h2>Scheda</h2><dl class="info">${info.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
         ${c.notes ? `<p class="notes">${esc(c.notes)}</p>` : ""}</section>
-      <section class="panel"><h2>Area clienti</h2>
-        ${!c.email ? `<p class="empty">Inserisci l'email del cliente (Modifica): sarà il suo nome utente.</p><div class="actions"><button class="btn" data-view="${c.id}">Vedi come cliente</button></div>`
-          : c.has_access ? `<p>${badge("yes", "Attiva")} Il cliente entra su <a href="/area-clienti/" target="_blank">${esc(location.host)}/area-clienti/</a> con <strong>${esc(c.email)}</strong>.</p>
-            <div class="actions"><button class="btn primary" data-view="${c.id}">Vedi come cliente</button><button class="btn" data-access="${c.id}">Nuova password</button><button class="btn danger" data-revoke="${c.id}">Revoca accesso</button></div>`
-          : `<p class="mute">Non ha ancora accesso. Imposta una password: il CRM copia un messaggio d'invito da mandargli su WhatsApp.</p>
-            <div class="actions"><button class="btn primary" data-access="${c.id}">Attiva accesso</button><button class="btn" data-view="${c.id}">Vedi come cliente</button></div>`}
+      <section class="panel"><div class="panel-head"><h2>Area clienti</h2><button class="btn" data-view="${c.id}">Vedi come cliente</button></div>
+        ${c.invite_token
+          ? `<p class="mute">Link d'invito privato: chi lo apre chiede l'accesso, tu approvi qui.</p>
+             <p class="invite"><code>${esc(inviteUrl(c.invite_token))}</code></p>
+             <div class="actions"><button class="btn primary" data-copy-invite="${c.id}">Copia invito per WhatsApp</button><button class="link" data-new-invite="${c.id}">Nuovo link</button></div>`
+          : `<p class="mute">Crea il link d'invito e mandalo al locale: chi lo apre chiede l'accesso con nome ed email, tu approvi una volta e resta collegato.</p>
+             <div class="actions"><button class="btn primary" data-new-invite="${c.id}">Crea link d'invito</button></div>`}
+        <div class="panel-head gap"><h3>Persone</h3><button class="link" data-add-person="${c.id}">+ Aggiungi persona</button></div>
+        ${people.length ? `<ul class="list">${people.map((u) => `<li><div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)} · ${u.status === "approvato" ? `ultimo accesso ${u.last_seen ? ago(u.last_seen.replace(" ", "T") + "Z") : "mai"}` : `richiesta ${day(u.requested_at)}`}</small></div>
+          <div class="end">${badge(u.status === "approvato" ? "yes" : u.status === "in_attesa" ? "da_pagare" : "no", USER[u.status])}${userActions(u)}</div></li>`).join("")}</ul>`
+          : '<p class="empty">Ancora nessuno.</p>'}
       </section>
     </div>
     <section class="panel"><div class="panel-head"><h2>Video</h2><div class="actions"><button class="btn" data-refresh-client="${id}">Aggiorna metriche</button>${add("videos", "+ Video", id)}</div></div>
@@ -352,18 +365,32 @@ view.addEventListener("click", (event) => {
     });
   } else if (d.pay) {
     act(() => api(`charges/${d.pay}`, { method: "PATCH", data: { paid_at: d.paid === "1" ? null : today() } }), d.paid === "1" ? "Segnato da pagare" : "Segnato pagato");
-  } else if (d.access) {
-    const c = clients.find((x) => x.id === Number(d.access));
-    if (c) access(c);
+  } else if (d.approve) {
+    act(() => api(`users/${d.approve}/approve`, { method: "POST", data: {} }), "Approvato: gli abbiamo mandato l'email per entrare");
+  } else if (d.reject) {
+    act(() => api(`users/${d.reject}/reject`, { method: "POST", data: {} }), "Richiesta rifiutata");
+  } else if (d.removeUser) {
+    if (!confirm("Togliere l'accesso a questa persona? Viene scollegata subito da tutti i dispositivi.")) return;
+    act(() => api(`users/${d.removeUser}`, { method: "DELETE" }), "Accesso tolto");
+  } else if (d.addPerson) {
+    addPerson(Number(d.addPerson));
+  } else if (d.copyInvite) {
+    const c = clients.find((x) => x.id === Number(d.copyInvite));
+    if (c) copyInvite(c);
+  } else if (d.newInvite) {
+    const c = clients.find((x) => x.id === Number(d.newInvite));
+    if (!c || (c.invite_token && !confirm("Creare un nuovo link? Quello vecchio smette di funzionare (chi è già dentro resta dentro)."))) return;
+    act(async () => {
+      const { invite_token } = await api(`clients/${c.id}/invite`, { method: "POST", data: {} });
+      await copyInvite(c, invite_token);
+      return "Nuovo link creato e copiato";
+    }, "");
   } else if (d.view) {
     // Opened before the request so the browser does not block the new tab.
     const tab = window.open("about:blank", "_blank");
     api(`clients/${d.view}/view`, { method: "POST", data: {} })
       .then(() => { if (tab) tab.location.href = "/area-clienti/"; else location.href = "/area-clienti/"; })
       .catch((error) => { tab?.close(); say(error.message, true); });
-  } else if (d.revoke) {
-    if (!confirm("Revocare l'accesso? Il cliente non potrà più entrare finché non imposti una nuova password.")) return;
-    act(() => api(`clients/${d.revoke}/access`, { method: "POST", data: { password: "" } }), "Accesso revocato");
   } else if (d.refresh) {
     act(async () => refreshed(await api("refresh", { method: "POST", data: { id: Number(d.refresh) } })), "");
   } else if (d.refreshClient) {
