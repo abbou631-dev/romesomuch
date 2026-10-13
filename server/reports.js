@@ -61,7 +61,6 @@ export function reportText(r, origin, name) {
     "",
     `ecco come sono andati i video di ${r.name} a ${monthName(r.period)}:`,
     "",
-    `REPORT ${monthName(r.period).split(" ")[0].toUpperCase()} - ${r.name.toUpperCase()}`,
     `Visualizzazioni tra le varie piattaforme: ${big(m.views)}`,
     `Condivisioni: ${big(m.shares)}`,
     `Salvati: ${big(m.saves)}`,
@@ -69,6 +68,7 @@ export function reportText(r, origin, name) {
     // Only the platforms the month's videos were on.
     ...PLATFORMS.filter(([key]) => views.has(key)).map(([key, label]) => `Visualizzazioni ${label}: ${big(views.get(key))}`),
     "",
+    ...(r.end_date ? [`Il tuo pacchetto termina a ${monthName(r.end_date.slice(0, 7))}.`, ""] : []),
     `Metriche complete qui: ${origin}/area-clienti/`,
     "",
     "A presto,",
