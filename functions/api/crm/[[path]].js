@@ -7,17 +7,19 @@ import {
 } from "../../../server/common.js";
 import { STAFF_COOKIE, VIEW_COOKIE, staffSignedIn } from "../../../server/sessions.js";
 import { connections, refresh, tiktokAuthorizeUrl, tiktokExchange } from "../../../server/platforms.js";
+import { upload, download, removeFiles } from "../../../server/files.js";
 
 const SESSION_DAYS = 30;
 
 const TABLES = {
   clients: {
     name: "t", contact: "t", email: "t", phone: "t", instagram: "t", tiktok: "t", vat: "t", fee: "i",
-    videos_per_month: "i", billing_day: "i", start_date: "d", end_date: "d", status: "t", notes: "t",
+    videos_per_month: "i", videos_total: "i", billing_day: "i", start_date: "d", end_date: "d", status: "t", notes: "t",
   },
   charges: {
     client_id: "i", period: "m", kind: "t", description: "t", amount: "i", due_date: "d", paid_at: "d", invoice_no: "t",
   },
+  documents: { client_id: "i", name: "t", kind: "t", doc_date: "d", amount: "i" },
   videos: {
     platform: "t", url: "t", title: "t", published_on: "d", views: "i", reach: "i",
     likes: "i", comments: "i", shares: "i", saves: "i",
@@ -27,12 +29,14 @@ const ORDER = {
   clients: "status = 'attivo' DESC, name COLLATE NOCASE",
   charges: "period DESC, due_date DESC, id DESC",
   videos: "published_on DESC, id DESC",
+  documents: "doc_date IS NULL, doc_date DESC, uploaded_at DESC",
 };
 // The password hash never leaves the server; the CRM only learns whether
 // the client can log in.
 const SELECT = {
-  clients: `SELECT id, name, contact, email, phone, instagram, tiktok, vat, fee, videos_per_month, billing_day,
+  clients: `SELECT id, name, contact, email, phone, instagram, tiktok, vat, fee, videos_per_month, videos_total, billing_day,
     start_date, end_date, status, notes, created_at, password IS NOT NULL AS has_access FROM clients`,
+  documents: "SELECT * FROM documents",
   charges: "SELECT * FROM charges",
   // The clients a video features, as a JSON array (see withClients).
   videos: "SELECT v.*, (SELECT json_group_array(client_id) FROM video_clients WHERE video_id = v.id) AS client_ids FROM videos v",
@@ -84,7 +88,11 @@ async function list(env, table, url) {
 }
 
 // Columns that are never empty: a cleared field means their default.
-const DEFAULTS = { clients: { fee: 0, videos_per_month: 0, billing_day: 1, status: "attivo" }, charges: { kind: "canone" } };
+const DEFAULTS = {
+  clients: { fee: 0, videos_per_month: 0, videos_total: 0, billing_day: 1, status: "attivo" },
+  charges: { kind: "canone" },
+  documents: { kind: "contratto" },
+};
 const typed = (table, body) => {
   const row = values(TABLES[table], body);
   for (const [key, fallback] of Object.entries(DEFAULTS[table] ?? {})) if (key in row && row[key] === null) row[key] = fallback;
@@ -126,6 +134,8 @@ async function update(env, table, id, body) {
 }
 
 async function remove(env, table, id) {
+  if (table === "clients") await removeFiles(env, "client_id", id);
+  if (table === "documents") await removeFiles(env, "id", id);
   await env.CRM_DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
   return json({ ok: true });
 }
@@ -174,7 +184,8 @@ async function summary(env, url) {
   const like = `${month}-%`;
   const [clients, unpaid, recent, trend, totals] = await db.batch([
     db.prepare(
-      `SELECT c.id, c.name, c.status, c.fee, c.videos_per_month, c.email, c.password IS NOT NULL AS has_access,
+      `SELECT c.id, c.name, c.status, c.fee, c.videos_total, c.end_date, c.email, c.password IS NOT NULL AS has_access,
+         (SELECT count(*) FROM video_clients WHERE client_id = c.id) AS videos_all,
          (SELECT count(*) FROM videos v JOIN video_clients l ON l.video_id = v.id
             WHERE l.client_id = c.id AND v.published_on LIKE ?1) AS videos,
          (SELECT coalesce(sum(views), 0) FROM videos v JOIN video_clients l ON l.video_id = v.id
@@ -239,6 +250,8 @@ async function api(request, env, path) {
     await tiktokExchange(env, url.origin, code);
     return redirect("/crm/#/collegamenti?ok=tiktok");
   }
+  if (table === "files" && id && method === "GET") return download(env, id);
+  if (table === "documents" && !id && method === "POST") return upload(env, request);
   if (table === "clients" && id && action === "access" && method === "POST") return setAccess(env, id, await request.json());
   // "Vedi come cliente": the client area, as this client sees it, for 2 hours.
   if (table === "clients" && id && action === "view" && method === "POST") {

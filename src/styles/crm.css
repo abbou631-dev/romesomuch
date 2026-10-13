@@ -332,3 +332,22 @@ tr.on td { background: var(--wash); }
 fieldset.field { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 fieldset.field legend { font-size: 12px; font-weight: 600; color: var(--mute); padding: 0 0 4px; }
 fieldset.field small { color: var(--mute); }
+
+/* client area: sections, documents */
+.tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--hair); margin: -4px 0 20px; overflow-x: auto; scrollbar-width: none; }
+.tabs a { padding: 8px 0 10px; text-decoration: none; color: var(--mute); font-weight: 700; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a.on { color: var(--ink); border-color: var(--gold); }
+.docs { list-style: none; margin: 0; padding: 0; }
+.docs li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--hair); }
+.docs li:last-child { border-bottom: 0; }
+.docs li > a:first-child { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; }
+.docs li span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.docs small { color: var(--mute); }
+.doc-icon { flex: none; width: 40px; height: 48px; border-radius: 6px; background: var(--wash); display: grid; place-items: center; font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--gold); }
+.portal-bar .end { white-space: nowrap; }
+@media (max-width: 600px) {
+  .portal-bar .who span { font-size: 13px; }
+  .portal-bar .end { gap: 12px; font-size: 13px; }
+  body.portal .head .sub { line-height: 1.5; }
+}
+body.portal td:first-child { white-space: nowrap; }

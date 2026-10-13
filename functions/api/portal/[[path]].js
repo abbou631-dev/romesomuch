@@ -8,6 +8,7 @@ import {
 } from "../../../server/common.js";
 import { CLIENT_COOKIE, VIEW_COOKIE, signedInClient } from "../../../server/sessions.js";
 import { refresh } from "../../../server/platforms.js";
+import { download } from "../../../server/files.js";
 
 const SESSION_DAYS = 60;
 const RESET_MINUTES = 60;
@@ -166,6 +167,15 @@ export async function onRequest({ request, env, params, waitUntil }) {
   if (!client) return json({ error: "Accesso richiesto." }, 401);
   const url = new URL(request.url);
   if (action === "overview" && request.method === "GET") return guarded(() => overview(env, client));
+  if (action === "documents" && request.method === "GET") {
+    return guarded(async () => json((await env.CRM_DB.prepare(
+      `SELECT id, name, kind, doc_date, amount, file_name, mime, size, uploaded_at FROM documents
+       WHERE client_id = ? ORDER BY doc_date IS NULL, doc_date DESC, uploaded_at DESC`,
+    ).bind(client.id).all()).results));
+  }
+  // Only the signed-in client's own files.
+  const fileId = Number([].concat(params.path ?? [])[1]);
+  if (action === "files" && Number.isInteger(fileId) && request.method === "GET") return guarded(() => download(env, fileId, client.id));
   if (action === "password" && request.method === "POST") return guarded(() => changePassword(request, env, client));
   if (action === "videos" && request.method === "GET") {
     const month = isMonth(url.searchParams.get("month")) ? url.searchParams.get("month") : today().slice(0, 7);

@@ -5,7 +5,7 @@ export type Row = Record<string, any>;
 export type Field = {
   name: string;
   label: string;
-  type?: "text" | "email" | "tel" | "url" | "money" | "date" | "month" | "number" | "select" | "textarea" | "password" | "checks";
+  type?: "text" | "email" | "tel" | "url" | "money" | "date" | "month" | "number" | "select" | "textarea" | "password" | "checks" | "file";
   options?: [string, string][];
   required?: boolean;
   hint?: string;
@@ -23,6 +23,11 @@ export const num = (n: number | null | undefined) => (n == null ? "—" : count.
 export const short = (n: number | null | undefined) => (n == null ? "—" : compact.format(n));
 export const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date());
 export const thisMonth = () => today().slice(0, 7);
+export const addDays = (date: string, n: number) => {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
 export const addMonths = (period: string, n: number) => {
   const [y, m] = period.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7);
@@ -141,7 +146,7 @@ function input(f: Field, value: any) {
 
 // Opens a form in the dialog and calls `save` with the typed values; `done`
 // runs after a successful save.
-export function form(title: string, fields: Field[], values: Row, save: (data: Row) => Promise<unknown>, done: () => void) {
+export function form(title: string, fields: Field[], values: Row, save: (data: Row, raw: FormData) => Promise<unknown>, done: () => void) {
   const dialog = document.getElementById("dialog") as HTMLDialogElement;
   dialog.innerHTML = `<form method="dialog" class="sheet">
     <header><h2>${esc(title)}</h2><button type="button" class="link" data-close aria-label="Chiudi">✕</button></header>
@@ -159,6 +164,7 @@ export function form(title: string, fields: Field[], values: Row, save: (data: R
     try {
       const data: Row = {};
       for (const f of fields) {
+        if (f.type === "file") continue;
         if (f.type === "checks") {
           data[f.name] = raw.getAll(f.name).map(Number);
           if (f.required && !data[f.name].length) throw new Error(`${f.label}: scegline almeno uno.`);
@@ -167,7 +173,7 @@ export function form(title: string, fields: Field[], values: Row, save: (data: R
         const v = raw.get(f.name);
         data[f.name] = f.type === "money" ? (v ? cents(String(v)) : null) : v === null ? null : String(v);
       }
-      await save(data);
+      await save(data, raw);
       dialog.close();
       say("Salvato");
       done();

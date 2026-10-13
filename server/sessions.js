@@ -9,7 +9,8 @@ export const VIEW_COOKIE = "rsm_view";
 export const staffSignedIn = async (request, env) =>
   Boolean(await verify(env, "staff", readCookie(request, STAFF_COOKIE)));
 
-const CLIENT = "SELECT id, name, email, password, videos_per_month, start_date, status, instagram, tiktok FROM clients WHERE id = ?";
+const CLIENT = `SELECT id, name, contact, email, password, videos_total, start_date, end_date, status, instagram, tiktok
+  FROM clients WHERE id = ?`;
 
 // The agency previewing a client comes first; otherwise the client's own
 // cookie, which carries its id and a fragment of its password hash, so a new

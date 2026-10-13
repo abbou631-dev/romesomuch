@@ -3,7 +3,7 @@
 
 import {
   type Field, type Row, apiFor, say, form, esc, eur, num, short, day, month, shortMonth, ago, today, thisMonth,
-  addMonths, head, kpi, table, quota, bars, badge, platform, interactions, PLATFORM,
+  addMonths, addDays, head, kpi, table, quota, bars, badge, platform, interactions, PLATFORM,
 } from "./ui";
 
 const api = apiFor("/api/crm", "/crm/login/");
@@ -25,11 +25,11 @@ const clientFields = (): Field[] => [
   { name: "name", label: "Nome del locale / cliente", required: true },
   { name: "status", label: "Stato", type: "select", options: Object.entries(STATUS) },
   { name: "fee", label: "Canone mensile (€)", type: "money" },
-  { name: "videos_per_month", label: "Video al mese previsti dal pacchetto", type: "number", min: 0, max: 100 },
+  { name: "videos_total", label: "Video totali del pacchetto", type: "number", min: 0, max: 500, hint: "Quanti video in tutto prevede il contratto, es. 6" },
   { name: "billing_day", label: "Giorno di pagamento", type: "number", min: 1, max: 28 },
-  { name: "start_date", label: "Inizio pacchetto", type: "date" },
-  { name: "end_date", label: "Fine pacchetto", type: "date" },
-  { name: "contact", label: "Referente" },
+  { name: "start_date", label: "Inizio contratto", type: "date" },
+  { name: "end_date", label: "Fine contratto", type: "date", hint: "Il cliente la vede nella sua area" },
+  { name: "contact", label: "Referente", hint: "Nome della persona: l'area clienti la saluta così" },
   { name: "email", label: "Email", type: "email", hint: "È anche il nome utente dell'area clienti" },
   { name: "phone", label: "Telefono / WhatsApp", type: "tel" },
   { name: "instagram", label: "Instagram del locale" },
@@ -60,15 +60,35 @@ const chargeFields = (): Field[] => [
   { name: "invoice_no", label: "N° fattura" },
   { name: "paid_at", label: "Pagato il", type: "date", hint: "Vuoto = non ancora pagato" },
 ];
-const FIELDS: Record<string, () => Field[]> = { clients: clientFields, videos: videoFields, charges: chargeFields };
+const DOC = { contratto: "Contratto", fattura: "Fattura", altro: "Altro" } as Record<string, string>;
+const documentFields = (withFile: boolean): Field[] => [
+  { name: "client_id", label: "Cliente", type: "select", options: clientOptions(), required: true },
+  ...(withFile ? [{ name: "file", label: "File (PDF o immagine, max 25 MB)", type: "file", required: true } as Field] : []),
+  { name: "kind", label: "Tipo", type: "select", options: Object.entries(DOC) },
+  { name: "name", label: "Titolo", hint: withFile ? "Vuoto = nome del file. Es. «Fattura n. 12/2026»" : undefined },
+  { name: "doc_date", label: "Data", type: "date" },
+  { name: "amount", label: "Importo (€, solo fatture)", type: "money" },
+];
+const FIELDS: Record<string, (row: Row) => Field[]> = {
+  clients: clientFields, videos: videoFields, charges: chargeFields, documents: (row) => documentFields(!row.id),
+};
 const TITLES: Record<string, [string, string]> = {
   clients: ["Nuovo cliente", "Modifica cliente"], videos: ["Nuovo video", "Modifica video"], charges: ["Nuovo addebito", "Modifica addebito"],
+  documents: ["Carica documento", "Modifica documento"],
 };
 const edit = (table: string, row: Row) =>
-  form(TITLES[table][row.id ? 1 : 0], FIELDS[table](), row,
-    (d) => (row.id ? api(`${table}/${row.id}`, { method: "PATCH", data: d }) : api(table, { method: "POST", data: d })), render);
+  form(TITLES[table][row.id ? 1 : 0], FIELDS[table](row), row, (d, raw) => {
+    if (row.id) return api(`${table}/${row.id}`, { method: "PATCH", data: d });
+    // A new document travels as a file upload, its details alongside.
+    if (table === "documents") {
+      for (const [k, v] of Object.entries(d)) raw.set(k, v ?? "");
+      return api(table, { method: "POST", body: raw });
+    }
+    return api(table, { method: "POST", data: d });
+  }, render);
 const fresh = (table: string, clientId?: number): Row => {
-  if (table === "clients") return { status: "attivo", billing_day: 1, videos_per_month: 4, start_date: today() };
+  if (table === "clients") return { status: "attivo", billing_day: 1, videos_total: 6, start_date: today() };
+  if (table === "documents") return { client_id: clientId ?? clients[0]?.id, kind: "contratto", doc_date: today() };
   if (table === "videos") return { client_ids: clientId ? [clientId] : [], platform: "instagram", published_on: today() };
   return { client_id: clientId ?? clients[0]?.id, kind: "extra", period: thisMonth(), due_date: today() };
 };
@@ -135,8 +155,8 @@ async function dashboard() {
 
   const rows = s.clients.filter((c: Row) => c.status !== "concluso").map((c: Row) => `<tr>
     <td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a>${c.status === "pausa" ? ` ${badge("pausa", "In pausa")}` : ""}</td>
-    <td>${quota(c.videos, c.videos_per_month)}</td><td class="num">${num(c.views)}</td><td class="num">${num(c.interactions)}</td>
-    <td>${day(c.last_video)}</td>
+    <td class="num">${c.videos}</td><td>${quota(c.videos_all, c.videos_total)}</td><td class="num">${num(c.views)}</td><td class="num">${num(c.interactions)}</td>
+    <td>${day(c.last_video)}</td><td${c.end_date && c.end_date < addDays(s.today, 30) ? ' class="warn"' : ""}>${day(c.end_date)}</td>
     <td>${c.fee ? (c.paid === null ? '<span class="mute">—</span>' : c.paid ? badge("pagato", "Pagato") : badge("da_pagare", "Da pagare")) : '<span class="mute">—</span>'}</td>
     <td>${c.has_access ? badge("yes", "Attiva") : c.email ? badge("no", "Da attivare") : badge("no", "Manca email")}</td></tr>`);
 
@@ -146,12 +166,12 @@ async function dashboard() {
     <section class="kpis">
       ${kpi("Clienti attivi", String(active.length), `${s.clients.length} in totale`)}
       ${kpi("Canoni al mese", eur(sum(active, "fee")))}
-      ${kpi(`Presenze ${month(selected)}`, `${sum(active, "videos")} / ${sum(active, "videos_per_month")}`, "video dei clienti / previsti dai pacchetti", sum(active, "videos") >= sum(active, "videos_per_month") ? "good" : "")}
-      ${kpi("Visualizzazioni del mese", short(s.totals.views), `${s.totals.videos} video · ${num(s.totals.interactions)} interazioni`)}
+      ${kpi(`Video ${month(selected)}`, String(s.totals.videos), "pubblicati, ognuno contato una volta")}
+      ${kpi("Visualizzazioni del mese", short(s.totals.views), `${num(s.totals.interactions)} interazioni`)}
       ${kpi("Da incassare", eur(outstanding), late.length ? `${late.length} in ritardo` : "nessun ritardo", late.length ? "alert" : "")}
     </section>
     <section class="panel"><h2>Clienti del pacchetto · ${esc(month(selected))}</h2>
-      ${table(["Cliente", "Video", "Visualizzazioni", "Interazioni", "Ultimo video", "Canone del mese", "Area clienti"], rows, "Nessun cliente ancora. Aggiungilo da Clienti.")}
+      ${table(["Cliente", "Video del mese", "Pacchetto", "Visualizzazioni", "Interazioni", "Ultimo video", "Fine contratto", "Canone del mese", "Area clienti"], rows, "Nessun cliente ancora. Aggiungilo da Clienti.")}
     </section>
     <section class="panel"><h2>Visualizzazioni per mese <small class="mute">tutti i clienti</small></h2>
       ${bars(months.map((m) => ({ key: m, label: shortMonth(m), value: (trend.get(m) as Row)?.views ?? 0, title: `${month(m)}: ${num((trend.get(m) as Row)?.views ?? 0)} visualizzazioni, ${(trend.get(m) as Row)?.videos ?? 0} video` })), selected, "data-pick")}
@@ -174,22 +194,24 @@ async function dashboard() {
 async function clientsView() {
   const s = await api(`summary?month=${thisMonth()}`);
   const rows = s.clients.map((c: Row) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a></td>
-    <td>${badge(c.status, STATUS[c.status])}</td><td class="num">${eur(c.fee)}</td><td>${quota(c.videos, c.videos_per_month)}</td>
+    <td>${badge(c.status, STATUS[c.status])}</td><td class="num">${eur(c.fee)}</td><td>${quota(c.videos_all, c.videos_total)}</td><td>${day(c.end_date)}</td>
     <td class="num ${c.outstanding ? "warn" : ""}">${eur(c.outstanding)}</td><td>${c.has_access ? badge("yes", "Attiva") : badge("no", "No")}</td></tr>`);
   view.innerHTML = `${head("Clienti", add("clients", "+ Nuovo cliente"))}
-    <section class="panel">${table(["Cliente", "Stato", "Canone", `Video ${shortMonth(thisMonth())}`, "Da incassare", "Area clienti"], rows, "Nessun cliente. Aggiungi il primo.")}</section>`;
+    <section class="panel">${table(["Cliente", "Stato", "Canone", "Pacchetto", "Fine contratto", "Da incassare", "Area clienti"], rows, "Nessun cliente. Aggiungi il primo.")}</section>`;
 }
 
 async function clientView(id: number) {
   const c = clients.find((x) => x.id === id);
   if (!c) return void (view.innerHTML = head("Cliente non trovato") + '<p><a href="#/clienti">← Clienti</a></p>');
-  const [videos, charges] = await Promise.all([api<Row[]>(`videos?client_id=${id}`), api<Row[]>(`charges?client_id=${id}`)]);
+  const [videos, charges, docs] = await Promise.all([
+    api<Row[]>(`videos?client_id=${id}`), api<Row[]>(`charges?client_id=${id}`), api<Row[]>(`documents?client_id=${id}`),
+  ]);
   const now = videos.filter((v) => v.published_on.startsWith(thisMonth()));
   const views = (rows: Row[]) => rows.reduce((t, v) => t + (v.views ?? 0), 0);
   const outstanding = charges.filter((x) => !x.paid_at).reduce((t, x) => t + x.amount, 0);
   const info: [string, string][] = [
-    ["Pacchetto", `${eur(c.fee)} / mese · ${c.videos_per_month} video / mese`],
-    ["Dal", `${day(c.start_date)}${c.end_date ? ` al ${day(c.end_date)}` : ""}`],
+    ["Pacchetto", `${c.videos_total} video in tutto · ${eur(c.fee)} / mese`],
+    ["Contratto", `dal ${day(c.start_date)}${c.end_date ? ` al ${day(c.end_date)}` : ", fine non indicata"}`],
     ["Referente", esc(c.contact ?? "—")],
     ["Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "—"],
     ["Telefono", c.phone ? `<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : "—"],
@@ -201,7 +223,7 @@ async function clientView(id: number) {
     <p class="crumb"><a href="#/clienti">← Clienti</a></p>
     ${head(`${esc(c.name)} ${badge(c.status, STATUS[c.status])}`, `<button class="btn" data-edit="clients" data-id="${c.id}">Modifica</button><button class="btn danger" data-del="clients" data-id="${c.id}">Elimina</button>`)}
     <section class="kpis">
-      ${kpi(`Video ${month(thisMonth())}`, `${now.length} / ${c.videos_per_month}`, "pubblicati / previsti", now.length >= c.videos_per_month ? "good" : "")}
+      ${kpi("Pacchetto", `${videos.length} / ${c.videos_total}`, `video pubblicati${c.end_date ? ` · fino al ${day(c.end_date)}` : ""}`, c.videos_total && videos.length >= c.videos_total ? "good" : "")}
       ${kpi("Visualizzazioni del mese", short(views(now)))}
       ${kpi("Visualizzazioni totali", short(views(videos)), `${videos.length} video`)}
       ${kpi("Da incassare", eur(outstanding), "", outstanding ? "alert" : "")}
@@ -219,6 +241,10 @@ async function clientView(id: number) {
     </div>
     <section class="panel"><div class="panel-head"><h2>Video</h2><div class="actions"><button class="btn" data-refresh-client="${id}">Aggiorna metriche</button>${add("videos", "+ Video", id)}</div></div>
       ${table(videoHeads(false), videoRows(videos, false), "Nessun video ancora.")}</section>
+    <section class="panel"><div class="panel-head"><h2>Documenti <small class="mute">il cliente li vede in "I tuoi documenti"</small></h2>${add("documents", "+ Carica", id)}</div>
+      ${table(["Documento", "Tipo", "Data", "Importo", ""], docs.map((d) => `<tr><td><a href="/api/crm/files/${d.id}" target="_blank" rel="noopener">${esc(d.name)}</a></td>
+        <td>${esc(DOC[d.kind])}</td><td>${day(d.doc_date)}</td><td class="num">${d.amount ? eur(d.amount) : ""}</td><td class="row-actions">${rowActions("documents", d.id)}</td></tr>`),
+        "Nessun documento. Carica il contratto e le fatture emesse.")}</section>
     <section class="panel"><div class="panel-head"><h2>Pagamenti</h2>${add("charges", "+ Addebito", id)}</div>
       ${table(chargeHeads(false), chargeRows(charges, false), "Nessun addebito. Il canone del mese si crea da solo quando apri il CRM.")}</section>`;
 }

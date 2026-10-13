@@ -8,5 +8,10 @@
   // applied with `wrangler d1 migrations apply romesomuch-crm --remote`.
   "d1_databases": [
     { "binding": "CRM_DB", "database_name": "romesomuch-crm", "database_id": "cb5274a6-5068-4389-81a0-1a5ef8edfa89" }
+  ],
+  // Client documents (contracts, invoices). KV, not R2: R2 is not enabled on
+  // this account; a value holds up to 25 MB.
+  "kv_namespaces": [
+    { "binding": "CRM_FILES", "id": "1cd0dc04f1e943188524ef44614f3825" }
   ]
 }
