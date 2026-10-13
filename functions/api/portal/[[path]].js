@@ -33,7 +33,8 @@ async function requestAccess(request, env) {
   if (!client) return back("link");
   const name = String(form.get("name") ?? "").trim().slice(0, 120);
   const email = String(form.get("email") ?? "").trim().toLowerCase().slice(0, 200);
-  if (!name || !looksLikeEmail(email)) return back("dati");
+  const venue = String(form.get("venue") ?? "").trim().slice(0, 160);
+  if (!name || !venue || !looksLikeEmail(email)) return back("dati");
 
   const db = env.CRM_DB;
   const existing = await db.prepare("SELECT * FROM client_users WHERE client_id = ? AND email = ?").bind(client.id, email).first();
@@ -45,12 +46,12 @@ async function requestAccess(request, env) {
   // A refused person sees the same answer as a new one, and is not re-queued.
   if (existing?.status === "rifiutato") return back("inviata");
   if (!existing) {
-    await db.prepare("INSERT INTO client_users (client_id, name, email) VALUES (?, ?, ?)").bind(client.id, name, email).run();
+    await db.prepare("INSERT INTO client_users (client_id, name, email, venue) VALUES (?, ?, ?, ?)").bind(client.id, name, email, venue).run();
   }
   await mail(env, {
     to: notifyTo(env),
     subject: `Richiesta d'accesso: ${name} per ${client.name}`,
-    text: `${name} (${email}) chiede di entrare nell'area clienti di ${client.name}.\n\nApprova o rifiuta dal CRM: ${origin}/crm/#/cliente/${client.id}`,
+    text: `${name} (${email}) chiede di entrare nell'area clienti di ${client.name}.\nLocale indicato: ${venue}\n\nApprova o rifiuta dal CRM: ${origin}/crm/#/cliente/${client.id}`,
   });
   return back("inviata");
 }

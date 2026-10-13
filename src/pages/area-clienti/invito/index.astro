@@ -9,10 +9,11 @@ import logo from "../../../assets/logo.svg";
     <img class="logo" src={logo.src} alt="RomeSoMuch" />
     <h1>Area clienti</h1>
     <p><strong id="venue"></strong></p>
-    <p class="mute">Qui trovi i video che pubblichiamo per il tuo locale, le metriche, i documenti e le previsioni. Scrivi nome ed email: il team ti dà l'accesso e ti arriva un'email per entrare.</p>
+    <p class="mute">Qui trovi i video che pubblichiamo per il tuo locale, le metriche, i documenti e le previsioni. Scrivi nome, email e il nome del tuo locale: il team ti dà l'accesso e ti arriva un'email per entrare.</p>
     <input type="hidden" name="t" id="token" />
     <label>Nome<input type="text" name="name" autocomplete="name" required autofocus /></label>
     <label>Email<input type="email" name="email" autocomplete="email" required /></label>
+    <label>Nome del locale<input type="text" name="venue" autocomplete="organization" required /></label>
     <p class="login-error" id="error" role="alert" hidden></p>
     <button type="submit" class="btn primary">Chiedi accesso</button>
   </form>
@@ -44,7 +45,7 @@ import logo from "../../../assets/logo.svg";
           document.getElementById("venue")!.textContent = name;
           (document.getElementById("token") as HTMLInputElement).value = token;
           document.getElementById("form")!.hidden = false;
-          const errors: Record<string, string> = { dati: "Scrivi nome ed email validi.", troppi: "Troppe richieste. Riprova tra 15 minuti." };
+          const errors: Record<string, string> = { dati: "Scrivi nome, email valida e nome del locale.", troppi: "Troppe richieste. Riprova tra 15 minuti." };
           if (result && errors[result]) {
             const box = document.getElementById("error")!;
             box.textContent = errors[result];

@@ -169,7 +169,7 @@ async function dashboard() {
     ${connected ? "" : `<p class="note warn">Nessuna piattaforma collegata: le metriche vanno inserite a mano. <a href="#/collegamenti">Collega Instagram, Facebook e TikTok →</a></p>`}
     ${s.reportsDue ? `<p class="note warn">I report di ${esc(month(addMonths(thisMonth(), -1)))} non sono ancora partiti per ${s.reportsDue} ${s.reportsDue === 1 ? "cliente" : "clienti"}. <a href="#/report">Controllali e mandali →</a></p>` : ""}
     ${s.requests.length ? `<section class="panel requests"><h2>Richieste d'accesso all'area clienti</h2><ul class="list">${s.requests.map((u: Row) => `<li>
-      <div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)} · per ${clientLink(u.client_id)} · ${day(u.requested_at)}</small></div>
+      <div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)} · locale indicato: <strong>${esc(u.venue || "—")}</strong> · link di ${clientLink(u.client_id)} · ${day(u.requested_at)}</small></div>
       <div class="end">${userActions(u)}</div></li>`).join("")}</ul></section>` : ""}
     <section class="kpis">
       ${kpi("Clienti attivi", String(active.length), `${s.clients.length} in totale`)}
@@ -248,7 +248,7 @@ async function clientView(id: number) {
           : `<p class="mute">Crea il link d'invito e mandalo al locale: chi lo apre chiede l'accesso con nome ed email, tu approvi una volta e resta collegato.</p>
              <div class="actions"><button class="btn primary" data-new-invite="${c.id}">Crea link d'invito</button></div>`}
         <div class="panel-head gap"><h3>Persone</h3><button class="link" data-add-person="${c.id}">+ Aggiungi persona</button></div>
-        ${people.length ? `<ul class="list">${people.map((u) => `<li><div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)} · ${u.status === "approvato" ? `ultimo accesso ${u.last_seen ? ago(u.last_seen.replace(" ", "T") + "Z") : "mai"}` : `richiesta ${day(u.requested_at)}`}</small></div>
+        ${people.length ? `<ul class="list">${people.map((u) => `<li><div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)}${u.venue ? ` · locale indicato: ${esc(u.venue)}` : ""} · ${u.status === "approvato" ? `ultimo accesso ${u.last_seen ? ago(u.last_seen.replace(" ", "T") + "Z") : "mai"}` : `richiesta ${day(u.requested_at)}`}</small></div>
           <div class="end">${badge(u.status === "approvato" ? "yes" : u.status === "in_attesa" ? "da_pagare" : "no", USER[u.status])}${userActions(u)}</div></li>`).join("")}</ul>`
           : '<p class="empty">Ancora nessuno.</p>'}
       </section>
