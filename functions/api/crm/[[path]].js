@@ -107,6 +107,8 @@ async function create(env, table, body) {
   const keys = Object.keys(row);
   if (!keys.length) throw new Invalid("Nessun dato.");
   if (table === "videos" && ![].concat(body.client_ids ?? []).length) throw new Invalid("Scegli almeno un cliente.");
+  // Titles are the agency's own words, never taken from the platforms.
+  if (table === "videos" && !row.title) throw new Invalid("Scrivi il titolo del video.");
   const { id } = await env.CRM_DB
     .prepare(`INSERT INTO ${table} (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")}) RETURNING id`)
     .bind(...Object.values(row)).first();
@@ -124,6 +126,7 @@ async function create(env, table, body) {
 
 async function update(env, table, id, body) {
   const row = typed(table, body);
+  if (table === "videos" && "title" in row && !row.title) throw new Invalid("Scrivi il titolo del video.");
   // A changed link points at another video: forget the old one's id.
   if (table === "videos" && "url" in row) row.external_id = null;
   const keys = Object.keys(row);

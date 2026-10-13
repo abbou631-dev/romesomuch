@@ -67,7 +67,7 @@ async function instagramId(env, video) {
 
 async function instagram(env, video) {
   const id = await instagramId(env, video);
-  const media = await graph(env, id, { fields: "like_count,comments_count,thumbnail_url,media_url,media_type,caption" });
+  const media = await graph(env, id, { fields: "like_count,comments_count,thumbnail_url,media_url,media_type" });
   const i = await insights(env, `${id}/insights`, ["views,reach,saved,shares,likes,comments", "reach,saved,shares,likes,comments"]);
   return {
     external_id: id,
@@ -78,7 +78,6 @@ async function instagram(env, video) {
     shares: i.shares ?? null,
     saves: i.saved ?? null,
     thumbnail: media.thumbnail_url ?? media.media_url ?? null,
-    title: video.title || media.caption?.split("\n")[0]?.slice(0, 120) || null,
   };
 }
 
@@ -90,7 +89,7 @@ const facebookId = (video) =>
 async function facebook(env, video) {
   const id = facebookId(video);
   if (!id) throw new Error("Link Facebook non riconosciuto (serve /reel/… o /videos/…).");
-  const node = await graph(env, id, { fields: "picture,description,likes.summary(true).limit(0),comments.summary(true).limit(0)" });
+  const node = await graph(env, id, { fields: "picture,likes.summary(true).limit(0),comments.summary(true).limit(0)" });
   const i = await insights(env, `${id}/video_insights`, [
     "blue_reels_play_count,post_impressions_unique",
     "total_video_views,total_video_impressions_unique",
@@ -104,7 +103,6 @@ async function facebook(env, video) {
     shares: null,
     saves: null,
     thumbnail: node.picture ?? null,
-    title: video.title || node.description?.split("\n")[0]?.slice(0, 120) || null,
   };
 }
 
@@ -170,7 +168,7 @@ async function tiktokBatch(env, videos) {
   const access = await tiktokAccess(env);
   const ids = new Map();
   for (const v of videos) ids.set(v.id, await tiktokId(v));
-  const response = await fetch(`${TIKTOK}/video/query/?fields=id,title,cover_image_url,view_count,like_count,comment_count,share_count`, {
+  const response = await fetch(`${TIKTOK}/video/query/?fields=id,cover_image_url,view_count,like_count,comment_count,share_count`, {
     method: "POST",
     headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
     body: JSON.stringify({ filters: { video_ids: [...new Set(ids.values())] } }),
@@ -186,7 +184,7 @@ async function tiktokBatch(env, videos) {
       metrics: {
         external_id: t.id, views: t.view_count ?? null, reach: null, likes: t.like_count ?? null,
         comments: t.comment_count ?? null, shares: t.share_count ?? null, saves: null,
-        thumbnail: t.cover_image_url ?? null, title: video.title || t.title?.slice(0, 120) || null,
+        thumbnail: t.cover_image_url ?? null,
       },
     };
   });
@@ -224,9 +222,9 @@ export async function refresh(env, videos, { maxAgeMinutes = 30, limit = 12 } = 
   const db = env.CRM_DB;
   await db.batch(results.map(({ video, metrics, error }) => metrics
     ? db.prepare(`UPDATE videos SET external_id = ?, views = ?, reach = ?, likes = ?, comments = ?, shares = ?, saves = ?,
-        thumbnail = coalesce(?, thumbnail), title = coalesce(?, title), metrics_at = ?, metrics_error = NULL WHERE id = ?`)
+        thumbnail = coalesce(?, thumbnail), metrics_at = ?, metrics_error = NULL WHERE id = ?`)
       .bind(metrics.external_id, metrics.views, metrics.reach, metrics.likes, metrics.comments, metrics.shares, metrics.saves,
-        metrics.thumbnail, metrics.title, now, video.id)
+        metrics.thumbnail, now, video.id)
     // A failed reading keeps the last numbers and says why; metrics_at moves
     // on so a broken link is not retried on every page view.
     : db.prepare("UPDATE videos SET metrics_error = ?, metrics_at = ? WHERE id = ?").bind(error.slice(0, 300), now, video.id)));

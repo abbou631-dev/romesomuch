@@ -42,7 +42,7 @@ const videoFields = (): Field[] => [
   { name: "platform", label: "Piattaforma", type: "select", options: Object.entries(PLATFORM), required: true },
   { name: "url", label: "Link del video", type: "url", required: true, hint: "Il link pubblico del reel / video / TikTok" },
   { name: "published_on", label: "Pubblicato il", type: "date", required: true },
-  { name: "title", label: "Titolo", hint: "Vuoto = prima riga della didascalia, se la piattaforma è collegata" },
+  { name: "title", label: "Titolo", required: true, hint: "Lo scrivi tu: è il nome con cui il cliente vede il video" },
   { name: "views", label: "Visualizzazioni", type: "number", min: 0, hint: "Le metriche si compilano da sole se la piattaforma è collegata" },
   { name: "reach", label: "Account raggiunti", type: "number", min: 0 },
   { name: "likes", label: "Mi piace", type: "number", min: 0 },
