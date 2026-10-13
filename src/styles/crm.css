@@ -280,7 +280,9 @@ tfoot td { border-top: 1px solid var(--ink); border-bottom: 0; }
 .b-yes { background: #e3f3ea; color: var(--green); }
 .b-no { color: var(--mute); }
 .chart .col.on span { color: var(--ink); font-weight: 700; }
-.chart .col.on .in { background: var(--gold); }
+/* Bars in the site's sage; the chosen month stands out in ink. */
+.chart .col .in { background: #b7c6c2; }
+.chart .col.on .in { background: var(--ink); }
 .chart .col { cursor: pointer; background: none; border: 0; padding: 0; font: inherit; }
 .chart.static .col { cursor: default; }
 .err { color: var(--red); font-size: 12px; }
