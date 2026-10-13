@@ -321,8 +321,8 @@ async function api(request, env, path) {
     const period = isMonth(url.searchParams.get("month")) ? url.searchParams.get("month") : addMonths(today().slice(0, 7), -1);
     const list = await reportList(env, period);
     return json(list.map((r) => ({
-      ...r, subject: reportSubject(r), preview: reportText(r, url.origin),
-      whatsapp: reportText(r, url.origin),
+      ...r, subject: reportSubject(r), preview: reportText(r, url.origin, r.people[0]?.name),
+      whatsapp: reportText(r, url.origin, r.contact),
     })));
   }
   if (table === "reports" && method === "POST") {

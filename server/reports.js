@@ -21,7 +21,7 @@ export async function reportList(env, period, onlyId) {
   const bind = (statement, ...values) => statement.bind(...values, ...(onlyId ? [onlyId] : []));
   const [clients, now, before, done, people, videos, platforms] = await db.batch([
     db.prepare(
-      `SELECT c.id, c.name, c.videos_total, c.end_date,
+      `SELECT c.id, c.name, c.contact, c.videos_total, c.end_date,
          (SELECT sent_at FROM monthly_reports WHERE client_id = c.id AND period = ?) AS sent_at
        FROM clients c WHERE c.status = 'attivo' ${onlyId ? "AND c.id = ?" : ""} ORDER BY c.name COLLATE NOCASE`,
     ).bind(period, ...(onlyId ? [onlyId] : [])),
@@ -50,12 +50,17 @@ const big = (n) => {
 };
 const PLATFORMS = [["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"]];
 
-// The monthly recap, in the agency's own format; the same text goes by email
-// and is copied for WhatsApp.
-export function reportText(r, origin) {
+// The monthly recap, in the agency's own format, after a short greeting to
+// `name` (the person emailed, or the venue's contact for WhatsApp).
+export function reportText(r, origin, name) {
   const m = r.month;
   const views = new Map(r.platforms.map((p) => [p.platform, p.views]));
+  const first = String(name ?? "").trim().split(" ")[0];
   const lines = [
+    first ? `Ciao ${first},` : "Ciao!",
+    "",
+    `ecco come sono andati i video di ${r.name} a ${monthName(r.period)}:`,
+    "",
     `REPORT ${monthName(r.period).split(" ")[0].toUpperCase()} - ${r.name.toUpperCase()}`,
     `Visualizzazioni tra le varie piattaforme: ${big(m.views)}`,
     `Condivisioni: ${big(m.shares)}`,
@@ -65,6 +70,9 @@ export function reportText(r, origin) {
     ...PLATFORMS.filter(([key]) => views.has(key)).map(([key, label]) => `Visualizzazioni ${label}: ${big(views.get(key))}`),
     "",
     `Metriche complete qui: ${origin}/area-clienti/`,
+    "",
+    "A presto,",
+    "RomeSoMuch",
   ];
   return lines.join("\n");
 }
@@ -78,7 +86,7 @@ export async function sendReport(env, origin, clientId, period) {
   if (!r.people.length) return { sent: 0, error: "Nessuna persona con accesso." };
   let sent = 0;
   for (const person of r.people) {
-    if (await mail(env, { to: person.email, subject: reportSubject(r), text: reportText(r, origin) })) sent++;
+    if (await mail(env, { to: person.email, subject: reportSubject(r), text: reportText(r, origin, person.name) })) sent++;
   }
   if (sent) {
     await env.CRM_DB.prepare(
