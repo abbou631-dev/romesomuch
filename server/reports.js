@@ -8,10 +8,11 @@ const monthName = (period) =>
   new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${period}-01T00:00:00Z`));
 
 const SUMS = `count(*) AS videos, coalesce(sum(v.views), 0) AS views, coalesce(sum(v.reach), 0) AS reach,
+  coalesce(sum(v.likes), 0) AS likes, coalesce(sum(v.comments), 0) AS comments,
   coalesce(sum(v.shares), 0) AS shares, coalesce(sum(v.saves), 0) AS saves,
   coalesce(sum(v.likes), 0) + coalesce(sum(v.comments), 0) + coalesce(sum(v.shares), 0) + coalesce(sum(v.saves), 0) AS interactions`;
 const JOIN = "FROM videos v JOIN video_clients l ON l.video_id = v.id";
-const EMPTY = { videos: 0, views: 0, reach: 0, shares: 0, saves: 0, interactions: 0 };
+const EMPTY = { videos: 0, views: 0, reach: 0, likes: 0, comments: 0, shares: 0, saves: 0, interactions: 0 };
 
 // Every active client's month (or just `onlyId`): numbers, the month before,
 // recipients, sent or not. A fixed handful of queries, however many clients.
@@ -50,23 +51,40 @@ const big = (n) => {
 };
 const PLATFORMS = [["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"]];
 
-// The monthly recap, in the agency's own format, after a short greeting to
-// `name` (the person emailed, or the venue's contact for WhatsApp).
+// The client area's rule of thumb (src/lib/crm/portal.ts): ~1 customer every 5,000 views.
+const VIEWS_PER_CUSTOMER = 5000;
+
+// The monthly recap, in the agency's own style, after a short greeting to
+// `name` (the person emailed, or the venue's contact for WhatsApp). No links
+// to single videos: the client area has those.
 export function reportText(r, origin, name) {
   const m = r.month;
   const views = new Map(r.platforms.map((p) => [p.platform, p.views]));
   const first = String(name ?? "").trim().split(" ")[0];
+  const previous = monthName(addMonths(r.period, -1)).split(" ")[0];
+  const change = r.before.views
+    ? ` (${Math.round(((m.views - r.before.views) / r.before.views) * 100) >= 0 ? "+" : ""}${Math.round(((m.views - r.before.views) / r.before.views) * 100)}% rispetto a ${previous})`
+    : "";
+  const best = [...r.videos].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0];
   const lines = [
     first ? `Ciao ${first},` : "Ciao!",
     "",
     `ecco come sono andati i video di ${r.name} a ${monthName(r.period)}:`,
     "",
-    `Visualizzazioni tra le varie piattaforme: ${big(m.views)}`,
+    `Video pubblicati: ${m.videos}${r.videos_total ? ` (${r.done} di ${r.videos_total} del pacchetto)` : ""}`,
+    `Visualizzazioni tra le varie piattaforme: ${big(m.views)}${change}`,
+    // Reach exists only where the platform reports it (not TikTok).
+    ...(m.reach ? [`Account raggiunti: ${big(m.reach)}`] : []),
+    `Mi piace: ${big(m.likes)}`,
+    `Commenti: ${big(m.comments)}`,
     `Condivisioni: ${big(m.shares)}`,
     `Salvati: ${big(m.saves)}`,
     "----",
     // Only the platforms the month's videos were on.
     ...PLATFORMS.filter(([key]) => views.has(key)).map(([key, label]) => `Visualizzazioni ${label}: ${big(views.get(key))}`),
+    "----",
+    ...(best?.views ? [`Video più visto: ${best.title ? `"${best.title}"` : "uno dei video del mese"}, con ${big(best.views)} visualizzazioni`] : []),
+    `Possibili nuovi clienti nel locale: circa ${big(Math.round(m.views / VIEWS_PER_CUSTOMER))} (stima: in media 1 ogni ${big(VIEWS_PER_CUSTOMER)} visualizzazioni)`,
     "",
     ...(r.end_date ? [`Il tuo pacchetto termina a ${monthName(r.end_date.slice(0, 7))}.`, ""] : []),
     `Metriche complete qui: ${origin}/area-clienti/`,
