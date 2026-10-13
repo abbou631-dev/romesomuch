@@ -1,0 +1,17 @@
+---
+// The client area: each venue on the "visibilità costante" package sees its
+// own videos and their numbers. Filled by src/lib/crm/portal.ts.
+import Shell from "../../components/private/Shell.astro";
+import logo from "../../assets/logo.svg";
+---
+<Shell title="Area clienti · RomeSoMuch" bodyClass="portal">
+  <header class="portal-bar">
+    <div class="who"><img class="logo" src={logo.src} alt="RomeSoMuch" /><span id="who"></span></div>
+    <form method="post" action="/api/portal/logout"><button type="submit" class="link">Esci</button></form>
+  </header>
+  <main id="view" aria-live="polite"></main>
+  <script>
+    import { start } from "../../lib/crm/portal";
+    start();
+  </script>
+</Shell>

@@ -1,0 +1,32 @@
+---
+// One login box for both doors. The server comes back with ?e=… on failure.
+import Shell from "./Shell.astro";
+import logo from "../../assets/logo.svg";
+interface Props { title: string; action: string; heading: string; email?: boolean }
+const { title, action, heading, email = false } = Astro.props;
+---
+<Shell title={title} bodyClass="login">
+  <form method="post" action={action} class="login-box">
+    <img class="logo" src={logo.src} alt="RomeSoMuch" />
+    <h1>{heading}</h1>
+    {email && (
+      <label>Email<input type="email" name="email" autocomplete="username" required autofocus /></label>
+    )}
+    <label>Password<input type="password" name="password" autocomplete="current-password" required autofocus={!email} /></label>
+    <p class="login-error" id="error" role="alert" hidden></p>
+    <button type="submit" class="btn primary">Entra</button>
+  </form>
+  <script>
+    const messages: Record<string, string> = {
+      password: "Credenziali non valide.",
+      troppi: "Troppi tentativi. Riprova tra 15 minuti.",
+      config: "Accesso non ancora configurato sul server.",
+    };
+    const code = new URLSearchParams(location.search).get("e");
+    const box = document.getElementById("error")!;
+    if (code && messages[code]) {
+      box.textContent = messages[code];
+      box.hidden = false;
+    }
+  </script>
+</Shell>

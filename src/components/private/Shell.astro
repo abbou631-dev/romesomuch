@@ -1,0 +1,23 @@
+---
+// Document shell for the private pages (CRM and client area): no site
+// header, footer, pixel or consent banner, never indexed.
+import "../../styles/crm.css";
+interface Props { title: string; bodyClass?: string }
+const { title, bodyClass } = Astro.props;
+---
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title}</title>
+    <link rel="icon" href="/favicon-32.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body class={bodyClass}>
+    <slot />
+  </body>
+</html>

@@ -3,5 +3,10 @@
   "name": "romesomuch",
   "compatibility_date": "2026-09-01",
   // Cloudflare Pages project: the static Astro build is served from dist/.
-  "pages_build_output_dir": "./dist"
+  "pages_build_output_dir": "./dist",
+  // The CRM (/crm) and the client area (/area-clienti). Schema in migrations/,
+  // applied with `wrangler d1 migrations apply romesomuch-crm --remote`.
+  "d1_databases": [
+    { "binding": "CRM_DB", "database_name": "romesomuch-crm", "database_id": "cb5274a6-5068-4389-81a0-1a5ef8edfa89" }
+  ]
 }

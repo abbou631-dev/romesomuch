@@ -1,0 +1,28 @@
+---
+// The agency CRM: an empty shell that src/lib/crm/app.ts fills from
+// /api/crm. functions/crm/_middleware.js serves it only after login.
+import Shell from "../../components/private/Shell.astro";
+import logo from "../../assets/logo.svg";
+
+const nav = [
+  ["#/", "Panoramica"],
+  ["#/clienti", "Clienti"],
+  ["#/video", "Video"],
+  ["#/pagamenti", "Pagamenti"],
+  ["#/collegamenti", "Collegamenti"],
+];
+---
+<Shell title="RomeSoMuch CRM">
+  <header class="side">
+    <a href="#/" class="brand"><img class="logo" src={logo.src} alt="RomeSoMuch" /><span class="tag">CRM</span></a>
+    <nav>{nav.map(([href, label]) => <a href={href} data-nav>{label}</a>)}</nav>
+    <form method="post" action="/api/crm/logout" class="logout"><button type="submit" class="link">Esci</button></form>
+  </header>
+  <main id="view" aria-live="polite"></main>
+  <dialog id="dialog"></dialog>
+  <div id="toast" role="status"></div>
+  <script>
+    import { start } from "../../lib/crm/app";
+    start();
+  </script>
+</Shell>
