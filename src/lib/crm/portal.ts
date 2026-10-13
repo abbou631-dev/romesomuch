@@ -2,7 +2,7 @@
 // (functions/api/portal). Metrics older than 15 minutes are read again from
 // the platforms each time a month opens.
 
-import { type Row, apiFor, esc, num, short, day, month, shortMonth, ago, thisMonth, head, kpi, table, bars, platform, interactions } from "./ui";
+import { type Row, apiFor, form, say, esc, num, short, day, month, shortMonth, ago, thisMonth, head, kpi, table, bars, platform, interactions } from "./ui";
 
 const api = apiFor("/api/portal", "/area-clienti/login/");
 const view = document.getElementById("view")!;
@@ -79,10 +79,27 @@ view.addEventListener("click", (event) => {
 
 const fail = (error: Error) => (view.innerHTML = `<p class="empty">Impossibile caricare: ${esc(error.message)}</p>`);
 
+// Signed in: the current password and a new one.
+const changePassword = () =>
+  form("Cambia password", [
+    { name: "current", label: "Password attuale", type: "password", required: true },
+    { name: "password", label: "Nuova password", type: "password", required: true, hint: "Almeno 8 caratteri" },
+  ], {}, (d) => api("password", { method: "POST", data: d }), () => say("Password cambiata"));
+
 export async function start() {
   try {
     data = await api("overview");
     document.getElementById("who")!.textContent = data.client.name;
+    if (data.client.preview) {
+      // The agency looking through the client's eyes.
+      const bar = document.createElement("div");
+      bar.className = "preview-bar";
+      bar.innerHTML = `<span>Anteprima: stai vedendo l'area clienti di <strong>${esc(data.client.name)}</strong> come la vede il cliente.</span>
+        <form method="post" action="/api/portal/logout"><button type="submit" class="link">Torna al CRM</button></form>`;
+      document.body.prepend(bar);
+      document.getElementById("change")?.remove();
+    }
+    document.getElementById("change")?.addEventListener("click", changePassword);
     await render();
   } catch (error) {
     fail(error as Error);

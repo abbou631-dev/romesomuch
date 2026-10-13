@@ -5,7 +5,7 @@ export type Row = Record<string, any>;
 export type Field = {
   name: string;
   label: string;
-  type?: "text" | "email" | "tel" | "url" | "money" | "date" | "month" | "number" | "select" | "textarea" | "password";
+  type?: "text" | "email" | "tel" | "url" | "money" | "date" | "month" | "number" | "select" | "textarea" | "password" | "checks";
   options?: [string, string][];
   required?: boolean;
   hint?: string;
@@ -116,6 +116,12 @@ function input(f: Field, value: any) {
   const req = f.required ? " required" : "";
   const v = value ?? "";
   let control: string;
+  if (f.type === "checks") {
+    // Several choices at once: `value` is the array of chosen keys.
+    const chosen = new Set([].concat(v || []).map(String));
+    return `<fieldset class="field"><legend>${esc(f.label)}${f.required ? " *" : ""}</legend><div class="checks">${f.options!.map(([k, l]) =>
+      `<label><input type="checkbox" name="${f.name}" value="${esc(k)}"${chosen.has(k) ? " checked" : ""} /> ${esc(l)}</label>`).join("")}</div>${f.hint ? `<small>${esc(f.hint)}</small>` : ""}</fieldset>`;
+  }
   if (f.type === "select") {
     control = `<select id="${id}" name="${f.name}"${req}>${f.options!.map(([k, l]) =>
       `<option value="${esc(k)}"${String(v) === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
@@ -153,6 +159,11 @@ export function form(title: string, fields: Field[], values: Row, save: (data: R
     try {
       const data: Row = {};
       for (const f of fields) {
+        if (f.type === "checks") {
+          data[f.name] = raw.getAll(f.name).map(Number);
+          if (f.required && !data[f.name].length) throw new Error(`${f.label}: scegline almeno uno.`);
+          continue;
+        }
         const v = raw.get(f.name);
         data[f.name] = f.type === "money" ? (v ? cents(String(v)) : null) : v === null ? null : String(v);
       }

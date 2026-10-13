@@ -5,7 +5,7 @@ import {
   Invalid, json, redirect, today, lastDayOf, isMonth, values, guarded, sameOrigin,
   sign, verify, setCookie, same, throttled, failed, succeeded, hashPassword,
 } from "../../../server/common.js";
-import { STAFF_COOKIE, staffSignedIn } from "../../../server/sessions.js";
+import { STAFF_COOKIE, VIEW_COOKIE, staffSignedIn } from "../../../server/sessions.js";
 import { connections, refresh, tiktokAuthorizeUrl, tiktokExchange } from "../../../server/platforms.js";
 
 const SESSION_DAYS = 30;
@@ -19,7 +19,7 @@ const TABLES = {
     client_id: "i", period: "m", kind: "t", description: "t", amount: "i", due_date: "d", paid_at: "d", invoice_no: "t",
   },
   videos: {
-    client_id: "i", platform: "t", url: "t", title: "t", published_on: "d", views: "i", reach: "i",
+    platform: "t", url: "t", title: "t", published_on: "d", views: "i", reach: "i",
     likes: "i", comments: "i", shares: "i", saves: "i",
   },
 };
@@ -34,8 +34,26 @@ const SELECT = {
   clients: `SELECT id, name, contact, email, phone, instagram, tiktok, vat, fee, videos_per_month, billing_day,
     start_date, end_date, status, notes, created_at, password IS NOT NULL AS has_access FROM clients`,
   charges: "SELECT * FROM charges",
-  videos: "SELECT * FROM videos",
+  // The clients a video features, as a JSON array (see withClients).
+  videos: "SELECT v.*, (SELECT json_group_array(client_id) FROM video_clients WHERE video_id = v.id) AS client_ids FROM videos v",
 };
+const withClients = (row) => (row && typeof row.client_ids === "string" ? { ...row, client_ids: JSON.parse(row.client_ids) } : row);
+const FEATURES = "v.id IN (SELECT video_id FROM video_clients WHERE client_id = ?)";
+
+// A video's clients come as `client_ids`: at least one, all existing.
+async function linkClients(env, videoId, body, required) {
+  if (!("client_ids" in (body ?? {}))) {
+    if (required) throw new Invalid("Scegli almeno un cliente.");
+    return;
+  }
+  const ids = [...new Set([].concat(body.client_ids ?? []).map(Number))];
+  if (!ids.length || !ids.every(Number.isInteger)) throw new Invalid("Scegli almeno un cliente.");
+  const db = env.CRM_DB;
+  await db.batch([
+    db.prepare("DELETE FROM video_clients WHERE video_id = ?").bind(videoId),
+    ...ids.map((id) => db.prepare("INSERT INTO video_clients (video_id, client_id) VALUES (?, ?)").bind(videoId, id)),
+  ]);
+}
 
 // ---- auth --------------------------------------------------------------------
 
@@ -56,12 +74,13 @@ async function list(env, table, url) {
   const where = [];
   const binds = [];
   const client = url.searchParams.get("client_id");
-  if (client && TABLES[table].client_id) { where.push("client_id = ?"); binds.push(Number(client)); }
+  if (client && table === "videos") { where.push(FEATURES); binds.push(Number(client)); }
+  else if (client && TABLES[table].client_id) { where.push("client_id = ?"); binds.push(Number(client)); }
   const month = url.searchParams.get("month");
   if (month && isMonth(month) && table === "videos") { where.push("published_on LIKE ?"); binds.push(`${month}-%`); }
   const sql = `${SELECT[table]} ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY ${ORDER[table]}`;
   const { results } = await env.CRM_DB.prepare(sql).bind(...binds).all();
-  return json(results);
+  return json(results.map(withClients));
 }
 
 // Columns that are never empty: a cleared field means their default.
@@ -76,12 +95,20 @@ async function create(env, table, body) {
   const row = typed(table, body);
   const keys = Object.keys(row);
   if (!keys.length) throw new Invalid("Nessun dato.");
+  if (table === "videos" && ![].concat(body.client_ids ?? []).length) throw new Invalid("Scegli almeno un cliente.");
   const { id } = await env.CRM_DB
     .prepare(`INSERT INTO ${table} (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")}) RETURNING id`)
     .bind(...Object.values(row)).first();
-  // A new video gets its numbers straight away when its platform is connected.
-  if (table === "videos") await refresh(env, [await env.CRM_DB.prepare("SELECT * FROM videos WHERE id = ?").bind(id).first()], { maxAgeMinutes: 0 });
-  return json(await env.CRM_DB.prepare(`${SELECT[table]} WHERE id = ?`).bind(id).first(), 201);
+  if (table === "videos") {
+    // No video without its clients: undo the insert if the links fail.
+    await linkClients(env, id, body, true).catch(async (error) => {
+      await env.CRM_DB.prepare("DELETE FROM videos WHERE id = ?").bind(id).run();
+      throw error;
+    });
+    // A new video gets its numbers straight away when its platform is connected.
+    await refresh(env, [await env.CRM_DB.prepare("SELECT * FROM videos WHERE id = ?").bind(id).first()], { maxAgeMinutes: 0 });
+  }
+  return json(withClients(await env.CRM_DB.prepare(`${SELECT[table]} WHERE id = ?`).bind(id).first()), 201);
 }
 
 async function update(env, table, id, body) {
@@ -93,8 +120,9 @@ async function update(env, table, id, body) {
     await env.CRM_DB.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`)
       .bind(...Object.values(row), id).run();
   }
+  if (table === "videos") await linkClients(env, id, body, false);
   const updated = await env.CRM_DB.prepare(`${SELECT[table]} WHERE id = ?`).bind(id).first();
-  return updated ? json(updated) : json({ error: "Non trovato." }, 404);
+  return updated ? json(withClients(updated)) : json({ error: "Non trovato." }, 404);
 }
 
 async function remove(env, table, id) {
@@ -144,27 +172,36 @@ async function summary(env, url) {
   if (month === now.slice(0, 7)) await chargeOnce(env, month);
   const db = env.CRM_DB;
   const like = `${month}-%`;
-  const [clients, unpaid, recent, trend] = await db.batch([
+  const [clients, unpaid, recent, trend, totals] = await db.batch([
     db.prepare(
       `SELECT c.id, c.name, c.status, c.fee, c.videos_per_month, c.email, c.password IS NOT NULL AS has_access,
-         (SELECT count(*) FROM videos WHERE client_id = c.id AND published_on LIKE ?1) AS videos,
-         (SELECT coalesce(sum(views), 0) FROM videos WHERE client_id = c.id AND published_on LIKE ?1) AS views,
+         (SELECT count(*) FROM videos v JOIN video_clients l ON l.video_id = v.id
+            WHERE l.client_id = c.id AND v.published_on LIKE ?1) AS videos,
+         (SELECT coalesce(sum(views), 0) FROM videos v JOIN video_clients l ON l.video_id = v.id
+            WHERE l.client_id = c.id AND v.published_on LIKE ?1) AS views,
          (SELECT coalesce(sum(likes), 0) + coalesce(sum(comments), 0) + coalesce(sum(shares), 0) + coalesce(sum(saves), 0)
-            FROM videos WHERE client_id = c.id AND published_on LIKE ?1) AS interactions,
-         (SELECT max(published_on) FROM videos WHERE client_id = c.id) AS last_video,
+            FROM videos v JOIN video_clients l ON l.video_id = v.id WHERE l.client_id = c.id AND v.published_on LIKE ?1) AS interactions,
+         (SELECT max(v.published_on) FROM videos v JOIN video_clients l ON l.video_id = v.id WHERE l.client_id = c.id) AS last_video,
          (SELECT paid_at IS NOT NULL FROM charges WHERE client_id = c.id AND period = ?2 AND kind = 'canone') AS paid,
          (SELECT coalesce(sum(amount), 0) FROM charges WHERE client_id = c.id AND paid_at IS NULL) AS outstanding
        FROM clients c ORDER BY c.status = 'attivo' DESC, c.name COLLATE NOCASE`,
     ).bind(like, month),
     db.prepare("SELECT * FROM charges WHERE paid_at IS NULL ORDER BY due_date"),
-    db.prepare("SELECT * FROM videos ORDER BY published_on DESC, id DESC LIMIT 8"),
+    db.prepare(`${SELECT.videos} ORDER BY published_on DESC, id DESC LIMIT 8`),
     db.prepare(
       `SELECT substr(published_on, 1, 7) AS month, count(*) AS videos, coalesce(sum(views), 0) AS views
        FROM videos WHERE published_on >= ? GROUP BY month ORDER BY month`,
     ).bind(`${Number(now.slice(0, 4)) - 1}${now.slice(4, 7)}-01`),
+    // The month across all clients, each video once even when it features several.
+    db.prepare(
+      `SELECT count(*) AS videos, coalesce(sum(views), 0) AS views,
+         coalesce(sum(likes), 0) + coalesce(sum(comments), 0) + coalesce(sum(shares), 0) + coalesce(sum(saves), 0) AS interactions
+       FROM videos WHERE published_on LIKE ?`,
+    ).bind(like),
   ]);
   return json({
-    today: now, month, clients: clients.results, unpaid: unpaid.results, recent: recent.results,
+    today: now, month, clients: clients.results, unpaid: unpaid.results, recent: recent.results.map(withClients),
+    totals: totals.results[0],
     trend: trend.results, connections: await connections(env),
   });
 }
@@ -186,8 +223,8 @@ async function api(request, env, path) {
   }
   if (table === "refresh" && method === "POST") {
     const body = await request.json().catch(() => ({}));
-    const where = body.id ? "WHERE id = ?" : body.client_id ? "WHERE client_id = ?" : "";
-    const statement = env.CRM_DB.prepare(`SELECT * FROM videos ${where} ORDER BY metrics_at IS NOT NULL, metrics_at`);
+    const where = body.id ? "WHERE v.id = ?" : body.client_id ? `WHERE ${FEATURES}` : "";
+    const statement = env.CRM_DB.prepare(`SELECT v.* FROM videos v ${where} ORDER BY v.metrics_at IS NOT NULL, v.metrics_at`);
     const { results } = await (where ? statement.bind(Number(body.id ?? body.client_id)) : statement).all();
     const updated = await refresh(env, results, { maxAgeMinutes: body.id ? 0 : 5 });
     return json({ updated, left: Math.max(0, results.length - 12) });
@@ -203,6 +240,12 @@ async function api(request, env, path) {
     return redirect("/crm/#/collegamenti?ok=tiktok");
   }
   if (table === "clients" && id && action === "access" && method === "POST") return setAccess(env, id, await request.json());
+  // "Vedi come cliente": the client area, as this client sees it, for 2 hours.
+  if (table === "clients" && id && action === "view" && method === "POST") {
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Set-Cookie": setCookie(VIEW_COOKIE, await sign(env, "view", [id], 1 / 12), 1 / 12) },
+    });
+  }
 
   if (!TABLES[table] || action) return json({ error: "Non trovato." }, 404);
   if (!id && method === "GET") return list(env, table, url);

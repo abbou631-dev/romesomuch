@@ -2,10 +2,11 @@
 // of every cache and search engine either way.
 import { redirect } from "./common.js";
 
-export async function gate({ request, env, next }, login, allowed) {
+// `open` lists the pages reachable without signing in (the first is the login).
+export async function gate({ request, env, next }, open, allowed) {
   const path = new URL(request.url).pathname;
-  const open = path === login || path.startsWith(`${login}/`);
-  if (!open && !(await allowed(request, env))) return redirect(`${login}/`);
+  const isOpen = open.some((p) => path === p || path.startsWith(`${p}/`));
+  if (!isOpen && !(await allowed(request, env))) return redirect(`${open[0]}/`);
   const page = await next();
   const headers = new Headers(page.headers);
   headers.set("Cache-Control", "no-store");

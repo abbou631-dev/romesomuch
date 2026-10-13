@@ -2,8 +2,8 @@
 // One login box for both doors. The server comes back with ?e=… on failure.
 import Shell from "./Shell.astro";
 import logo from "../../assets/logo.svg";
-interface Props { title: string; action: string; heading: string; email?: boolean }
-const { title, action, heading, email = false } = Astro.props;
+interface Props { title: string; action: string; heading: string; email?: boolean; forgot?: string }
+const { title, action, heading, email = false, forgot } = Astro.props;
 ---
 <Shell title={title} bodyClass="login">
   <form method="post" action={action} class="login-box">
@@ -13,8 +13,10 @@ const { title, action, heading, email = false } = Astro.props;
       <label>Email<input type="email" name="email" autocomplete="username" required autofocus /></label>
     )}
     <label>Password<input type="password" name="password" autocomplete="current-password" required autofocus={!email} /></label>
+    <p class="login-note" id="note" role="status" hidden></p>
     <p class="login-error" id="error" role="alert" hidden></p>
     <button type="submit" class="btn primary">Entra</button>
+    {forgot && <a class="link" href={forgot}>Password dimenticata?</a>}
   </form>
   <script>
     const messages: Record<string, string> = {
@@ -22,11 +24,17 @@ const { title, action, heading, email = false } = Astro.props;
       troppi: "Troppi tentativi. Riprova tra 15 minuti.",
       config: "Accesso non ancora configurato sul server.",
     };
-    const code = new URLSearchParams(location.search).get("e");
+    const query = new URLSearchParams(location.search);
+    const code = query.get("e");
     const box = document.getElementById("error")!;
     if (code && messages[code]) {
       box.textContent = messages[code];
       box.hidden = false;
+    }
+    if (query.get("inviata")) {
+      const note = document.getElementById("note")!;
+      note.textContent = "Se l'email è registrata, ti abbiamo mandato un link per scegliere una nuova password. Controlla anche lo spam.";
+      note.hidden = false;
     }
   </script>
 </Shell>

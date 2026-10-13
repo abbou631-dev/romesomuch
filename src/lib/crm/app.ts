@@ -16,6 +16,7 @@ const chargeState = (c: Row) => (c.paid_at ? "pagato" : c.due_date < today() ? "
 let clients: Row[] = [];
 const clientName = (id: number) => clients.find((c) => c.id === id)?.name ?? "—";
 const clientLink = (id: number) => `<a href="#/cliente/${id}">${esc(clientName(id))}</a>`;
+const clientLinks = (ids: number[] = []) => ids.map(clientLink).join(", ") || "—";
 const clientOptions = (): [string, string][] => clients.map((c) => [String(c.id), c.name]);
 
 // ---- forms -------------------------------------------------------------------
@@ -37,7 +38,7 @@ const clientFields = (): Field[] => [
   { name: "notes", label: "Note", type: "textarea" },
 ];
 const videoFields = (): Field[] => [
-  { name: "client_id", label: "Cliente", type: "select", options: clientOptions(), required: true },
+  { name: "client_ids", label: "Clienti nel video", type: "checks", options: clientOptions(), required: true, hint: "Spunta tutti i locali che compaiono nel video: lo vedranno tutti nella loro area" },
   { name: "platform", label: "Piattaforma", type: "select", options: Object.entries(PLATFORM), required: true },
   { name: "url", label: "Link del video", type: "url", required: true, hint: "Il link pubblico del reel / video / TikTok" },
   { name: "published_on", label: "Pubblicato il", type: "date", required: true },
@@ -68,7 +69,7 @@ const edit = (table: string, row: Row) =>
     (d) => (row.id ? api(`${table}/${row.id}`, { method: "PATCH", data: d }) : api(table, { method: "POST", data: d })), render);
 const fresh = (table: string, clientId?: number): Row => {
   if (table === "clients") return { status: "attivo", billing_day: 1, videos_per_month: 4, start_date: today() };
-  if (table === "videos") return { client_id: clientId ?? clients[0]?.id, platform: "instagram", published_on: today() };
+  if (table === "videos") return { client_ids: clientId ? [clientId] : [], platform: "instagram", published_on: today() };
   return { client_id: clientId ?? clients[0]?.id, kind: "extra", period: thisMonth(), due_date: today() };
 };
 
@@ -108,9 +109,9 @@ const chargeRows = (charges: Row[], showClient = true) => charges.map((c) => {
 const chargeHeads = (showClient = true) => [...(showClient ? ["Cliente"] : []), "Mese", "Voce", "Importo", "Scadenza", "Stato", ""];
 
 const videoRows = (videos: Row[], showClient = true) => videos.map((v) => `<tr>
-  <td>${day(v.published_on)}</td>${showClient ? `<td>${clientLink(v.client_id)}</td>` : ""}
+  <td>${day(v.published_on)}</td>${showClient ? `<td>${clientLinks(v.client_ids)}</td>` : ""}
   <td>${platform(v.platform)}</td>
-  <td><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "Apri video")}</a>${v.metrics_error ? `<small class="block err">${esc(v.metrics_error)}</small>` : ""}</td>
+  <td><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "Apri video")}</a>${!showClient && v.client_ids?.length > 1 ? `<small class="block mute">con ${v.client_ids.length - 1} altri locali</small>` : ""}${v.metrics_error ? `<small class="block err">${esc(v.metrics_error)}</small>` : ""}</td>
   <td class="num">${num(v.views)}</td><td class="num">${num(v.reach)}</td><td class="num">${num(interactions(v))}</td>
   <td><small class="mute">${v.metrics_at ? ago(v.metrics_at) : "a mano"}</small></td>
   <td class="row-actions"><button class="link" data-refresh="${v.id}">Aggiorna</button>${rowActions("videos", v.id)}</td></tr>`);
@@ -145,8 +146,8 @@ async function dashboard() {
     <section class="kpis">
       ${kpi("Clienti attivi", String(active.length), `${s.clients.length} in totale`)}
       ${kpi("Canoni al mese", eur(sum(active, "fee")))}
-      ${kpi(`Video ${month(selected)}`, `${sum(active, "videos")} / ${sum(active, "videos_per_month")}`, "pubblicati / previsti", sum(active, "videos") >= sum(active, "videos_per_month") ? "good" : "")}
-      ${kpi("Visualizzazioni del mese", short(sum(s.clients, "views")), `${num(sum(s.clients, "interactions"))} interazioni`)}
+      ${kpi(`Presenze ${month(selected)}`, `${sum(active, "videos")} / ${sum(active, "videos_per_month")}`, "video dei clienti / previsti dai pacchetti", sum(active, "videos") >= sum(active, "videos_per_month") ? "good" : "")}
+      ${kpi("Visualizzazioni del mese", short(s.totals.views), `${s.totals.videos} video · ${num(s.totals.interactions)} interazioni`)}
       ${kpi("Da incassare", eur(outstanding), late.length ? `${late.length} in ritardo` : "nessun ritardo", late.length ? "alert" : "")}
     </section>
     <section class="panel"><h2>Clienti del pacchetto · ${esc(month(selected))}</h2>
@@ -164,7 +165,7 @@ async function dashboard() {
         }).join("")}</ul>` : '<p class="empty">Tutti in regola.</p>'}
       </section>
       <section class="panel"><h2>Ultimi video</h2>
-        ${s.recent.length ? `<ul class="list">${s.recent.map((v: Row) => `<li><div>${clientLink(v.client_id)}<small>${platform(v.platform)} ${day(v.published_on)} · <a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "apri")}</a></small></div>
+        ${s.recent.length ? `<ul class="list">${s.recent.map((v: Row) => `<li><div><span>${clientLinks(v.client_ids)}</span><small>${platform(v.platform)} ${day(v.published_on)} · <a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "apri")}</a></small></div>
           <div class="end"><strong>${short(v.views)}</strong><small class="mute">views</small></div></li>`).join("")}</ul>` : '<p class="empty">Nessun video ancora.</p>'}
       </section>
     </div>`;
@@ -209,11 +210,11 @@ async function clientView(id: number) {
       <section class="panel"><h2>Scheda</h2><dl class="info">${info.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
         ${c.notes ? `<p class="notes">${esc(c.notes)}</p>` : ""}</section>
       <section class="panel"><h2>Area clienti</h2>
-        ${!c.email ? '<p class="empty">Inserisci l\'email del cliente (Modifica): sarà il suo nome utente.</p>'
+        ${!c.email ? `<p class="empty">Inserisci l'email del cliente (Modifica): sarà il suo nome utente.</p><div class="actions"><button class="btn" data-view="${c.id}">Vedi come cliente</button></div>`
           : c.has_access ? `<p>${badge("yes", "Attiva")} Il cliente entra su <a href="/area-clienti/" target="_blank">${esc(location.host)}/area-clienti/</a> con <strong>${esc(c.email)}</strong>.</p>
-            <div class="actions"><button class="btn" data-access="${c.id}">Nuova password</button><button class="btn danger" data-revoke="${c.id}">Revoca accesso</button></div>`
+            <div class="actions"><button class="btn primary" data-view="${c.id}">Vedi come cliente</button><button class="btn" data-access="${c.id}">Nuova password</button><button class="btn danger" data-revoke="${c.id}">Revoca accesso</button></div>`
           : `<p class="mute">Non ha ancora accesso. Imposta una password: il CRM copia un messaggio d'invito da mandargli su WhatsApp.</p>
-            <div class="actions"><button class="btn primary" data-access="${c.id}">Attiva accesso</button></div>`}
+            <div class="actions"><button class="btn primary" data-access="${c.id}">Attiva accesso</button><button class="btn" data-view="${c.id}">Vedi come cliente</button></div>`}
       </section>
     </div>
     <section class="panel"><div class="panel-head"><h2>Video</h2><div class="actions"><button class="btn" data-refresh-client="${id}">Aggiorna metriche</button>${add("videos", "+ Video", id)}</div></div>
@@ -225,7 +226,7 @@ async function clientView(id: number) {
 let videoClient = "";
 async function videosView() {
   const all = await api<Row[]>(`videos?month=${selected}`);
-  const rows = all.filter((v) => !videoClient || String(v.client_id) === videoClient);
+  const rows = all.filter((v) => !videoClient || v.client_ids.includes(Number(videoClient)));
   view.innerHTML = `${head("Video", `<button class="btn" data-refresh-all>Aggiorna metriche</button>${add("videos", "+ Video")}`)}
     <div class="filters">${monthPicker(selected)}
       <label>Cliente <select data-video-client><option value="">Tutti</option>${clientOptions().map(([k, l]) => `<option value="${k}"${k === videoClient ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label></div>
@@ -328,6 +329,12 @@ view.addEventListener("click", (event) => {
   } else if (d.access) {
     const c = clients.find((x) => x.id === Number(d.access));
     if (c) access(c);
+  } else if (d.view) {
+    // Opened before the request so the browser does not block the new tab.
+    const tab = window.open("about:blank", "_blank");
+    api(`clients/${d.view}/view`, { method: "POST", data: {} })
+      .then(() => { if (tab) tab.location.href = "/area-clienti/"; else location.href = "/area-clienti/"; })
+      .catch((error) => { tab?.close(); say(error.message, true); });
   } else if (d.revoke) {
     if (!confirm("Revocare l'accesso? Il cliente non potrà più entrare finché non imposti una nuova password.")) return;
     act(() => api(`clients/${d.revoke}/access`, { method: "POST", data: { password: "" } }), "Accesso revocato");

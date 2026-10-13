@@ -243,9 +243,9 @@ dialog::backdrop { background: rgba(17, 17, 17, 0.35); }
 #toast.bad { background: var(--red); }
 
 /* ---- login ---- */
-body.login { display: grid; place-items: center; min-height: 100vh; padding: 16px; background: var(--wash); }
+body.login { display: grid; grid-template-columns: 1fr; place-items: center; min-height: 100vh; padding: 16px; background: var(--wash); }
 .login-box { background: var(--paper); border-radius: 16px; padding: 32px 28px; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 16px; }
-.login-box .logo { height: 30px; }
+.login-box .logo { height: 30px; align-self: flex-start; }
 .login-box h1 { font-size: 13px; letter-spacing: 0.14em; color: var(--mute); margin-top: -12px; }
 .login-box label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
 .login-box input { font-size: 16px; padding: 10px 12px; }
@@ -322,3 +322,13 @@ tr.on td { background: var(--wash); }
 .note.pos { color: var(--green); }
 .note.neg { color: var(--red); }
 .video .thumb.empty { aspect-ratio: 4 / 3; }
+.login-note { margin: 0; color: var(--green); }
+.login-box .mute { margin: -6px 0 0; }
+.preview-bar { background: var(--ink); color: var(--paper); padding: 10px 16px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; align-items: center; }
+.preview-bar button { color: var(--cream); }
+.checks { display: grid; gap: 6px; max-height: 220px; overflow-y: auto; border: 1px solid var(--hair); border-radius: 8px; padding: 8px 10px; }
+.checks label { flex-direction: row !important; align-items: center; gap: 8px; color: var(--ink) !important; font-size: 14px !important; font-weight: 500 !important; }
+.portal-bar .end { display: flex; gap: 16px; align-items: center; }
+fieldset.field { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+fieldset.field legend { font-size: 12px; font-weight: 600; color: var(--mute); padding: 0 0 4px; }
+fieldset.field small { color: var(--mute); }
