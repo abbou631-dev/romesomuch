@@ -1,7 +1,7 @@
 // Passwordless access to the client area: invite links, access requests,
 // and sign-in links sent by email (through Resend, like the site's forms).
 import { setCookie, sign } from "./common.js";
-import { CLIENT_COOKIE } from "./sessions.js";
+import { CLIENT_COOKIE, STAFF_COOKIE } from "./sessions.js";
 
 // Browsers keep a cookie at most ~400 days; every visit renews it, so a
 // person who opens the area at least once a year never signs in again.
@@ -50,5 +50,25 @@ export async function sendLinks(env, origin, users, { minutes = LINK_MINUTES, in
     to: users[0].email,
     subject: "RomeSoMuch · il tuo accesso all'area clienti",
     text: `Ciao${users[0].name ? ` ${users[0].name}` : ""},\n\n${intro ?? "ecco il link per entrare nell'area clienti RomeSoMuch."}\n\n${links.join("\n\n")}\n\nIl link vale ${valid}. Una volta dentro resti collegato su questo dispositivo: la prossima volta ti basta aprire ${origin}/area-clienti/.\nSe non l'hai chiesto tu, ignora questa email.\n\nRomeSoMuch`,
+  });
+}
+
+// Team members: a sign-in link to the CRM, valid `minutes`.
+export const TEAM_DAYS = 400;
+export const teamCookie = async (env, member) =>
+  setCookie(STAFF_COOKIE, await sign(env, "staff", ["team", member.id, member.session_version], TEAM_DAYS), TEAM_DAYS);
+
+export async function sendTeamLink(env, origin, member, { minutes = LINK_MINUTES, intro } = {}) {
+  const token = randomToken();
+  await env.CRM_DB.batch([
+    env.CRM_DB.prepare("DELETE FROM team_links WHERE expires_at < ?").bind(Date.now()),
+    env.CRM_DB.prepare("INSERT INTO team_links (token_hash, member_id, expires_at) VALUES (?, ?, ?)")
+      .bind(await sha256(token), member.id, Date.now() + minutes * 60e3),
+  ]);
+  const valid = minutes >= 1440 ? `${Math.round(minutes / 1440)} giorni` : `${minutes} minuti`;
+  return mail(env, {
+    to: member.email,
+    subject: "RomeSoMuch · accesso al CRM del team",
+    text: `Ciao${member.name ? ` ${member.name.split(" ")[0]}` : ""},\n\n${intro ?? "ecco il link per entrare nel CRM RomeSoMuch."}\n\n${origin}/api/crm/team-enter?t=${token}\n\nIl link vale ${valid}. Una volta dentro resti collegato su questo dispositivo: la prossima volta apri ${origin}/crm/.\nSe non l'hai chiesto tu, ignora questa email.\n\nRomeSoMuch`,
   });
 }

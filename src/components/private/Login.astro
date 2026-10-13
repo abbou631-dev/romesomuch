@@ -1,25 +1,46 @@
 ---
-// The CRM's front door: one password. The server comes back with ?e=… on failure.
+// The CRM's front door: the owner's password, or, for the team, an email
+// that receives a sign-in link. The server comes back with ?e=… or ?inviata=1.
 import Shell from "./Shell.astro";
 import logo from "../../assets/logo.svg";
 interface Props { title: string; action: string; heading: string }
 const { title, action, heading } = Astro.props;
 ---
 <Shell title={title} bodyClass="login">
-  <form method="post" action={action} class="login-box">
+  <div class="login-box" id="sent" hidden>
     <img class="logo" src={logo.src} alt="RomeSoMuch" />
-    <h1>{heading}</h1>
-    <label>Password<input type="password" name="password" autocomplete="current-password" required autofocus /></label>
-    <p class="login-error" id="error" role="alert" hidden></p>
-    <button type="submit" class="btn primary">Entra</button>
-  </form>
+    <h1>Controlla la tua email</h1>
+    <p>Se fai parte del team, ti abbiamo appena mandato il link per entrare (vale 30 minuti). Guarda anche nello spam.</p>
+    <a class="link" href="/crm/login/">Torna all'accesso</a>
+  </div>
+  <div class="login-stack" id="forms">
+    <form method="post" action={action} class="login-box">
+      <img class="logo" src={logo.src} alt="RomeSoMuch" />
+      <h1>{heading}</h1>
+      <label>Password<input type="password" name="password" autocomplete="current-password" required /></label>
+      <p class="login-error" id="error" role="alert" hidden></p>
+      <button type="submit" class="btn primary">Entra</button>
+    </form>
+    <form method="post" action="/api/crm/team-login" class="login-box team">
+      <h2>Fai parte del team?</h2>
+      <p class="mute">Scrivi la tua email: ti mandiamo il link per entrare.</p>
+      <label>Email<input type="email" name="email" autocomplete="email" required /></label>
+      <button type="submit" class="btn">Mandami il link</button>
+    </form>
+  </div>
   <script>
+    const query = new URLSearchParams(location.search);
+    if (query.get("inviata")) {
+      document.getElementById("forms")!.hidden = true;
+      document.getElementById("sent")!.hidden = false;
+    }
     const messages: Record<string, string> = {
       password: "Password errata.",
       troppi: "Troppi tentativi. Riprova tra 15 minuti.",
       config: "Accesso non ancora configurato sul server.",
+      scaduto: "Il link è scaduto o non è valido: chiedine uno nuovo qui sotto.",
     };
-    const code = new URLSearchParams(location.search).get("e");
+    const code = query.get("e");
     const box = document.getElementById("error")!;
     if (code && messages[code]) {
       box.textContent = messages[code];

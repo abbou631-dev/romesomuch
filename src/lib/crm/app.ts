@@ -14,6 +14,9 @@ const CHARGE = { pagato: "Pagato", scaduto: "Scaduto", da_pagare: "Da pagare" } 
 const chargeState = (c: Row) => (c.paid_at ? "pagato" : c.due_date < today() ? "scaduto" : "da_pagare");
 
 let clients: Row[] = [];
+// "owner" sees everything; "team" only Clienti and Video, without money.
+let role = "owner";
+const isTeam = () => role === "team";
 const clientName = (id: number) => clients.find((c) => c.id === id)?.name ?? "—";
 const clientLink = (id: number) => `<a href="#/cliente/${id}">${esc(clientName(id))}</a>`;
 const clientLinks = (ids: number[] = []) => ids.map(clientLink).join(", ") || "—";
@@ -199,7 +202,15 @@ async function dashboard() {
     </div>`;
 }
 
+async function teamClientsView() {
+  const rows = clients.map((c) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a></td>
+    <td>${badge(c.status, STATUS[c.status])}</td><td>${quota(c.videos_all, c.videos_total)}</td><td>${day(c.end_date)}</td><td>${esc(c.contact ?? "")}</td></tr>`);
+  view.innerHTML = `${head("Clienti")}
+    <section class="panel">${table(["Cliente", "Stato", "Pacchetto", "Fine contratto", "Referente"], rows, "Nessun cliente.")}</section>`;
+}
+
 async function clientsView() {
+  if (isTeam()) return teamClientsView();
   const s = await api(`summary?month=${thisMonth()}`);
   const rows = s.clients.map((c: Row) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a></td>
     <td>${badge(c.status, STATUS[c.status])}</td><td class="num">${eur(c.fee)}</td><td>${quota(c.videos_all, c.videos_total)}</td><td>${day(c.end_date)}</td>
@@ -208,9 +219,36 @@ async function clientsView() {
     <section class="panel">${table(["Cliente", "Stato", "Canone", "Pacchetto", "Fine contratto", "Da incassare", "Area clienti"], rows, "Nessun cliente. Aggiungi il primo.")}</section>`;
 }
 
+// The team's client page: details and videos, nothing about money or access.
+async function teamClientView(c: Row) {
+  const videos = await api<Row[]>(`videos?client_id=${c.id}`);
+  const now = videos.filter((v) => v.published_on.startsWith(thisMonth()));
+  const views = (rows: Row[]) => rows.reduce((t, v) => t + (v.views ?? 0), 0);
+  const info: [string, string][] = [
+    ["Pacchetto", `${c.videos_total} video in tutto`],
+    ["Contratto", `dal ${day(c.start_date)}${c.end_date ? ` al ${day(c.end_date)}` : ""}`],
+    ["Referente", esc(c.contact ?? "—")],
+    ["Telefono", c.phone ? `<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : "—"],
+    ["Instagram", esc(c.instagram ?? "—")],
+    ["TikTok", esc(c.tiktok ?? "—")],
+  ];
+  view.innerHTML = `<p class="crumb"><a href="#/clienti">← Clienti</a></p>
+    ${head(`${esc(c.name)} ${badge(c.status, STATUS[c.status])}`)}
+    <section class="kpis">
+      ${kpi("Pacchetto", `${videos.length} / ${c.videos_total}`, `video pubblicati${c.end_date ? ` · fino al ${day(c.end_date)}` : ""}`, c.videos_total && videos.length >= c.videos_total ? "good" : "")}
+      ${kpi("Visualizzazioni del mese", short(views(now)))}
+      ${kpi("Visualizzazioni totali", short(views(videos)), `${videos.length} video`)}
+    </section>
+    <section class="panel"><h2>Scheda</h2><dl class="info">${info.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+      ${c.notes ? `<p class="notes">${esc(c.notes)}</p>` : ""}</section>
+    <section class="panel"><div class="panel-head"><h2>Video</h2><div class="actions"><button class="btn" data-refresh-client="${c.id}">Aggiorna metriche</button>${add("videos", "+ Video", c.id)}</div></div>
+      ${table(videoHeads(false), videoRows(videos, false), "Nessun video ancora.")}</section>`;
+}
+
 async function clientView(id: number) {
   const c = clients.find((x) => x.id === id);
   if (!c) return void (view.innerHTML = head("Cliente non trovato") + '<p><a href="#/clienti">← Clienti</a></p>');
+  if (isTeam()) return teamClientView(c);
   const [videos, charges, docs, people] = await Promise.all([
     api<Row[]>(`videos?client_id=${id}`), api<Row[]>(`charges?client_id=${id}`), api<Row[]>(`documents?client_id=${id}`),
     api<Row[]>(`users?client_id=${id}`),
@@ -383,6 +421,24 @@ async function sendReports(ids: number[]) {
   return `${mails} email inviate per ${month(reportMonth)}`;
 }
 
+// The owner's list of team members: they sign in by emailed link and see
+// only Clienti and Video.
+async function teamView() {
+  const members = await api<Row[]>("team");
+  view.innerHTML = `${head("Team", '<button class="btn primary" data-add-member>+ Aggiungi al team</button>',
+      "Chi è nel team vede solo Clienti e Video: inserisce i video, niente canoni, pagamenti, documenti, report o accessi.")}
+    <section class="panel">${members.length ? `<ul class="list">${members.map((m) => `<li><div><strong>${esc(m.name || m.email)}</strong>
+      <small>${esc(m.email)} · ultimo accesso ${m.last_seen ? ago(m.last_seen.replace(" ", "T") + "Z") : "mai"}</small></div>
+      <div class="end"><button class="link danger" data-remove-member="${m.id}">Rimuovi</button></div></li>`).join("")}</ul>`
+      : '<p class="empty">Nessuno ancora. Aggiungi un membro: riceve un\'email con il link per entrare.</p>'}</section>
+    <p class="explain">Per entrare: romesomuch.com/crm/ › "Fai parte del team?" › la sua email › il link che riceve. Resta collegato su quel dispositivo.</p>`;
+}
+const addMember = () =>
+  form("Aggiungi al team", [
+    { name: "name", label: "Nome" },
+    { name: "email", label: "Email", type: "email", required: true, hint: "Riceve subito un'email con il link per entrare (vale 7 giorni)" },
+  ], {}, (d) => api("team", { method: "POST", data: d }), render);
+
 // ---- routing and events ------------------------------------------------------------
 
 async function render() {
@@ -391,6 +447,11 @@ async function render() {
     const target = a.getAttribute("href")!.replace(/^#\/?/, "");
     a.classList.toggle("on", target === route || (route === "cliente" && target === "clienti"));
   });
+  // The team lands on Video and never opens the owner's pages.
+  if (isTeam() && !["clienti", "cliente", "video"].includes(route)) {
+    location.hash = "#/video";
+    return;
+  }
   try {
     clients = await api<Row[]>("clients");
     if (route === "clienti") await clientsView();
@@ -399,6 +460,7 @@ async function render() {
     else if (route === "pagamenti") await paymentsView();
     else if (route === "collegamenti") await connectionsView();
     else if (route === "report") await reportsView();
+    else if (route === "team") await teamView();
     else await dashboard();
   } catch (error) {
     view.innerHTML = `<p class="empty">Impossibile caricare: ${esc((error as Error).message)}</p>`;
@@ -434,6 +496,11 @@ view.addEventListener("click", (event) => {
     });
   } else if (d.pay) {
     act(() => api(`charges/${d.pay}`, { method: "PATCH", data: { paid_at: d.paid === "1" ? null : today() } }), d.paid === "1" ? "Segnato da pagare" : "Segnato pagato");
+  } else if ("addMember" in d) {
+    addMember();
+  } else if (d.removeMember) {
+    if (!confirm("Togliere questa persona dal team? Viene scollegata subito.")) return;
+    act(() => api(`team/${d.removeMember}`, { method: "DELETE" }), "Rimosso dal team");
   } else if (d.copyReport) {
     copyReport(Number(d.copyReport));
   } else if (d.preview) {
@@ -495,7 +562,13 @@ view.addEventListener("change", (event) => {
   else if ("payState" in el.dataset) { payState = el.value; render(); }
 });
 
-export function start() {
+export async function start() {
+  try {
+    role = (await api<Row>("me")).role;
+  } catch {
+    return;
+  }
+  if (isTeam()) document.querySelectorAll("[data-owner]").forEach((a) => a.remove());
   addEventListener("hashchange", render);
   render();
 }

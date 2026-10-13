@@ -361,3 +361,6 @@ body.portal td:first-child { white-space: nowrap; }
 .panel h3 { font-size: 13px; margin: 0; }
 .requests { border-color: var(--amber); }
 .mail { white-space: pre-wrap; font: 13px/1.55 var(--font); background: var(--wash); padding: 14px 16px; border-radius: 8px; margin: 0; }
+.login-stack { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 360px; }
+.login-box.team { padding: 22px 28px; gap: 10px; }
+.login-box.team h2 { margin: 0; font-size: 15px; }

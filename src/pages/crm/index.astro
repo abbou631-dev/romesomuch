@@ -4,19 +4,22 @@
 import Shell from "../../components/private/Shell.astro";
 import logo from "../../assets/logo.svg";
 
-const nav = [
-  ["#/", "Panoramica"],
-  ["#/clienti", "Clienti"],
-  ["#/video", "Video"],
-  ["#/pagamenti", "Pagamenti"],
-  ["#/report", "Report"],
-  ["#/collegamenti", "Collegamenti"],
+// The second value marks what only the owner sees; the team gets Clienti
+// and Video (the server enforces the same, see functions/api/crm).
+const nav: [string, string, boolean][] = [
+  ["#/", "Panoramica", true],
+  ["#/clienti", "Clienti", false],
+  ["#/video", "Video", false],
+  ["#/pagamenti", "Pagamenti", true],
+  ["#/report", "Report", true],
+  ["#/collegamenti", "Collegamenti", true],
+  ["#/team", "Team", true],
 ];
 ---
 <Shell title="RomeSoMuch CRM">
   <header class="side">
     <a href="#/" class="brand"><img class="logo" src={logo.src} alt="RomeSoMuch" /><span class="tag">CRM</span></a>
-    <nav>{nav.map(([href, label]) => <a href={href} data-nav>{label}</a>)}</nav>
+    <nav>{nav.map(([href, label, owner]) => <a href={href} data-nav data-owner={owner ? "" : undefined}>{label}</a>)}</nav>
     <form method="post" action="/api/crm/logout" class="logout"><button type="submit" class="link">Esci</button></form>
   </header>
   <main id="view" aria-live="polite"></main>

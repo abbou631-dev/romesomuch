@@ -6,8 +6,23 @@ export const CLIENT_COOKIE = "rsm_client";
 // Set by the CRM's "Vedi come cliente": the agency looks at one client's area.
 export const VIEW_COOKIE = "rsm_view";
 
-export const staffSignedIn = async (request, env) =>
-  Boolean(await verify(env, "staff", readCookie(request, STAFF_COOKIE)));
+// The CRM has two kinds of session: the owner (the CRM password, cookie
+// parts ["crm"]) and team members (emailed link, parts ["team", id, version]),
+// who only add videos and look up clients. Raising a member's version, or
+// removing them, ends their session.
+export async function staffSession(request, env) {
+  const parts = await verify(env, "staff", readCookie(request, STAFF_COOKIE));
+  if (!parts) return null;
+  if (parts[0] === "crm") return { role: "owner" };
+  if (parts[0] !== "team") return null;
+  const member = await env.CRM_DB.prepare("SELECT id, name, email, session_version FROM team_members WHERE id = ?")
+    .bind(Number(parts[1])).first();
+  return member && String(member.session_version) === parts[2] ? { role: "team", ...member } : null;
+}
+
+export const staffSignedIn = async (request, env) => Boolean(await staffSession(request, env));
+// Previews of the client area show documents and invoices: owner only.
+export const ownerSignedIn = async (request, env) => (await staffSession(request, env))?.role === "owner";
 
 const CLIENT = `SELECT id, name, contact, videos_total, start_date, end_date, status, instagram, tiktok FROM clients WHERE id = ?`;
 
@@ -16,7 +31,7 @@ const CLIENT = `SELECT id, name, contact, videos_total, start_date, end_date, st
 // version matches (raising it signs them out) and the client is not closed.
 export async function signedInClient(request, env) {
   const viewing = await verify(env, "view", readCookie(request, VIEW_COOKIE));
-  if (viewing && (await staffSignedIn(request, env))) {
+  if (viewing && (await ownerSignedIn(request, env))) {
     const client = await env.CRM_DB.prepare(CLIENT).bind(Number(viewing[0])).first();
     if (client) return { ...client, preview: true };
   }

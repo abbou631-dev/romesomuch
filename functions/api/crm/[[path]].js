@@ -5,9 +5,9 @@ import {
   Invalid, json, redirect, today, lastDayOf, isMonth, addMonths, values, guarded, sameOrigin,
   sign, verify, setCookie, same, throttled, failed, succeeded,
 } from "../../../server/common.js";
-import { randomToken, sendLinks } from "../../../server/access.js";
+import { randomToken, sendLinks, sendTeamLink, teamCookie, sha256 } from "../../../server/access.js";
 import { reportList, reportText, reportSubject, sendReport } from "../../../server/reports.js";
-import { STAFF_COOKIE, VIEW_COOKIE, staffSignedIn } from "../../../server/sessions.js";
+import { STAFF_COOKIE, VIEW_COOKIE, staffSession } from "../../../server/sessions.js";
 import { connections, refresh, tiktokAuthorizeUrl, tiktokExchange } from "../../../server/platforms.js";
 import { upload, download, removeFiles } from "../../../server/files.js";
 
@@ -38,6 +38,7 @@ const SELECT = {
   clients: `SELECT id, name, contact, email, phone, instagram, tiktok, vat, fee, videos_per_month, videos_total, billing_day,
     start_date, end_date, status, notes, created_at, invite_token,
     (SELECT count(*) FROM client_users WHERE client_id = clients.id AND status = 'approvato') AS people,
+    (SELECT count(*) FROM video_clients WHERE client_id = clients.id) AS videos_all,
     (SELECT count(*) FROM client_users WHERE client_id = clients.id AND status = 'in_attesa') AS pending FROM clients`,
   documents: "SELECT * FROM documents",
   charges: "SELECT * FROM charges",
@@ -283,15 +284,85 @@ async function summary(env, url) {
   });
 }
 
+// ---- team ------------------------------------------------------------------------
+
+// What a team member may do: look up clients (without money) and handle videos.
+const TEAM_CAN = (method, path) => {
+  const [table, id, action] = path;
+  if (action) return false;
+  if (table === "me") return method === "GET";
+  if (table === "clients") return method === "GET" && !id;
+  if (table === "videos") return ["GET", "POST", "PATCH", "DELETE"].includes(method);
+  return table === "refresh" && method === "POST";
+};
+// The client fields a team member sees: no fee, billing, VAT number, invite link or access.
+const TEAM_CLIENT = ["id", "name", "contact", "email", "phone", "instagram", "tiktok", "videos_total", "videos_all",
+  "start_date", "end_date", "status", "notes"];
+const forTeam = (client) => Object.fromEntries(TEAM_CLIENT.map((k) => [k, client[k]]));
+
+async function team(request, env, url, id) {
+  const db = env.CRM_DB;
+  if (!id && request.method === "GET") {
+    return json((await db.prepare("SELECT id, name, email, last_seen, created_at FROM team_members ORDER BY name COLLATE NOCASE").all()).results);
+  }
+  if (!id && request.method === "POST") {
+    const body = await request.json();
+    const email = String(body.email ?? "").trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email)) throw new Invalid("Email non valida.");
+    const member = await db.prepare(
+      `INSERT INTO team_members (name, email) VALUES (?, ?)
+       ON CONFLICT(email) DO UPDATE SET name = coalesce(excluded.name, name) RETURNING *`,
+    ).bind(String(body.name ?? "").trim() || null, email).first();
+    await sendTeamLink(env, url.origin, member, {
+      minutes: 7 * 1440, intro: "ti abbiamo dato accesso al CRM RomeSoMuch: puoi vedere i clienti e inserire i video.",
+    });
+    return json({ ok: true }, 201);
+  }
+  if (id && request.method === "DELETE") {
+    await db.prepare("DELETE FROM team_members WHERE id = ?").bind(id).run();
+    return json({ ok: true });
+  }
+  return json({ error: "Non trovato." }, 404);
+}
+
+// The CRM sign-in page's "team" form: a link by email, same answer either way.
+async function teamLogin(request, env) {
+  if (await throttled(env, request)) return redirect("/crm/login/?e=troppi");
+  await failed(env, request);
+  const email = String((await request.formData()).get("email") ?? "").trim().toLowerCase();
+  const member = email && await env.CRM_DB.prepare("SELECT * FROM team_members WHERE email = ?").bind(email).first();
+  if (member) await sendTeamLink(env, new URL(request.url).origin, member);
+  return redirect("/crm/login/?inviata=1");
+}
+
+async function teamEnter(env, url) {
+  const token = url.searchParams.get("t") ?? "";
+  const member = token && await env.CRM_DB.prepare(
+    "SELECT m.* FROM team_links l JOIN team_members m ON m.id = l.member_id WHERE l.token_hash = ? AND l.expires_at > ?",
+  ).bind(await sha256(token), Date.now()).first();
+  if (!member) return redirect("/crm/login/?e=scaduto");
+  await env.CRM_DB.prepare("UPDATE team_members SET last_seen = datetime('now') WHERE id = ?").bind(member.id).run();
+  return redirect("/crm/#/video", { "Set-Cookie": await teamCookie(env, member) });
+}
+
 // ---- routing -------------------------------------------------------------------
 
-async function api(request, env, path) {
+async function api(request, env, path, session) {
   const url = new URL(request.url);
   const method = request.method;
   const [table, idText, action] = path;
   const id = idText ? Number(idText) : null;
   if (idText && !Number.isInteger(id)) return json({ error: "Non trovato." }, 404);
 
+  // Who is signed in; a team member's session renews on every visit.
+  if (table === "me" && method === "GET") {
+    if (session.role !== "team") return json({ role: "owner" });
+    await env.CRM_DB.prepare("UPDATE team_members SET last_seen = datetime('now') WHERE id = ?").bind(session.id).run();
+    return new Response(JSON.stringify({ role: "team", name: session.name, email: session.email }), {
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Set-Cookie": await teamCookie(env, session) },
+    });
+  }
+  if (table === "team") return team(request, env, url, id);
   if (table === "summary" && method === "GET") return summary(env, url);
   if (table === "charge-month" && method === "POST") {
     const { period } = await request.json();
@@ -342,7 +413,11 @@ async function api(request, env, path) {
   }
 
   if (!TABLES[table] || action) return json({ error: "Non trovato." }, 404);
-  if (!id && method === "GET") return list(env, table, url);
+  if (!id && method === "GET") {
+    const listed = await list(env, table, url);
+    if (session.role !== "team" || table !== "clients") return listed;
+    return json((await listed.json()).map(forTeam));
+  }
   if (!id && method === "POST") return create(env, table, await request.json());
   if (id && method === "PATCH") return update(env, table, id, await request.json());
   if (id && method === "DELETE") return remove(env, table, id);
@@ -356,8 +431,15 @@ export async function onRequest({ request, env, params }) {
   if (path[0] === "logout" && request.method === "POST") {
     return redirect("/crm/login/", { "Set-Cookie": setCookie(STAFF_COOKIE, "", 0) });
   }
-  if (!(await staffSignedIn(request, env))) {
+  if (path[0] === "team-login" && request.method === "POST") return guarded(() => teamLogin(request, env));
+  if (path[0] === "team-enter" && request.method === "GET") return guarded(() => teamEnter(env, new URL(request.url)));
+  const session = await staffSession(request, env);
+  if (!session) {
     return path[0] === "tiktok" ? redirect("/crm/login/") : json({ error: "Accesso richiesto." }, 401);
   }
-  return guarded(() => api(request, env, path));
+  // The team never reaches money, documents, reports, access or settings.
+  if (session.role === "team" && !TEAM_CAN(request.method, path)) {
+    return path[0] === "tiktok" ? redirect("/crm/#/video") : json({ error: "Non disponibile per il team." }, 403);
+  }
+  return guarded(() => api(request, env, path, session));
 }
