@@ -22,9 +22,24 @@ export const connections = async (env) => ({
   tiktokApp: Boolean(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET),
 });
 
-const graph = async (env, path, params = {}) => {
+// One refresh is one request to the server, which may make only 50 outbound
+// calls (Workers free plan). A run counts them, stops before the limit and
+// remembers lists it has already read (the account's posts) for every video.
+const BUDGET = 40;
+class OutOfBudget extends Error {}
+const run = (env) => ({ env, calls: 0, cache: new Map() });
+const spend = (r) => {
+  if (++r.calls > BUDGET) throw new OutOfBudget();
+};
+const once = (r, key, load) => {
+  if (!r.cache.has(key)) r.cache.set(key, load());
+  return r.cache.get(key);
+};
+
+const graph = async (r, path, params = {}) => {
+  spend(r);
   const url = new URL(`${GRAPH}/${path}`);
-  for (const [k, v] of Object.entries({ ...params, access_token: env.META_TOKEN })) url.searchParams.set(k, v);
+  for (const [k, v] of Object.entries({ ...params, access_token: r.env.META_TOKEN })) url.searchParams.set(k, v);
   const response = await fetch(url);
   const body = await response.json();
   if (body.error) throw new Error(`Meta: ${body.error.message}`);
@@ -32,13 +47,14 @@ const graph = async (env, path, params = {}) => {
 };
 // Insights come back as [{name, values:[{value}]}]; some metrics only exist
 // for some media types, so each list is tried in turn until one is accepted.
-const insights = async (env, path, lists) => {
+const insights = async (r, path, lists) => {
   let last;
   for (const metric of lists) {
     try {
-      const { data } = await graph(env, path, { metric });
+      const { data } = await graph(r, path, { metric });
       return Object.fromEntries(data.map((d) => [d.name, d.values?.[0]?.value ?? d.total_value?.value ?? null]));
     } catch (error) {
+      if (error instanceof OutOfBudget) throw error;
       last = error;
     }
   }
@@ -49,26 +65,33 @@ const insights = async (env, path, lists) => {
 
 const shortcode = (url) => url.match(/instagram\.com\/(?:[^/]+\/)?(?:p|reels?|tv)\/([A-Za-z0-9_-]+)/)?.[1];
 
-async function instagramId(env, video) {
-  if (video.external_id) return video.external_id;
-  const code = shortcode(video.url);
-  if (!code) throw new Error("Link Instagram non riconosciuto.");
-  // The API has no lookup by link: walk the account's recent media.
+// The API has no lookup by link: the account's recent media (shortcode -> id),
+// read once per run.
+const instagramMedia = (r) => once(r, "instagram", async () => {
+  const map = new Map();
   let after;
-  for (let page = 0; page < 8; page++) {
-    const { data, paging } = await graph(env, `${env.IG_USER_ID}/media`, { fields: "id,shortcode", limit: "100", ...(after ? { after } : {}) });
-    const hit = data.find((m) => m.shortcode === code);
-    if (hit) return hit.id;
+  for (let page = 0; page < 6; page++) {
+    const { data, paging } = await graph(r, `${r.env.IG_USER_ID}/media`, { fields: "id,shortcode", limit: "100", ...(after ? { after } : {}) });
+    for (const m of data) map.set(m.shortcode, m.id);
     after = paging?.cursors?.after;
     if (!paging?.next) break;
   }
-  throw new Error("Video non trovato sul profilo Instagram collegato.");
+  return map;
+});
+
+async function instagramId(r, video) {
+  if (video.external_id) return video.external_id;
+  const code = shortcode(video.url);
+  if (!code) throw new Error("Link Instagram non riconosciuto.");
+  const id = (await instagramMedia(r)).get(code);
+  if (!id) throw new Error("Video non trovato sul profilo Instagram collegato.");
+  return id;
 }
 
-async function instagram(env, video) {
-  const id = await instagramId(env, video);
-  const media = await graph(env, id, { fields: "like_count,comments_count,thumbnail_url,media_url,media_type" });
-  const i = await insights(env, `${id}/insights`, ["views,reach,saved,shares,likes,comments", "reach,saved,shares,likes,comments"]);
+async function instagram(r, video) {
+  const id = await instagramId(r, video);
+  const media = await graph(r, id, { fields: "like_count,comments_count,thumbnail_url,media_url,media_type" });
+  const i = await insights(r, `${id}/insights`, ["views,reach,saved,shares,likes,comments", "reach,saved,shares,likes,comments"]);
   return {
     external_id: id,
     views: i.views ?? null,
@@ -84,8 +107,9 @@ async function instagram(env, video) {
 // Share links (facebook.com/share/r/…, tiktok.com/t/…) redirect to the full
 // address with the video's id; hops are followed until `done` finds what it
 // needs (a later hop may be a login page), at most three.
-async function unshorten(url, done) {
+async function unshorten(r, url, done) {
   for (let hop = 0; hop < 3 && !done(url); hop++) {
+    spend(r);
     const response = await fetch(url, { redirect: "manual", headers: { "User-Agent": "Mozilla/5.0" } });
     const next = response.headers.get("Location");
     if (!next) return url;
@@ -100,46 +124,48 @@ const facebookIdIn = (url) => url.match(/(?:reel|videos)\/(\d+)/)?.[1] || url.ma
 const romeDate = (time) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date(time));
 
 // Facebook often answers a server's request for a share link with its login
-// page, so when the link gives no id the video is found on the Page itself:
-// the one reel (or video) published that day.
-async function facebookByDate(env, video) {
-  for (const edge of ["video_reels", "videos"]) {
+// page, so when the link gives no id the video is found on the Page itself
+// by its publication day. The Page's reels and videos are read once per run.
+const facebookPosts = (r) => once(r, "facebook", async () => {
+  const posts = [];
+  for (const [edge, pages] of [["video_reels", 4], ["videos", 2]]) {
     let after;
-    for (let page = 0; page < 5; page++) {
-      const { data, paging } = await graph(env, `me/${edge}`, { fields: "id,created_time,description,title", limit: "100", ...(after ? { after } : {}) });
-      const hits = data.filter((v) => romeDate(v.created_time) === video.published_on);
-      if (hits.length === 1) return hits[0].id;
-      if (hits.length > 1) {
-        // Several that day: the one whose caption shares most words with the title.
-        const words = new Set(String(video.title ?? "").toLowerCase().match(/[a-z0-9]{3,}/g) ?? []);
-        const score = (v) => (`${v.title ?? ""} ${v.description ?? ""}`.toLowerCase().match(/[a-z0-9]{3,}/g) ?? []).filter((w) => words.has(w)).length;
-        const ranked = hits.map((v) => [score(v), v]).sort((a, b) => b[0] - a[0]);
-        if (ranked[0][0] > 0 && ranked[0][0] > ranked[1][0]) return ranked[0][1].id;
-        throw new Error("Più video Facebook pubblicati quel giorno: incolla il link del reel (facebook.com/reel/…).");
-      }
-      const oldest = data.at(-1)?.created_time;
-      if (!paging?.next || (oldest && romeDate(oldest) < video.published_on)) break;
-      after = paging.cursors?.after;
+    for (let page = 0; page < pages; page++) {
+      const { data, paging } = await graph(r, `me/${edge}`, { fields: "id,created_time,description,title", limit: "100", ...(after ? { after } : {}) });
+      for (const v of data) if (!posts.some((p) => p.id === v.id)) posts.push(v);
+      after = paging?.cursors?.after;
+      if (!paging?.next) break;
     }
   }
-  return null;
+  return posts;
+});
+
+async function facebookByDate(r, video) {
+  const hits = (await facebookPosts(r)).filter((v) => romeDate(v.created_time) === video.published_on);
+  if (hits.length <= 1) return hits[0]?.id ?? null;
+  // Several that day: the one whose caption shares most words with the title.
+  const words = new Set(String(video.title ?? "").toLowerCase().match(/[a-z0-9]{3,}/g) ?? []);
+  const score = (v) => (`${v.title ?? ""} ${v.description ?? ""}`.toLowerCase().match(/[a-z0-9]{3,}/g) ?? []).filter((w) => words.has(w)).length;
+  const ranked = hits.map((v) => [score(v), v]).sort((a, b) => b[0] - a[0]);
+  if (ranked[0][0] > 0 && ranked[0][0] > ranked[1][0]) return ranked[0][1].id;
+  throw new Error("Più video Facebook pubblicati quel giorno: incolla il link del reel (facebook.com/reel/…).");
 }
 
-async function facebookId(env, video) {
+async function facebookId(r, video) {
   if (video.external_id) return video.external_id;
-  return facebookIdIn(video.url) || facebookIdIn(await unshorten(video.url, facebookIdIn)) || facebookByDate(env, video);
+  return facebookIdIn(video.url) || facebookIdIn(await unshorten(r, video.url, facebookIdIn)) || facebookByDate(r, video);
 }
 
 // Which insights a video has depends on its kind (reel or classic video), so
 // all of them are asked for and the known names picked out.
 const total = (value) => (value && typeof value === "object" ? Object.values(value).reduce((t, n) => t + (Number(n) || 0), 0) : value);
 
-async function facebook(env, video) {
-  const id = await facebookId(env, video);
+async function facebook(r, video) {
+  const id = await facebookId(r, video);
   if (!id) throw new Error("Video Facebook non trovato sulla Pagina: incolla il link del reel (facebook.com/reel/…).");
   const [node, { data }] = await Promise.all([
-    graph(env, id, { fields: "picture,likes.summary(true).limit(0),comments.summary(true).limit(0)" }),
-    graph(env, `${id}/video_insights`),
+    graph(r, id, { fields: "picture,likes.summary(true).limit(0),comments.summary(true).limit(0)" }),
+    graph(r, `${id}/video_insights`),
   ]);
   const i = Object.fromEntries(data.map((d) => [d.name, d.values?.[0]?.value ?? null]));
   const actions = i.post_video_social_actions ?? {};
@@ -202,21 +228,22 @@ async function tiktokAccess(env) {
   return (await tokenRequest(env, { grant_type: "refresh_token", refresh_token: tokens.refresh })).access;
 }
 
-async function tiktokId(video) {
+async function tiktokId(r, video) {
   if (video.external_id) return video.external_id;
   let url = video.url;
   // Short share links (vm./vt.tiktok.com, tiktok.com/t/) redirect to the full one.
-  if (/\/\/(vm|vt)\.tiktok\.com\/|tiktok\.com\/t\//.test(url)) url = await unshorten(url, (u) => /\/video\/\d+/.test(u));
+  if (/\/\/(vm|vt)\.tiktok\.com\/|tiktok\.com\/t\//.test(url)) url = await unshorten(r, url, (u) => /\/video\/\d+/.test(u));
   const id = url.match(/\/video\/(\d+)/)?.[1];
   if (!id) throw new Error("Link TikTok non riconosciuto.");
   return id;
 }
 
 // TikTok answers up to 20 videos per call, so they go together.
-async function tiktokBatch(env, videos) {
-  const access = await tiktokAccess(env);
+async function tiktokBatch(r, videos) {
+  const access = await tiktokAccess(r.env);
   const ids = new Map();
-  for (const v of videos) ids.set(v.id, await tiktokId(v));
+  for (const v of videos) ids.set(v.id, await tiktokId(r, v));
+  spend(r);
   const response = await fetch(`${TIKTOK}/video/query/?fields=id,cover_image_url,view_count,like_count,comment_count,share_count`, {
     method: "POST",
     headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
@@ -250,22 +277,26 @@ export async function refresh(env, videos, { maxAgeMinutes = 30, limit = 12 } = 
   const due = videos.filter((v) => live[v.platform] && (!v.metrics_at || v.metrics_at < cutoff)).slice(0, limit);
   if (!due.length) return 0;
 
+  const r = run(env);
   const results = [];
   const tiktok = due.filter((v) => v.platform === "tiktok");
   if (tiktok.length) {
     try {
-      results.push(...(await tiktokBatch(env, tiktok)));
+      results.push(...(await tiktokBatch(r, tiktok)));
     } catch (error) {
-      results.push(...tiktok.map((video) => ({ video, error: error.message })));
+      if (!(error instanceof OutOfBudget)) results.push(...tiktok.map((video) => ({ video, error: error.message })));
     }
   }
   for (const video of due.filter((v) => v.platform !== "tiktok")) {
     try {
-      results.push({ video, metrics: await (video.platform === "instagram" ? instagram : facebook)(env, video) });
+      results.push({ video, metrics: await (video.platform === "instagram" ? instagram : facebook)(r, video) });
     } catch (error) {
+      // Out of calls: this video and the rest wait for the next refresh.
+      if (error instanceof OutOfBudget) break;
       results.push({ video, error: error.message });
     }
   }
+  if (!results.length) return 0;
 
   const now = new Date().toISOString();
   const db = env.CRM_DB;
