@@ -10,6 +10,19 @@ const api = apiFor("/api/crm", "/crm/login/");
 const view = document.getElementById("view")!;
 
 const STATUS = { attivo: "Attivo", pausa: "In pausa", concluso: "Concluso" } as Record<string, string>;
+// The kinds of venue; a client can be in several (stored as "key,key").
+const CATEGORY = {
+  trattoria: "Trattoria/Osteria", ristorante: "Ristoranti medio-alti", negozio: "Negozi", street_food: "Street food", cafe: "Cafe",
+} as Record<string, string>;
+const categoriesOf = (c: Row): string[] => String(c.categories ?? "").split(",").filter((k) => CATEGORY[k]);
+const categoryTags = (c: Row) => categoriesOf(c).map((k) => `<span class="cat">${esc(CATEGORY[k])}</span>`).join("");
+// The Clienti page's filter: a category key, or "" for all.
+let category = "";
+const inCategory = (c: Row) => !category || categoriesOf(c).includes(category);
+const categoryFilter = (rows: Row[]) => `<nav class="months cats" aria-label="Categoria">${[["", "Tutti"], ...Object.entries(CATEGORY)].map(([k, l]) => {
+  const n = k ? rows.filter((c) => categoriesOf(c).includes(k)).length : rows.length;
+  return `<button type="button" data-category="${k}" class="${k === category ? "on" : ""}">${esc(l)} <small>${n}</small></button>`;
+}).join("")}</nav>`;
 const CHARGE = { pagato: "Pagato", scaduto: "Scaduto", da_pagare: "Da pagare" } as Record<string, string>;
 const chargeState = (c: Row) => (c.paid_at ? "pagato" : c.due_date < today() ? "scaduto" : "da_pagare");
 
@@ -27,6 +40,7 @@ const clientOptions = (): [string, string][] => clients.map((c) => [String(c.id)
 const clientFields = (): Field[] => [
   { name: "name", label: "Nome del locale / cliente", required: true },
   { name: "status", label: "Stato", type: "select", options: Object.entries(STATUS) },
+  { name: "categories", label: "Categorie", type: "checks", options: Object.entries(CATEGORY), hint: "Anche più di una" },
   { name: "fee", label: "Canone mensile (€)", type: "money" },
   { name: "videos_per_month", label: "Video al mese", type: "number", min: 0, max: 100, hint: "Il pacchetto: di solito 6 (2 per Instagram, Facebook e TikTok)" },
   { name: "billing_day", label: "Giorno di pagamento", type: "number", min: 1, max: 28 },
@@ -80,7 +94,8 @@ const TITLES: Record<string, [string, string]> = {
   documents: ["Carica documento", "Modifica documento"],
 };
 const edit = (table: string, row: Row) =>
-  form(TITLES[table][row.id ? 1 : 0], FIELDS[table](row), row, (d, raw) => {
+  // The categories checkboxes want the list, the record has "key,key".
+  form(TITLES[table][row.id ? 1 : 0], FIELDS[table](row), table === "clients" ? { ...row, categories: categoriesOf(row) } : row, (d, raw) => {
     if (row.id) return api(`${table}/${row.id}`, { method: "PATCH", data: d });
     // A new document travels as a file upload, its details alongside.
     if (table === "documents") {
@@ -215,19 +230,19 @@ async function dashboard() {
 }
 
 async function teamClientsView() {
-  const rows = clients.map((c) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a></td>
+  const rows = clients.filter(inCategory).map((c) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a><div class="cats-row">${categoryTags(c)}</div></td>
     <td>${badge(c.status, STATUS[c.status])}</td><td>${quota(c.videos_month, c.videos_per_month)}</td><td>${day(c.end_date)}</td><td>${esc(c.contact ?? "")}</td></tr>`);
-  view.innerHTML = `${head("Clienti")}
+  view.innerHTML = `${head("Clienti")}${categoryFilter(clients)}
     <section class="panel">${table(["Cliente", "Stato", `Video di ${month(thisMonth())}`, "Fine contratto", "Referente"], rows, "Nessun cliente.")}</section>`;
 }
 
 async function clientsView() {
   if (isTeam()) return teamClientsView();
   const s = await api(`summary?month=${thisMonth()}`);
-  const rows = s.clients.map((c: Row) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a></td>
+  const rows = s.clients.filter(inCategory).map((c: Row) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a><div class="cats-row">${categoryTags(c)}</div></td>
     <td>${badge(c.status, STATUS[c.status])}</td><td class="num">${eur(c.fee)}</td><td>${quota(c.videos, c.videos_per_month)}</td><td>${day(c.end_date)}</td>
     <td class="num ${c.outstanding ? "warn" : ""}">${eur(c.outstanding)}</td><td>${c.people ? badge("yes", String(c.people)) : badge("no", "—")}${c.pending ? ` ${badge("da_pagare", `${c.pending} in attesa`)}` : ""}</td></tr>`);
-  view.innerHTML = `${head("Clienti", add("clients", "+ Nuovo cliente"))}
+  view.innerHTML = `${head("Clienti", add("clients", "+ Nuovo cliente"))}${categoryFilter(s.clients)}
     <section class="panel">${table(["Cliente", "Stato", "Canone", `Video di ${month(thisMonth())}`, "Fine contratto", "Da incassare", "Area clienti"], rows, "Nessun cliente. Aggiungi il primo.")}</section>`;
 }
 
@@ -237,6 +252,7 @@ async function teamClientView(c: Row) {
   const now = videos.filter((v) => v.published_on.startsWith(thisMonth()));
   const views = (rows: Row[]) => rows.reduce((t, v) => t + (v.views ?? 0), 0);
   const info: [string, string][] = [
+    ["Categorie", categoryTags(c) || "—"],
     ["Video al mese", String(c.videos_per_month)],
     ["Contratto", `dal ${day(c.start_date)}${c.end_date ? ` al ${day(c.end_date)}` : ""}`],
     ["Referente", esc(c.contact ?? "—")],
@@ -269,6 +285,7 @@ async function clientView(id: number) {
   const views = (rows: Row[]) => rows.reduce((t, v) => t + (v.views ?? 0), 0);
   const outstanding = charges.filter((x) => !x.paid_at).reduce((t, x) => t + x.amount, 0);
   const info: [string, string][] = [
+    ["Categorie", categoryTags(c) || "—"],
     ["Pacchetto", `${c.videos_per_month} video al mese · ${eur(c.fee)} / mese`],
     ["Contratto", `dal ${day(c.start_date)}${c.end_date ? ` al ${day(c.end_date)}` : ", fine non indicata"}`],
     ["Referente", esc(c.contact ?? "—")],
@@ -563,6 +580,9 @@ view.addEventListener("click", (event) => {
     act(async () => refreshed(await api("refresh", { method: "POST", data: {} })), "");
   } else if ("chargeMonth" in d) {
     act(async () => `${(await api("charge-month", { method: "POST", data: { period: selected } })).created} canoni creati per ${month(selected)}`, "");
+  } else if ("category" in d) {
+    category = d.category ?? "";
+    render();
   } else if (d.pick) {
     selected = d.pick;
     render();

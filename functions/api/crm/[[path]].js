@@ -17,6 +17,7 @@ const TABLES = {
   clients: {
     name: "t", contact: "t", email: "t", phone: "t", instagram: "t", tiktok: "t", vat: "t", fee: "i",
     videos_per_month: "i", videos_total: "i", billing_day: "i", start_date: "d", end_date: "d", status: "t", notes: "t",
+    categories: "t",
   },
   charges: {
     client_id: "i", period: "m", kind: "t", description: "t", amount: "i", due_date: "d", paid_at: "d", invoice_no: "t",
@@ -38,7 +39,7 @@ const ORDER = {
 const SELECT = {
   get clients() {
     return `SELECT id, name, contact, email, phone, instagram, tiktok, vat, fee, videos_per_month, videos_total, billing_day,
-    start_date, end_date, status, notes, created_at, invite_token,
+    start_date, end_date, status, categories, notes, created_at, invite_token,
     (SELECT count(*) FROM client_users WHERE client_id = clients.id AND status = 'approvato') AS people,
     (SELECT count(*) FROM video_clients WHERE client_id = clients.id) AS videos_all,
     (SELECT count(*) FROM video_clients l JOIN videos v ON v.id = l.video_id
@@ -102,7 +103,14 @@ const DEFAULTS = {
   charges: { kind: "canone" },
   documents: { kind: "contratto" },
 };
+// The client categories the CRM knows (src/lib/crm/app.ts has their labels).
+const CATEGORIES = new Set(["trattoria", "ristorante", "negozio", "street_food", "cafe"]);
+
 const typed = (table, body) => {
+  // Categories arrive as a list of keys and are kept as "key,key".
+  if (table === "clients" && Array.isArray(body?.categories)) {
+    body = { ...body, categories: body.categories.filter((k) => CATEGORIES.has(k)).join(",") };
+  }
   const row = values(TABLES[table], body);
   for (const [key, fallback] of Object.entries(DEFAULTS[table] ?? {})) if (key in row && row[key] === null) row[key] = fallback;
   return row;
@@ -245,7 +253,7 @@ async function summary(env, url) {
   const like = `${month}-%`;
   const [clients, unpaid, recent, trend, totals, requests] = await db.batch([
     db.prepare(
-      `SELECT c.id, c.name, c.status, c.fee, c.videos_per_month, c.videos_total, c.end_date, c.invite_token,
+      `SELECT c.id, c.name, c.status, c.categories, c.fee, c.videos_per_month, c.videos_total, c.end_date, c.invite_token,
          (SELECT count(*) FROM client_users WHERE client_id = c.id AND status = 'approvato') AS people,
          (SELECT count(*) FROM video_clients WHERE client_id = c.id) AS videos_all,
          (SELECT count(*) FROM videos v JOIN video_clients l ON l.video_id = v.id
@@ -301,7 +309,7 @@ const TEAM_CAN = (method, path) => {
   return table === "refresh" && method === "POST";
 };
 // The client fields a team member sees: no fee, billing, VAT number, invite link or access.
-const TEAM_CLIENT = ["id", "name", "contact", "email", "phone", "instagram", "tiktok", "videos_per_month", "videos_month", "videos_all",
+const TEAM_CLIENT = ["id", "name", "categories", "contact", "email", "phone", "instagram", "tiktok", "videos_per_month", "videos_month", "videos_all",
   "start_date", "end_date", "status", "notes"];
 const forTeam = (client) => Object.fromEntries(TEAM_CLIENT.map((k) => [k, client[k]]));
 
