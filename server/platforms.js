@@ -97,27 +97,52 @@ async function unshorten(url, done) {
 // ---- Facebook ----------------------------------------------------------------
 
 const facebookIdIn = (url) => url.match(/(?:reel|videos)\/(\d+)/)?.[1] || url.match(/[?&]v=(\d+)/)?.[1];
-async function facebookId(video) {
-  if (video.external_id) return video.external_id;
-  return facebookIdIn(video.url) || facebookIdIn(await unshorten(video.url, facebookIdIn));
+const romeDate = (time) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date(time));
+
+// Facebook often answers a server's request for a share link with its login
+// page, so when the link gives no id the video is found on the Page itself:
+// the one reel (or video) published that day.
+async function facebookByDate(env, video) {
+  for (const edge of ["video_reels", "videos"]) {
+    let after;
+    for (let page = 0; page < 5; page++) {
+      const { data, paging } = await graph(env, `me/${edge}`, { fields: "id,created_time", limit: "100", ...(after ? { after } : {}) });
+      const hits = data.filter((v) => romeDate(v.created_time) === video.published_on);
+      if (hits.length === 1) return hits[0].id;
+      if (hits.length > 1) throw new Error("Più video Facebook pubblicati quel giorno: incolla il link del reel (facebook.com/reel/…).");
+      const oldest = data.at(-1)?.created_time;
+      if (!paging?.next || (oldest && romeDate(oldest) < video.published_on)) break;
+      after = paging.cursors?.after;
+    }
+  }
+  return null;
 }
 
+async function facebookId(env, video) {
+  if (video.external_id) return video.external_id;
+  return facebookIdIn(video.url) || facebookIdIn(await unshorten(video.url, facebookIdIn)) || facebookByDate(env, video);
+}
+
+// Which insights a video has depends on its kind (reel or classic video), so
+// all of them are asked for and the known names picked out.
+const total = (value) => (value && typeof value === "object" ? Object.values(value).reduce((t, n) => t + (Number(n) || 0), 0) : value);
+
 async function facebook(env, video) {
-  const id = await facebookId(video);
-  // fb.watch links send to a login page and never reveal the id.
-  if (!id) throw new Error("Link Facebook non riconosciuto: usa il link del reel (facebook.com/reel/…), non fb.watch.");
-  const node = await graph(env, id, { fields: "picture,likes.summary(true).limit(0),comments.summary(true).limit(0)" });
-  const i = await insights(env, `${id}/video_insights`, [
-    "blue_reels_play_count,post_impressions_unique",
-    "total_video_views,total_video_impressions_unique",
+  const id = await facebookId(env, video);
+  if (!id) throw new Error("Video Facebook non trovato sulla Pagina: incolla il link del reel (facebook.com/reel/…).");
+  const [node, { data }] = await Promise.all([
+    graph(env, id, { fields: "picture,likes.summary(true).limit(0),comments.summary(true).limit(0)" }),
+    graph(env, `${id}/video_insights`),
   ]);
+  const i = Object.fromEntries(data.map((d) => [d.name, d.values?.[0]?.value ?? null]));
+  const actions = i.post_video_social_actions ?? {};
   return {
     external_id: id,
-    views: i.blue_reels_play_count ?? i.total_video_views ?? null,
+    views: i.fb_reels_total_plays ?? i.blue_reels_play_count ?? i.total_video_views ?? null,
     reach: i.post_impressions_unique ?? i.total_video_impressions_unique ?? null,
-    likes: node.likes?.summary?.total_count ?? null,
-    comments: node.comments?.summary?.total_count ?? null,
-    shares: null,
+    likes: total(i.post_video_likes_by_reaction_type) ?? node.likes?.summary?.total_count ?? null,
+    comments: node.comments?.summary?.total_count ?? actions.COMMENT ?? actions.comment ?? null,
+    shares: actions.SHARE ?? actions.share ?? null,
     saves: null,
     thumbnail: node.picture ?? null,
   };
