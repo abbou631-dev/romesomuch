@@ -181,7 +181,8 @@ export function form(title: string, fields: Field[], values: Row, save: (data: R
           continue;
         }
         if (f.type === "checks") {
-          data[f.name] = raw.getAll(f.name).map(Number);
+          // Ids (clients) are numbers, keys (categories) stay text.
+          data[f.name] = raw.getAll(f.name).map((v) => (/^\d+$/.test(String(v)) ? Number(v) : String(v)));
           if (f.required && !data[f.name].length) throw new Error(`${f.label}: scegline almeno uno.`);
           continue;
         }
