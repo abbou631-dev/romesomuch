@@ -33,13 +33,18 @@ const ORDER = {
   videos: "published_on DESC, id DESC",
   documents: "doc_date IS NULL, doc_date DESC, uploaded_at DESC",
 };
-// Clients come with who can open their area: approved people and pending requests.
+// Clients come with who can open their area (approved people, pending
+// requests) and how many of the month's videos are done.
 const SELECT = {
-  clients: `SELECT id, name, contact, email, phone, instagram, tiktok, vat, fee, videos_per_month, videos_total, billing_day,
+  get clients() {
+    return `SELECT id, name, contact, email, phone, instagram, tiktok, vat, fee, videos_per_month, videos_total, billing_day,
     start_date, end_date, status, notes, created_at, invite_token,
     (SELECT count(*) FROM client_users WHERE client_id = clients.id AND status = 'approvato') AS people,
     (SELECT count(*) FROM video_clients WHERE client_id = clients.id) AS videos_all,
-    (SELECT count(*) FROM client_users WHERE client_id = clients.id AND status = 'in_attesa') AS pending FROM clients`,
+    (SELECT count(*) FROM video_clients l JOIN videos v ON v.id = l.video_id
+      WHERE l.client_id = clients.id AND v.published_on LIKE '${today().slice(0, 7)}-%') AS videos_month,
+    (SELECT count(*) FROM client_users WHERE client_id = clients.id AND status = 'in_attesa') AS pending FROM clients`;
+  },
   documents: "SELECT * FROM documents",
   charges: "SELECT * FROM charges",
   // The clients a video features, as a JSON array (see withClients).
@@ -93,7 +98,7 @@ async function list(env, table, url) {
 
 // Columns that are never empty: a cleared field means their default.
 const DEFAULTS = {
-  clients: { fee: 0, videos_per_month: 0, videos_total: 0, billing_day: 1, status: "attivo" },
+  clients: { fee: 0, videos_per_month: 6, videos_total: 0, billing_day: 1, status: "attivo" },
   charges: { kind: "canone" },
   documents: { kind: "contratto" },
 };
@@ -240,7 +245,7 @@ async function summary(env, url) {
   const like = `${month}-%`;
   const [clients, unpaid, recent, trend, totals, requests] = await db.batch([
     db.prepare(
-      `SELECT c.id, c.name, c.status, c.fee, c.videos_total, c.end_date, c.invite_token,
+      `SELECT c.id, c.name, c.status, c.fee, c.videos_per_month, c.videos_total, c.end_date, c.invite_token,
          (SELECT count(*) FROM client_users WHERE client_id = c.id AND status = 'approvato') AS people,
          (SELECT count(*) FROM video_clients WHERE client_id = c.id) AS videos_all,
          (SELECT count(*) FROM videos v JOIN video_clients l ON l.video_id = v.id
@@ -296,7 +301,7 @@ const TEAM_CAN = (method, path) => {
   return table === "refresh" && method === "POST";
 };
 // The client fields a team member sees: no fee, billing, VAT number, invite link or access.
-const TEAM_CLIENT = ["id", "name", "contact", "email", "phone", "instagram", "tiktok", "videos_total", "videos_all",
+const TEAM_CLIENT = ["id", "name", "contact", "email", "phone", "instagram", "tiktok", "videos_per_month", "videos_month", "videos_all",
   "start_date", "end_date", "status", "notes"];
 const forTeam = (client) => Object.fromEntries(TEAM_CLIENT.map((k) => [k, client[k]]));
 
