@@ -81,14 +81,31 @@ async function instagram(env, video) {
   };
 }
 
+// Share links (facebook.com/share/r/…, tiktok.com/t/…) redirect to the full
+// address with the video's id; hops are followed until `done` finds what it
+// needs (a later hop may be a login page), at most three.
+async function unshorten(url, done) {
+  for (let hop = 0; hop < 3 && !done(url); hop++) {
+    const response = await fetch(url, { redirect: "manual", headers: { "User-Agent": "Mozilla/5.0" } });
+    const next = response.headers.get("Location");
+    if (!next) return url;
+    url = new URL(next, url).toString();
+  }
+  return url;
+}
+
 // ---- Facebook ----------------------------------------------------------------
 
-const facebookId = (video) =>
-  video.external_id || video.url.match(/(?:reel|videos)\/(\d+)/)?.[1] || video.url.match(/[?&]v=(\d+)/)?.[1];
+const facebookIdIn = (url) => url.match(/(?:reel|videos)\/(\d+)/)?.[1] || url.match(/[?&]v=(\d+)/)?.[1];
+async function facebookId(video) {
+  if (video.external_id) return video.external_id;
+  return facebookIdIn(video.url) || facebookIdIn(await unshorten(video.url, facebookIdIn));
+}
 
 async function facebook(env, video) {
-  const id = facebookId(video);
-  if (!id) throw new Error("Link Facebook non riconosciuto (serve /reel/… o /videos/…).");
+  const id = await facebookId(video);
+  // fb.watch links send to a login page and never reveal the id.
+  if (!id) throw new Error("Link Facebook non riconosciuto: usa il link del reel (facebook.com/reel/…), non fb.watch.");
   const node = await graph(env, id, { fields: "picture,likes.summary(true).limit(0),comments.summary(true).limit(0)" });
   const i = await insights(env, `${id}/video_insights`, [
     "blue_reels_play_count,post_impressions_unique",
@@ -156,8 +173,8 @@ async function tiktokAccess(env) {
 async function tiktokId(video) {
   if (video.external_id) return video.external_id;
   let url = video.url;
-  // Short share links (vm./vt.tiktok.com) redirect to the full one.
-  if (/\/\/(vm|vt)\.tiktok\.com\//.test(url)) url = (await fetch(url, { redirect: "manual" })).headers.get("Location") ?? url;
+  // Short share links (vm./vt.tiktok.com, tiktok.com/t/) redirect to the full one.
+  if (/\/\/(vm|vt)\.tiktok\.com\/|tiktok\.com\/t\//.test(url)) url = await unshorten(url, (u) => /\/video\/\d+/.test(u));
   const id = url.match(/\/video\/(\d+)/)?.[1];
   if (!id) throw new Error("Link TikTok non riconosciuto.");
   return id;
