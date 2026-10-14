@@ -58,6 +58,15 @@ const clientFields = (): Field[] => [
   { name: "vat", label: "P.IVA / Codice fiscale" },
   { name: "notes", label: "Note", type: "textarea" },
 ];
+// A new video can go out on several platforms at once, one link each: it is
+// saved as one video per platform (each has its own numbers). Editing touches
+// one platform's video.
+const newVideoFields = (): Field[] => [
+  { name: "client_ids", label: "Clienti nel video", type: "checks", options: clientOptions(), required: true, hint: "Spunta tutti i locali che compaiono nel video: lo vedranno tutti nella loro area" },
+  { name: "links", label: "Piattaforme e link", type: "links", options: Object.entries(PLATFORM), required: true, hint: "Spunta dove è uscito il video e incolla il link di ognuno" },
+  { name: "published_on", label: "Pubblicato il", type: "date", required: true },
+  { name: "title", label: "Titolo", required: true, hint: "Lo scrivi tu: è il nome con cui il cliente vede il video" },
+];
 const videoFields = (): Field[] => [
   { name: "client_ids", label: "Clienti nel video", type: "checks", options: clientOptions(), required: true, hint: "Spunta tutti i locali che compaiono nel video: lo vedranno tutti nella loro area" },
   { name: "platform", label: "Piattaforma", type: "select", options: Object.entries(PLATFORM), required: true },
@@ -99,8 +108,14 @@ const TITLES: Record<string, [string, string]> = {
 };
 const edit = (table: string, row: Row) =>
   // The categories checkboxes want the list, the record has "key,key".
-  form(TITLES[table][row.id ? 1 : 0], FIELDS[table](row), table === "clients" ? { ...row, categories: categoriesOf(row) } : row, (d, raw) => {
+  form(TITLES[table][row.id ? 1 : 0], table === "videos" && !row.id ? newVideoFields() : FIELDS[table](row), table === "clients" ? { ...row, categories: categoriesOf(row) } : row, async (d, raw) => {
     if (row.id) return api(`${table}/${row.id}`, { method: "PATCH", data: d });
+    // One video per ticked platform, same clients, date and title.
+    if (table === "videos") {
+      const { links, ...shared } = d;
+      for (const { platform, url } of links) await api("videos", { method: "POST", data: { ...shared, platform, url } });
+      return;
+    }
     // A new document travels as a file upload, its details alongside.
     if (table === "documents") {
       for (const [k, v] of Object.entries(d)) raw.set(k, v ?? "");

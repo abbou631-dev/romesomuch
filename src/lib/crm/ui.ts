@@ -5,7 +5,7 @@ export type Row = Record<string, any>;
 export type Field = {
   name: string;
   label: string;
-  type?: "text" | "email" | "tel" | "url" | "money" | "date" | "month" | "number" | "select" | "textarea" | "password" | "checks" | "file";
+  type?: "text" | "email" | "tel" | "url" | "money" | "date" | "month" | "number" | "select" | "textarea" | "password" | "checks" | "file" | "links";
   options?: [string, string][];
   required?: boolean;
   hint?: string;
@@ -121,6 +121,13 @@ function input(f: Field, value: any) {
   const req = f.required ? " required" : "";
   const v = value ?? "";
   let control: string;
+  if (f.type === "links") {
+    // Several platforms at once, each with its own link: ticking a platform
+    // shows its link field (CSS, .link-row:has(:checked)).
+    return `<fieldset class="field"><legend>${esc(f.label)}${f.required ? " *" : ""}</legend><div class="link-rows">${f.options!.map(([k, l]) =>
+      `<div class="link-row"><label class="check"><input type="checkbox" name="${f.name}" value="${esc(k)}" /> ${esc(l)}</label>
+        <input type="url" name="${f.name}_${esc(k)}" placeholder="Link ${esc(l)}" aria-label="Link ${esc(l)}" /></div>`).join("")}</div>${f.hint ? `<small>${esc(f.hint)}</small>` : ""}</fieldset>`;
+  }
   if (f.type === "checks") {
     // Several choices at once: `value` is the array of chosen keys.
     const chosen = new Set([].concat(v || []).map(String));
@@ -165,6 +172,14 @@ export function form(title: string, fields: Field[], values: Row, save: (data: R
       const data: Row = {};
       for (const f of fields) {
         if (f.type === "file") continue;
+        if (f.type === "links") {
+          const labels = new Map(f.options);
+          data[f.name] = raw.getAll(f.name).map((k) => ({ platform: String(k), url: String(raw.get(`${f.name}_${k}`) ?? "").trim() }));
+          if (f.required && !data[f.name].length) throw new Error(`${f.label}: scegli almeno una piattaforma.`);
+          const missing = data[f.name].find((x: Row) => !/^https?:\/\//i.test(x.url));
+          if (missing) throw new Error(`Manca il link ${labels.get(missing.platform)} (deve iniziare con https://).`);
+          continue;
+        }
         if (f.type === "checks") {
           data[f.name] = raw.getAll(f.name).map(Number);
           if (f.required && !data[f.name].length) throw new Error(`${f.label}: scegline almeno uno.`);
