@@ -112,16 +112,18 @@ async function overview(env, client) {
   return Response.json({ client: visible, today: today(), months, totals }, { headers });
 }
 
-// The month's videos, with fresh numbers for any read more than 15 minutes ago.
+// The month's videos (or all of them, month "all"), with fresh numbers for
+// any read more than 15 minutes ago.
 async function videos(env, client, month, ctx) {
+  const pattern = month === "all" ? "%" : `${month}-%`;
   const { results } = await env.CRM_DB.prepare(`SELECT * FROM videos WHERE ${FEATURES} AND published_on LIKE ?`)
-    .bind(client.id, `${month}-%`).all();
+    .bind(client.id, pattern).all();
   // Fresh numbers first when there are few to read; otherwise answer at once
   // and read them in the background for the next view.
   const reading = refresh(env, results, { maxAgeMinutes: 15 });
   if (results.length <= 6) await reading; else ctx.waitUntil(reading);
   const { results: rows } = await env.CRM_DB.prepare(`SELECT ${VIDEO} FROM videos WHERE ${FEATURES} AND published_on LIKE ? ORDER BY published_on DESC, id DESC`)
-    .bind(client.id, `${month}-%`).all();
+    .bind(client.id, pattern).all();
   return json(rows);
 }
 
@@ -152,7 +154,8 @@ export async function onRequest({ request, env, params, waitUntil }) {
   if (!client) return json({ error: "Accesso richiesto." }, 401);
   if (action === "overview" && method === "GET") return guarded(() => overview(env, client));
   if (action === "videos" && method === "GET") {
-    const month = isMonth(url.searchParams.get("month")) ? url.searchParams.get("month") : today().slice(0, 7);
+    const asked = url.searchParams.get("month");
+    const month = asked === "all" || isMonth(asked) ? asked : today().slice(0, 7);
     return guarded(() => videos(env, client, month, { waitUntil }));
   }
   if (action === "documents" && method === "GET") {

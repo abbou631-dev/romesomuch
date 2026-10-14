@@ -15,6 +15,8 @@ const customers = (views: number) => Math.round(views / VIEWS_PER_CUSTOMER);
 
 let data: Row;
 let selected = thisMonth();
+// The video list's own filter: a month, or "all"; the month chips set it too.
+let videoMonth = thisMonth();
 
 const delta = (now: number, before: number) => {
   if (!before) return "";
@@ -83,14 +85,29 @@ async function overview() {
       ${table(["Mese", "Video", "Visualizzazioni", "Raggiunti", "Interazioni"], [...months].reverse().map((m) =>
         `<tr${m.month === selected ? ' class="on"' : ""}><td>${esc(month(m.month))}</td><td class="num">${m.videos}</td><td class="num">${num(m.views)}</td><td class="num">${num(m.reach)}</td><td class="num">${num(interactionsOf(m))}</td></tr>`), "")}
     </section>
-    <section class="panel"><div class="panel-head"><h2>I video di ${esc(month(selected))}</h2><span class="live" id="live">aggiornamento…</span></div>
+    <section class="panel"><div class="panel-head"><h2>I tuoi video</h2>
+      <label class="inline">Mese <select id="video-month" aria-label="Filtra i video per mese">
+        <option value="all"${videoMonth === "all" ? " selected" : ""}>Tutti i mesi (${data.totals.videos})</option>
+        ${[...months].reverse().map((m) => `<option value="${m.month}"${m.month === videoMonth ? " selected" : ""}>${esc(month(m.month))} (${m.videos})</option>`).join("")}
+      </select></label></div>
+      <p class="live" id="live">aggiornamento…</p>
       <div id="videos"><p class="empty">Caricamento…</p></div>
     </section>`;
+  document.getElementById("video-month")!.addEventListener("change", (event) => {
+    videoMonth = (event.target as HTMLSelectElement).value;
+    loadVideos().catch(fail);
+  });
+  await loadVideos();
+}
 
-  const list = await api<Row[]>(`videos?month=${selected}`);
+// Only the list below the filter is redrawn.
+async function loadVideos() {
   const box = document.getElementById("videos");
   if (!box) return;
-  box.innerHTML = list.length ? `<div class="videos">${list.map(card).join("")}</div>` : '<p class="empty">Nessun video pubblicato in questo mese.</p>';
+  box.innerHTML = '<p class="empty">Caricamento…</p>';
+  const list = await api<Row[]>(`videos?month=${videoMonth}`);
+  box.innerHTML = list.length ? `<div class="videos">${list.map(card).join("")}</div>`
+    : `<p class="empty">${videoMonth === "all" ? "Ancora nessun video." : "Nessun video pubblicato in questo mese."}</p>`;
   const latest = list.map((v) => v.metrics_at).filter(Boolean).sort().at(-1);
   document.getElementById("live")!.textContent = latest ? `Metriche aggiornate ${ago(latest)}` : "Metriche inserite dal team";
 }
@@ -153,7 +170,7 @@ function render() {
 view.addEventListener("click", (event) => {
   const el = (event.target as HTMLElement).closest<HTMLElement>("[data-month]");
   if (!el || el.dataset.month === selected) return;
-  selected = el.dataset.month!;
+  selected = videoMonth = el.dataset.month!;
   overview().catch(fail);
 });
 
