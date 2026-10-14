@@ -10,6 +10,9 @@ const api = apiFor("/api/crm", "/crm/login/");
 const view = document.getElementById("view")!;
 
 const STATUS = { attivo: "Attivo", pausa: "In pausa", concluso: "Concluso" } as Record<string, string>;
+const EVERY = { 1: "Mensile", 3: "Trimestrale", 6: "Semestrale" } as Record<string, string>;
+// "800,00 € / mese · semestrale (rata 4.800,00 €)"
+const feeLine = (c: Row) => `${eur(c.fee)} / mese · ${(EVERY[c.billing_every] ?? "Mensile").toLowerCase()}${c.billing_every > 1 ? ` (rata ${eur(c.fee * c.billing_every)})` : ""}`;
 // The kinds of venue; a client can be in several (stored as "key,key").
 const CATEGORY = {
   trattoria: "Trattoria/Osteria", ristorante: "Ristoranti medio-alti", negozio: "Negozi", street_food: "Street food", cafe: "Cafe",
@@ -43,6 +46,7 @@ const clientFields = (): Field[] => [
   { name: "categories", label: "Categorie", type: "checks", options: Object.entries(CATEGORY), hint: "Anche più di una" },
   { name: "fee", label: "Canone mensile (€)", type: "money" },
   { name: "videos_per_month", label: "Video al mese", type: "number", min: 0, max: 100, hint: "Il pacchetto: di solito 6 (2 per Instagram, Facebook e TikTok)" },
+  { name: "billing_every", label: "Pagamento", type: "select", options: Object.entries(EVERY), hint: "Ogni rata vale canone mensile × mesi; il CRM la crea da sola all'inizio di ogni periodo" },
   { name: "billing_day", label: "Giorno di pagamento", type: "number", min: 1, max: 28 },
   { name: "start_date", label: "Inizio contratto", type: "date" },
   { name: "end_date", label: "Fine contratto", type: "date", hint: "Il cliente la vede nella sua area" },
@@ -105,7 +109,7 @@ const edit = (table: string, row: Row) =>
     return api(table, { method: "POST", data: d });
   }, render);
 const fresh = (table: string, clientId?: number): Row => {
-  if (table === "clients") return { status: "attivo", billing_day: 1, videos_per_month: 6, start_date: today() };
+  if (table === "clients") return { status: "attivo", billing_day: 1, billing_every: 6, videos_per_month: 6, start_date: today() };
   if (table === "documents") return { client_id: clientId ?? clients[0]?.id, kind: "contratto", doc_date: today() };
   if (table === "videos") return { client_ids: clientId ? [clientId] : [], platform: "instagram", published_on: today() };
   return { client_id: clientId ?? clients[0]?.id, kind: "extra", period: thisMonth(), due_date: today() };
@@ -209,7 +213,7 @@ async function dashboard() {
       ${kpi("Da incassare", eur(outstanding), late.length ? `${late.length} in ritardo` : "nessun ritardo", late.length ? "alert" : "")}
     </section>
     <section class="panel"><h2>Clienti del pacchetto · ${esc(month(selected))}</h2>
-      ${table(["Cliente", "Video del mese", "Visualizzazioni", "Interazioni", "Ultimo video", "Fine contratto", "Canone del mese", "Area clienti"], rows, "Nessun cliente ancora. Aggiungilo da Clienti.")}
+      ${table(["Cliente", "Video del mese", "Visualizzazioni", "Interazioni", "Ultimo video", "Fine contratto", "Canone in corso", "Area clienti"], rows, "Nessun cliente ancora. Aggiungilo da Clienti.")}
     </section>
     <section class="panel"><h2>Visualizzazioni per mese <small class="mute">tutti i clienti</small></h2>
       ${bars(months.map((m) => ({ key: m, label: shortMonth(m), value: (trend.get(m) as Row)?.views ?? 0, title: `${month(m)}: ${num((trend.get(m) as Row)?.views ?? 0)} visualizzazioni, ${(trend.get(m) as Row)?.videos ?? 0} video` })), selected, "data-pick")}
@@ -240,7 +244,7 @@ async function clientsView() {
   if (isTeam()) return teamClientsView();
   const s = await api(`summary?month=${thisMonth()}`);
   const rows = s.clients.filter(inCategory).map((c: Row) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a><div class="cats-row">${categoryTags(c)}</div></td>
-    <td>${badge(c.status, STATUS[c.status])}</td><td class="num">${eur(c.fee)}</td><td>${quota(c.videos, c.videos_per_month)}</td><td>${day(c.end_date)}</td>
+    <td>${badge(c.status, STATUS[c.status])}</td><td class="num">${eur(c.fee)}<small class="block mute">${esc((EVERY[c.billing_every] ?? "").toLowerCase())}</small></td><td>${quota(c.videos, c.videos_per_month)}</td><td>${day(c.end_date)}</td>
     <td class="num ${c.outstanding ? "warn" : ""}">${eur(c.outstanding)}</td><td>${c.people ? badge("yes", String(c.people)) : badge("no", "—")}${c.pending ? ` ${badge("da_pagare", `${c.pending} in attesa`)}` : ""}</td></tr>`);
   view.innerHTML = `${head("Clienti", add("clients", "+ Nuovo cliente"))}${categoryFilter(s.clients)}
     <section class="panel">${table(["Cliente", "Stato", "Canone", `Video di ${month(thisMonth())}`, "Fine contratto", "Da incassare", "Area clienti"], rows, "Nessun cliente. Aggiungi il primo.")}</section>`;
@@ -264,7 +268,8 @@ async function teamClientView(c: Row) {
     ${head(`${esc(c.name)} ${badge(c.status, STATUS[c.status])}`)}
     <section class="kpis">
       ${kpi(`Video di ${month(thisMonth())}`, `${now.length} / ${c.videos_per_month}`, `video fatti nel mese${c.end_date ? ` · contratto fino al ${day(c.end_date)}` : ""}`, c.videos_per_month && now.length >= c.videos_per_month ? "good" : "")}
-      ${kpi("Visualizzazioni del mese", short(views(now)))}
+      ${kpi(`Visualizzazioni ${month(thisMonth())}`, short(views(now)))}
+      ${kpi(`Visualizzazioni ${month(addMonths(thisMonth(), -1))}`, short(views(videos.filter((v) => v.published_on.startsWith(addMonths(thisMonth(), -1))))), "mese precedente")}
       ${kpi("Visualizzazioni totali", short(views(videos)), `${videos.length} video`)}
     </section>
     <section class="panel"><h2>Scheda</h2><dl class="info">${info.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
@@ -286,7 +291,8 @@ async function clientView(id: number) {
   const outstanding = charges.filter((x) => !x.paid_at).reduce((t, x) => t + x.amount, 0);
   const info: [string, string][] = [
     ["Categorie", categoryTags(c) || "—"],
-    ["Pacchetto", `${c.videos_per_month} video al mese · ${eur(c.fee)} / mese`],
+    ["Pacchetto", `${c.videos_per_month} video al mese`],
+    ["Canone", feeLine(c)],
     ["Contratto", `dal ${day(c.start_date)}${c.end_date ? ` al ${day(c.end_date)}` : ", fine non indicata"}`],
     ["Referente", esc(c.contact ?? "—")],
     ["Email", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "—"],
@@ -300,7 +306,8 @@ async function clientView(id: number) {
     ${head(`${esc(c.name)} ${badge(c.status, STATUS[c.status])}`, `<button class="btn" data-edit="clients" data-id="${c.id}">Modifica</button><button class="btn danger" data-del="clients" data-id="${c.id}">Elimina</button>`)}
     <section class="kpis">
       ${kpi(`Video di ${month(thisMonth())}`, `${now.length} / ${c.videos_per_month}`, `video fatti nel mese${c.end_date ? ` · contratto fino al ${day(c.end_date)}` : ""}`, c.videos_per_month && now.length >= c.videos_per_month ? "good" : "")}
-      ${kpi("Visualizzazioni del mese", short(views(now)))}
+      ${kpi(`Visualizzazioni ${month(thisMonth())}`, short(views(now)))}
+      ${kpi(`Visualizzazioni ${month(addMonths(thisMonth(), -1))}`, short(views(videos.filter((v) => v.published_on.startsWith(addMonths(thisMonth(), -1))))), "mese precedente")}
       ${kpi("Visualizzazioni totali", short(views(videos)), `${videos.length} video`)}
       ${kpi("Da incassare", eur(outstanding), "", outstanding ? "alert" : "")}
     </section>

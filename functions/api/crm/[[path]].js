@@ -17,7 +17,7 @@ const TABLES = {
   clients: {
     name: "t", contact: "t", email: "t", phone: "t", instagram: "t", tiktok: "t", vat: "t", fee: "i",
     videos_per_month: "i", videos_total: "i", billing_day: "i", start_date: "d", end_date: "d", status: "t", notes: "t",
-    categories: "t",
+    categories: "t", billing_every: "i",
   },
   charges: {
     client_id: "i", period: "m", kind: "t", description: "t", amount: "i", due_date: "d", paid_at: "d", invoice_no: "t",
@@ -39,7 +39,7 @@ const ORDER = {
 const SELECT = {
   get clients() {
     return `SELECT id, name, contact, email, phone, instagram, tiktok, vat, fee, videos_per_month, videos_total, billing_day,
-    start_date, end_date, status, categories, notes, created_at, invite_token,
+    start_date, end_date, status, categories, billing_every, notes, created_at, invite_token,
     (SELECT count(*) FROM client_users WHERE client_id = clients.id AND status = 'approvato') AS people,
     (SELECT count(*) FROM video_clients WHERE client_id = clients.id) AS videos_all,
     (SELECT count(*) FROM video_clients l JOIN videos v ON v.id = l.video_id
@@ -99,7 +99,7 @@ async function list(env, table, url) {
 
 // Columns that are never empty: a cleared field means their default.
 const DEFAULTS = {
-  clients: { fee: 0, videos_per_month: 6, videos_total: 0, billing_day: 1, status: "attivo" },
+  clients: { fee: 0, videos_per_month: 6, videos_total: 0, billing_day: 1, billing_every: 6, status: "attivo" },
   charges: { kind: "canone" },
   documents: { kind: "contratto" },
 };
@@ -222,15 +222,22 @@ async function newInvite(env, id) {
 
 // ---- money and the package ---------------------------------------------------------
 
+// One instalment per client whose billing cycle starts this month: monthly,
+// every 3 or every 6 months, counted from the contract start (from January
+// when there is none). The fee is monthly, so an instalment is fee x months.
 async function chargeMonth(env, period) {
+  const [y, m] = period.split("-").map(Number);
   const { meta } = await env.CRM_DB.prepare(
     `INSERT OR IGNORE INTO charges (client_id, period, kind, description, amount, due_date)
-     SELECT id, ?1, 'canone', 'Visibilità costante', fee, ?1 || '-' || printf('%02d', min(max(billing_day, 1), 28))
+     SELECT id, ?1, 'canone',
+       CASE billing_every WHEN 3 THEN 'Visibilità costante · trimestre' WHEN 6 THEN 'Visibilità costante · semestre' ELSE 'Visibilità costante' END,
+       fee * billing_every, ?1 || '-' || printf('%02d', min(max(billing_day, 1), 28))
      FROM clients
      WHERE status = 'attivo' AND fee > 0
        AND (start_date IS NULL OR start_date <= ?2)
-       AND (end_date IS NULL OR end_date >= ?1 || '-01')`,
-  ).bind(period, lastDayOf(period)).run();
+       AND (end_date IS NULL OR end_date >= ?1 || '-01')
+       AND (?3 - coalesce(CAST(substr(start_date, 1, 4) AS INTEGER) * 12 + CAST(substr(start_date, 6, 2) AS INTEGER), 1)) % max(billing_every, 1) = 0`,
+  ).bind(period, lastDayOf(period), y * 12 + m).run();
   return meta.changes;
 }
 
@@ -253,7 +260,7 @@ async function summary(env, url) {
   const like = `${month}-%`;
   const [clients, unpaid, recent, trend, totals, requests] = await db.batch([
     db.prepare(
-      `SELECT c.id, c.name, c.status, c.categories, c.fee, c.videos_per_month, c.videos_total, c.end_date, c.invite_token,
+      `SELECT c.id, c.name, c.status, c.categories, c.billing_every, c.fee, c.videos_per_month, c.videos_total, c.end_date, c.invite_token,
          (SELECT count(*) FROM client_users WHERE client_id = c.id AND status = 'approvato') AS people,
          (SELECT count(*) FROM video_clients WHERE client_id = c.id) AS videos_all,
          (SELECT count(*) FROM videos v JOIN video_clients l ON l.video_id = v.id
@@ -263,7 +270,8 @@ async function summary(env, url) {
          (SELECT coalesce(sum(likes), 0) + coalesce(sum(comments), 0) + coalesce(sum(shares), 0) + coalesce(sum(saves), 0)
             FROM videos v JOIN video_clients l ON l.video_id = v.id WHERE l.client_id = c.id AND v.published_on LIKE ?1) AS interactions,
          (SELECT max(v.published_on) FROM videos v JOIN video_clients l ON l.video_id = v.id WHERE l.client_id = c.id) AS last_video,
-         (SELECT paid_at IS NOT NULL FROM charges WHERE client_id = c.id AND period = ?2 AND kind = 'canone') AS paid,
+         (SELECT paid_at IS NOT NULL FROM charges WHERE client_id = c.id AND kind = 'canone' AND period <= ?2
+            ORDER BY period DESC LIMIT 1) AS paid,
          (SELECT coalesce(sum(amount), 0) FROM charges WHERE client_id = c.id AND paid_at IS NULL) AS outstanding
        FROM clients c ORDER BY c.status = 'attivo' DESC, c.name COLLATE NOCASE`,
     ).bind(like, month),
