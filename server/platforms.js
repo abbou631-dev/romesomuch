@@ -106,10 +106,17 @@ async function facebookByDate(env, video) {
   for (const edge of ["video_reels", "videos"]) {
     let after;
     for (let page = 0; page < 5; page++) {
-      const { data, paging } = await graph(env, `me/${edge}`, { fields: "id,created_time", limit: "100", ...(after ? { after } : {}) });
+      const { data, paging } = await graph(env, `me/${edge}`, { fields: "id,created_time,description,title", limit: "100", ...(after ? { after } : {}) });
       const hits = data.filter((v) => romeDate(v.created_time) === video.published_on);
       if (hits.length === 1) return hits[0].id;
-      if (hits.length > 1) throw new Error("Più video Facebook pubblicati quel giorno: incolla il link del reel (facebook.com/reel/…).");
+      if (hits.length > 1) {
+        // Several that day: the one whose caption shares most words with the title.
+        const words = new Set(String(video.title ?? "").toLowerCase().match(/[a-z0-9]{3,}/g) ?? []);
+        const score = (v) => (`${v.title ?? ""} ${v.description ?? ""}`.toLowerCase().match(/[a-z0-9]{3,}/g) ?? []).filter((w) => words.has(w)).length;
+        const ranked = hits.map((v) => [score(v), v]).sort((a, b) => b[0] - a[0]);
+        if (ranked[0][0] > 0 && ranked[0][0] > ranked[1][0]) return ranked[0][1].id;
+        throw new Error("Più video Facebook pubblicati quel giorno: incolla il link del reel (facebook.com/reel/…).");
+      }
       const oldest = data.at(-1)?.created_time;
       if (!paging?.next || (oldest && romeDate(oldest) < video.published_on)) break;
       after = paging.cursors?.after;
