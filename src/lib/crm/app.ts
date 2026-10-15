@@ -47,7 +47,8 @@ const clientFields = (): Field[] => [
   { name: "name", label: "Nome del locale / cliente", required: true },
   { name: "status", label: "Stato", type: "select", options: Object.entries(STATUS) },
   { name: "categories", label: "Categorie", type: "checks", options: Object.entries(CATEGORY), hint: "Anche più di una" },
-  { name: "fee", label: "Canone del periodo (€)", type: "money", hint: "Il totale che paga per ogni periodo: per il semestrale, il prezzo dei 6 mesi" },
+  { name: "fee", label: "Canone semestrale / del periodo (€)", type: "money", hint: "Il totale di ogni rata: per il semestrale, il prezzo dei 6 mesi" },
+  { name: "fee_month", label: "Oppure canone mensile (€)", type: "money", hint: "Se scrivi qui, il canone del periodo diventa mensile × mesi del pagamento" },
   { name: "videos_per_month", label: "Video al mese", type: "number", min: 0, max: 100, hint: "Il pacchetto: di solito 6 (2 per Instagram, Facebook e TikTok)" },
   { name: "billing_every", label: "Pagamento", type: "select", options: Object.entries(EVERY), hint: "Una rata pari al canone all'inizio di ogni periodo: il CRM la crea da sola" },
   { name: "billing_day", label: "Giorno di pagamento", type: "number", min: 1, max: 28 },
@@ -111,7 +112,16 @@ const TITLES: Record<string, [string, string]> = {
 };
 const edit = (table: string, row: Row) =>
   // The categories checkboxes want the list, the record has "key,key".
-  form(TITLES[table][row.id ? 1 : 0], table === "videos" && !row.id ? newVideoFields() : FIELDS[table](row), table === "clients" ? { ...row, categories: categoriesOf(row) } : row, async (d, raw) => {
+  form(TITLES[table][row.id ? 1 : 0], table === "videos" && !row.id ? newVideoFields() : FIELDS[table](row),
+    table === "clients" ? { ...row, categories: categoriesOf(row), fee_month: row.fee ? perMonth(row) : null } : row, async (d, raw) => {
+    // Either price can be typed: a changed monthly one sets the period's.
+    if (table === "clients") {
+      const { fee_month, ...rest } = d;
+      if (fee_month != null && fee_month !== (row.fee ? perMonth(row) : null) && d.fee === (row.fee ?? null)) {
+        rest.fee = fee_month * Math.max(Number(d.billing_every) || 1, 1);
+      }
+      d = rest;
+    }
     if (row.id) return api(`${table}/${row.id}`, { method: "PATCH", data: d });
     // One video per ticked platform, same clients, date and title.
     if (table === "videos") {
