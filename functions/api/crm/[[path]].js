@@ -224,14 +224,14 @@ async function newInvite(env, id) {
 
 // One instalment per client whose billing cycle starts this month: monthly,
 // every 3 or every 6 months, counted from the contract start (from January
-// when there is none). The fee is monthly, so an instalment is fee x months.
+// when there is none). The fee is the whole period's price: one instalment.
 async function chargeMonth(env, period) {
   const [y, m] = period.split("-").map(Number);
   const { meta } = await env.CRM_DB.prepare(
     `INSERT OR IGNORE INTO charges (client_id, period, kind, description, amount, due_date)
      SELECT id, ?1, 'canone',
        CASE billing_every WHEN 3 THEN 'Visibilità costante · trimestre' WHEN 6 THEN 'Visibilità costante · semestre' ELSE 'Visibilità costante' END,
-       fee * billing_every, ?1 || '-' || printf('%02d', min(max(billing_day, 1), 28))
+       fee, ?1 || '-' || printf('%02d', min(max(billing_day, 1), 28))
      FROM clients
      WHERE status = 'attivo' AND fee > 0
        AND (start_date IS NULL OR start_date <= ?2)

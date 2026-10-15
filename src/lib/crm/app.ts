@@ -11,8 +11,11 @@ const view = document.getElementById("view")!;
 
 const STATUS = { attivo: "Attivo", pausa: "In pausa", concluso: "Concluso" } as Record<string, string>;
 const EVERY = { 1: "Mensile", 3: "Trimestrale", 6: "Semestrale" } as Record<string, string>;
-// "800,00 € / mese · semestrale (rata 4.800,00 €)"
-const feeLine = (c: Row) => `${eur(c.fee)} / mese · ${(EVERY[c.billing_every] ?? "Mensile").toLowerCase()}${c.billing_every > 1 ? ` (rata ${eur(c.fee * c.billing_every)})` : ""}`;
+// The fee is what the client pays each period (the whole semester, say);
+// a month is that divided by the months it covers.
+const perMonth = (c: Row) => Math.round((c.fee ?? 0) / Math.max(c.billing_every || 1, 1));
+// "1.800,00 € · semestrale (300,00 € / mese)"
+const feeLine = (c: Row) => `${eur(c.fee)} · ${(EVERY[c.billing_every] ?? "Mensile").toLowerCase()}${c.billing_every > 1 ? ` (${eur(perMonth(c))} / mese)` : ""}`;
 // The kinds of venue; a client can be in several (stored as "key,key").
 const CATEGORY = {
   trattoria: "Trattoria/Osteria", ristorante: "Ristoranti medio-alti", negozio: "Negozi", street_food: "Street food", cafe: "Cafe",
@@ -44,9 +47,9 @@ const clientFields = (): Field[] => [
   { name: "name", label: "Nome del locale / cliente", required: true },
   { name: "status", label: "Stato", type: "select", options: Object.entries(STATUS) },
   { name: "categories", label: "Categorie", type: "checks", options: Object.entries(CATEGORY), hint: "Anche più di una" },
-  { name: "fee", label: "Canone mensile (€)", type: "money" },
+  { name: "fee", label: "Canone del periodo (€)", type: "money", hint: "Il totale che paga per ogni periodo: per il semestrale, il prezzo dei 6 mesi" },
   { name: "videos_per_month", label: "Video al mese", type: "number", min: 0, max: 100, hint: "Il pacchetto: di solito 6 (2 per Instagram, Facebook e TikTok)" },
-  { name: "billing_every", label: "Pagamento", type: "select", options: Object.entries(EVERY), hint: "Ogni rata vale canone mensile × mesi; il CRM la crea da sola all'inizio di ogni periodo" },
+  { name: "billing_every", label: "Pagamento", type: "select", options: Object.entries(EVERY), hint: "Una rata pari al canone all'inizio di ogni periodo: il CRM la crea da sola" },
   { name: "billing_day", label: "Giorno di pagamento", type: "number", min: 1, max: 28 },
   { name: "start_date", label: "Inizio contratto", type: "date" },
   { name: "end_date", label: "Fine contratto", type: "date", hint: "Il cliente la vede nella sua area" },
@@ -222,7 +225,7 @@ async function dashboard() {
       <div class="end">${userActions(u)}</div></li>`).join("")}</ul></section>` : ""}
     <section class="kpis">
       ${kpi("Clienti attivi", String(active.length), `${s.clients.length} in totale`)}
-      ${kpi("Canoni al mese", eur(sum(active, "fee")))}
+      ${kpi("Canoni al mese", eur(active.reduce((t: number, c: Row) => t + perMonth(c), 0)), "canoni divisi per i mesi del periodo")}
       ${kpi(`Video ${month(selected)}`, String(s.totals.videos), "pubblicati, ognuno contato una volta")}
       ${kpi("Visualizzazioni del mese", short(s.totals.views), `${num(s.totals.interactions)} interazioni`)}
       ${kpi("Da incassare", eur(outstanding), late.length ? `${late.length} in ritardo` : "nessun ritardo", late.length ? "alert" : "")}
