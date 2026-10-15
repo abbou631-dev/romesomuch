@@ -454,6 +454,11 @@ export async function onRequest({ request, env, params }) {
   }
   if (path[0] === "team-login" && request.method === "POST") return guarded(() => teamLogin(request, env));
   if (path[0] === "team-enter" && request.method === "GET") return guarded(() => teamEnter(env, new URL(request.url)));
+  // The daily metrics refresh (workers/report-reminder's cron), by its own key.
+  if (path[0] === "refresh" && path.length === 1 && request.method === "POST" && env.CRON_KEY
+      && await same(request.headers.get("X-Cron-Key") ?? "", env.CRON_KEY)) {
+    return guarded(() => api(request, env, path, { role: "owner" }));
+  }
   const session = await staffSession(request, env);
   if (!session) {
     return path[0] === "tiktok" ? redirect("/crm/login/") : json({ error: "Accesso richiesto." }, 401);

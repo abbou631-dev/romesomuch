@@ -3,14 +3,16 @@
   // reminds the agency to check and send last month's recaps from the CRM.
   // Pages Functions have no cron, hence this small Worker of its own.
   // Deploy from this folder: npx wrangler deploy
-  // Secret: npx wrangler secret put RESEND_API_KEY (the same key as the site)
+  // Secrets: RESEND_API_KEY (the same key as the site), CRON_KEY (the same as
+  // the Pages project's, lets the nightly run refresh metrics)
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "romesomuch-report-reminder",
   "main": "index.js",
   "compatibility_date": "2026-09-01",
   "workers_dev": false,
-  "triggers": { "crons": ["0 7 1 * *"] },
-  "vars": { "NOTIFY": "romesomuch@gmail.com", "CRM_URL": "https://romesomuch.com/crm/#/report" },
+  // 3:00 UTC daily (4:00/5:00 in Rome): metrics; the 1st: report reminder.
+  "triggers": { "crons": ["0 3 * * *", "0 7 1 * *"] },
+  "vars": { "SITE": "https://romesomuch.com", "NOTIFY": "romesomuch@gmail.com", "CRM_URL": "https://romesomuch.com/crm/#/report" },
   "d1_databases": [
     { "binding": "CRM_DB", "database_name": "romesomuch-crm", "database_id": "cb5274a6-5068-4389-81a0-1a5ef8edfa89" }
   ],

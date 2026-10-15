@@ -540,7 +540,19 @@ async function act(work: () => Promise<unknown>, done: string) {
     say((error as Error).message, true);
   }
 }
-const refreshed = ({ updated }: Row) => (updated ? `${updated} video aggiornati` : "Niente da aggiornare (piattaforma non collegata o letto da poco)");
+const refreshed = (updated: number) => (updated ? `${updated} video aggiornati` : "Niente da aggiornare (piattaforma non collegata o letto da poco)");
+// The server reads a dozen videos per request; asking again until nothing is
+// left covers them all (a video just read, or just failed, is skipped).
+async function refreshEvery(scope: Row) {
+  let total = 0;
+  for (let round = 0; round < 40; round++) {
+    if (round) say(`Aggiornamento in corso: ${total} video finora…`);
+    const { updated } = await api<Row>("refresh", { method: "POST", data: scope });
+    if (!updated) break;
+    total += updated;
+  }
+  return refreshed(total);
+}
 
 view.addEventListener("click", (event) => {
   const el = (event.target as HTMLElement).closest<HTMLElement>("button");
@@ -610,9 +622,9 @@ view.addEventListener("click", (event) => {
   } else if (d.refresh) {
     act(async () => refreshed(await api("refresh", { method: "POST", data: { id: Number(d.refresh) } })), "");
   } else if (d.refreshClient) {
-    act(async () => refreshed(await api("refresh", { method: "POST", data: { client_id: Number(d.refreshClient) } })), "");
+    act(() => refreshEvery({ client_id: Number(d.refreshClient) }), "");
   } else if ("refreshAll" in d) {
-    act(async () => refreshed(await api("refresh", { method: "POST", data: {} })), "");
+    act(() => refreshEvery({}), "");
   } else if ("chargeMonth" in d) {
     act(async () => `${(await api("charge-month", { method: "POST", data: { period: selected } })).created} canoni creati per ${month(selected)}`, "");
   } else if ("category" in d) {
