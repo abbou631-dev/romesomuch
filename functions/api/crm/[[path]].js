@@ -267,7 +267,7 @@ async function summary(env, url) {
   if (month === now.slice(0, 7)) await chargeOnce(env, month);
   const db = env.CRM_DB;
   const like = `${month}-%`;
-  const [clients, unpaid, recent, trend, totals, requests, promos] = await db.batch([
+  const [clients, unpaid, recent, trend, totals, requests, promos, unpaidPromos] = await db.batch([
     db.prepare(
       `SELECT c.id, c.name, c.status, c.categories, c.billing_every, c.fee, c.videos_per_month, c.videos_total, c.end_date, c.invite_token,
          (SELECT count(*) FROM client_users WHERE client_id = c.id AND status = 'approvato') AS people,
@@ -301,10 +301,12 @@ async function summary(env, url) {
        WHERE u.status = 'in_attesa' ORDER BY u.requested_at`,
     ),
     db.prepare("SELECT count(*) AS n, coalesce(sum(price), 0) AS price, coalesce(sum(cost), 0) AS cost FROM promos WHERE date LIKE ?").bind(like),
+    db.prepare("SELECT * FROM promos WHERE paid_at IS NULL AND price > 0 ORDER BY date"),
   ]);
   return json({
     today: now, month, clients: clients.results, unpaid: unpaid.results, recent: recent.results.map(withClients),
     totals: totals.results[0], requests: requests.results, promos: promos.results[0],
+    unpaidPromos: unpaidPromos.results,
     // Last month's recaps not sent yet, for clients someone can receive them.
     reportsDue: (await db.prepare(
       `SELECT count(*) AS n FROM clients c WHERE c.status = 'attivo'
@@ -445,6 +447,8 @@ async function api(request, env, path, session) {
 
   if (!TABLES[table] || action) return json({ error: "Non trovato." }, 404);
   if (!id && method === "GET") {
+    // Pagamenti may be the first page opened in a new month.
+    if (table === "charges") await chargeOnce(env, today().slice(0, 7));
     const listed = await list(env, table, url);
     if (session.role !== "team" || table !== "clients") return listed;
     return json((await listed.json()).map(forTeam));

@@ -196,6 +196,35 @@ const chargeRows = (charges: Row[], showClient = true) => charges.map((c) => {
 });
 const chargeHeads = (showClient = true) => [...(showClient ? ["Cliente"] : []), "Mese", "Voce", "Importo", "Scadenza", "Stato", ""];
 
+// Everything someone owes, fees and promos alike, in one shape: the
+// Pagamenti reminder and the Panoramica list read it. A promo is due the day
+// it goes out.
+type Due = { kind: "charge" | "promo"; id: number; who: string; what: string; period: string; amount: number; due: string; paid_at: string | null };
+const chargeDue = (c: Row): Due => ({
+  kind: "charge", id: c.id, who: clientLink(c.client_id), what: esc(c.description || "Canone"), period: c.period,
+  amount: c.amount, due: c.due_date, paid_at: c.paid_at,
+});
+const promoDue = (p: Row): Due => ({
+  kind: "promo", id: p.id, who: `<strong>${esc(p.venue)}</strong>`, what: `Promo${p.title ? ` · ${esc(p.title)}` : ""}`,
+  period: p.date.slice(0, 7), amount: p.price, due: p.date, paid_at: p.paid_at,
+});
+// Due by the end of this month: what the reminder asks for. Later instalments
+// show up in their own month.
+const dueNow = (d: Due) => !d.paid_at && d.period <= thisMonth();
+const dueState = (d: Due) => (d.paid_at ? "pagato" : d.due < today() ? "scaduto" : "da_pagare");
+const byDue = (a: Due, b: Due) => a.due.localeCompare(b.due) || a.kind.localeCompare(b.kind);
+// The button that flips a fee or a promo between paid and not paid.
+const payButton = (d: Due, label = d.paid_at ? "Annulla" : "Segna pagato") =>
+  `<button class="btn small${d.paid_at ? "" : " primary"}" ${d.kind === "promo" ? "data-promo-paid" : "data-pay"}="${d.id}" data-paid="${d.paid_at ? 1 : 0}">${label}</button>`;
+const dueRows = (dues: Due[]) => dues.map((d) => {
+  const state = dueState(d);
+  return `<tr class="${state === "scaduto" ? "late" : ""}"><td>${d.who}</td><td>${d.what}</td><td>${esc(month(d.period))}</td>
+    <td class="num"><strong>${eur(d.amount)}</strong></td><td>${day(d.due)}</td>
+    <td>${badge(state, CHARGE[state])}${d.paid_at ? `<small class="block mute">${day(d.paid_at)}</small>` : ""}</td>
+    <td class="row-actions">${payButton(d)}${d.kind === "charge" ? rowActions("charges", d.id) : rowActions("promos", d.id)}</td></tr>`;
+});
+const dueHeads = ["Chi", "Voce", "Mese", "Importo", "Scadenza", "Stato", ""];
+
 const videoRows = (videos: Row[], showClient = true) => videos.map((v) => `<tr>
   <td>${day(v.published_on)}</td>${showClient ? `<td>${clientLinks(v.client_ids)}</td>` : ""}
   <td>${platform(v.platform)}</td>
@@ -227,8 +256,9 @@ async function dashboard() {
   const s = await api(`summary?month=${selected}`);
   const active = s.clients.filter((c: Row) => c.status === "attivo");
   const sum = (rows: Row[], k: string) => rows.reduce((t, r) => t + (r[k] ?? 0), 0);
-  const outstanding = sum(s.unpaid, "amount");
-  const late = s.unpaid.filter((c: Row) => c.due_date < s.today);
+  const dues = [...s.unpaid.map(chargeDue), ...s.unpaidPromos.map(promoDue)].filter(dueNow).sort(byDue);
+  const outstanding = sum(dues, "amount");
+  const late = dues.filter((d) => d.due < s.today);
   const connected = Object.entries(s.connections).filter(([k, v]) => v && k !== "tiktokApp").length;
   const trend = new Map(s.trend.map((t: Row) => [t.month, t]));
   const months = Array.from({ length: 12 }, (_, i) => addMonths(thisMonth(), i - 11));
@@ -265,11 +295,11 @@ async function dashboard() {
     </section>
     <div class="grid2">
       <section class="panel"><h2>Pagamenti da ricevere</h2>
-        ${s.unpaid.length ? `<ul class="list">${s.unpaid.slice(0, 10).map((c: Row) => {
-          const state = chargeState(c);
-          return `<li><div>${clientLink(c.client_id)}<small>${esc(c.description ?? "")} · ${esc(month(c.period))} · scade ${day(c.due_date)}</small></div>
-            <div class="end"><strong>${eur(c.amount)}</strong>${badge(state, CHARGE[state])}<button class="btn small primary" data-pay="${c.id}" data-paid="0">Pagato</button></div></li>`;
-        }).join("")}</ul>` : '<p class="empty">Tutti in regola.</p>'}
+        ${dues.length ? `<ul class="list">${dues.slice(0, 10).map((d) => {
+          const state = dueState(d);
+          return `<li><div><span>${d.who}</span><small>${d.what} · ${esc(month(d.period))} · scade ${day(d.due)}</small></div>
+            <div class="end"><strong>${eur(d.amount)}</strong>${badge(state, CHARGE[state])}${payButton(d, "Pagato")}</div></li>`;
+        }).join("")}</ul>${dues.length > 10 ? `<a class="more" href="#/pagamenti">Tutti i ${dues.length} →</a>` : ""}` : '<p class="empty">Tutti in regola.</p>'}
       </section>
       <section class="panel"><h2>Ultimi video</h2>
         ${s.recent.length ? `<ul class="list">${s.recent.map((v: Row) => `<li><div><span>${clientLinks(v.client_ids)}</span><small>${platform(v.platform)} ${day(v.published_on)} · <a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "apri")}</a></small></div>
@@ -393,17 +423,33 @@ async function videosView() {
 }
 
 let payState = "tutti";
+// Pagamenti: first a reminder of everyone who has not paid yet, from any
+// month, fees and promos; under it the chosen month, paid or not.
 async function paymentsView() {
-  const all = await api<Row[]>("charges");
-  const rows = all.filter((c) => c.period === selected && (payState === "tutti" || chargeState(c) === payState));
-  const total = rows.reduce((t, c) => t + c.amount, 0);
-  const paid = rows.filter((c) => c.paid_at).reduce((t, c) => t + c.amount, 0);
-  view.innerHTML = `${head("Pagamenti", `<button class="btn" data-charge-month>Genera canoni del mese</button>${add("charges", "+ Addebito")}`)}
-    <div class="filters">${monthPicker(selected)}
-      <label>Stato <select data-pay-state>${[["tutti", "Tutti"], ...Object.entries(CHARGE)].map(([k, l]) => `<option value="${k}"${k === payState ? " selected" : ""}>${l}</option>`).join("")}</select></label></div>
-    <section class="panel">
-      <div class="totals"><div><span>Totale</span><strong>${eur(total)}</strong></div><div><span>Pagato</span><strong>${eur(paid)}</strong></div><div><span>Da pagare</span><strong class="${total - paid ? "warn" : ""}">${eur(total - paid)}</strong></div></div>
-      ${table(chargeHeads(), chargeRows(rows), "Nessun addebito con questi filtri.")}
+  const [charges, promos] = await Promise.all([api<Row[]>("charges"), api<Row[]>("promos")]);
+  const all = [...charges.map(chargeDue), ...promos.filter((p) => p.price > 0).map(promoDue)].sort(byDue);
+  const open = all.filter(dueNow);
+  const later = all.filter((d) => !d.paid_at && !dueNow(d));
+  const late = open.filter((d) => d.due < today());
+  const total = (rows: Due[]) => rows.reduce((t, d) => t + d.amount, 0);
+  const inMonth = all.filter((d) => d.period === selected && (payState === "tutti" || dueState(d) === payState));
+  const paid = inMonth.filter((d) => d.paid_at);
+  view.innerHTML = `${head("Pagamenti", `<button class="btn" data-charge-month>Genera canoni del mese</button>${add("charges", "+ Addebito")}${add("promos", "+ Promo")}`,
+      "Chi deve ancora pagare resta qui finché non lo segni pagato")}
+    <section class="kpis">
+      ${kpi("Da incassare", eur(total(open)), `${open.length} ${open.length === 1 ? "pagamento aperto" : "pagamenti aperti"}`, open.length ? "alert" : "")}
+      ${kpi("Scaduti", eur(total(late)), late.length ? `${late.length} in ritardo` : "nessun ritardo", late.length ? "alert" : "")}
+      ${kpi("Promo da incassare", eur(total(open.filter((d) => d.kind === "promo"))), `${open.filter((d) => d.kind === "promo").length} promo`)}
+    </section>
+    <section class="panel"><h2>Da pagare <small class="mute">canoni e promo fino a ${esc(month(thisMonth()))}, anche dei mesi passati</small></h2>
+      ${open.length ? table(dueHeads, dueRows(open), "") : '<p class="empty">Tutti in regola: nessun pagamento aperto.</p>'}
+      ${later.length ? `<p class="explain">Più avanti: ${later.length} ${later.length === 1 ? "rata" : "rate"} per ${eur(total(later))}, ${esc(month(later[0].period))} la prossima. Le trovi scegliendo il mese qui sotto.</p>` : ""}
+    </section>
+    <section class="panel"><div class="panel-head"><h2>${esc(month(selected))}</h2>
+      <div class="filters">${monthPicker(selected)}
+        <label>Stato <select data-pay-state>${[["tutti", "Tutti"], ...Object.entries(CHARGE)].map(([k, l]) => `<option value="${k}"${k === payState ? " selected" : ""}>${l}</option>`).join("")}</select></label></div></div>
+      <div class="totals"><div><span>Totale</span><strong>${eur(total(inMonth))}</strong></div><div><span>Pagato</span><strong>${eur(total(paid))}</strong></div><div><span>Da pagare</span><strong class="${total(inMonth) - total(paid) ? "warn" : ""}">${eur(total(inMonth) - total(paid))}</strong></div></div>
+      ${table(dueHeads, dueRows(inMonth), "Niente in questo mese con questi filtri.")}
     </section>`;
 }
 

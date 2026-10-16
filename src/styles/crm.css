@@ -376,3 +376,4 @@ body.portal td:first-child { white-space: nowrap; }
 .link-row input[type="url"] { display: none; }
 .link-row:has(input[type="checkbox"]:checked) input[type="url"] { display: block; }
 .link-row .check { color: var(--ink); font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.panel-head .filters { margin: 0; }
