@@ -27,12 +27,16 @@ const TABLES = {
     platform: "t", url: "t", title: "t", published_on: "d", views: "i", reach: "i",
     likes: "i", comments: "i", shares: "i", saves: "i",
   },
+  promos: {
+    venue: "t", title: "t", date: "d", price: "i", cost: "i", cost_to: "t", url: "t", paid_at: "d", notes: "t",
+  },
 };
 const ORDER = {
   clients: "status = 'attivo' DESC, name COLLATE NOCASE",
   charges: "period DESC, due_date DESC, id DESC",
   videos: "published_on DESC, id DESC",
   documents: "doc_date IS NULL, doc_date DESC, uploaded_at DESC",
+  promos: "date DESC, id DESC",
 };
 // Clients come with who can open their area (approved people, pending
 // requests) and how many of the month's videos are done.
@@ -48,6 +52,7 @@ const SELECT = {
   },
   documents: "SELECT * FROM documents",
   charges: "SELECT * FROM charges",
+  promos: "SELECT * FROM promos",
   // The clients a video features, as a JSON array (see withClients).
   videos: "SELECT v.*, (SELECT json_group_array(client_id) FROM video_clients WHERE video_id = v.id) AS client_ids FROM videos v",
 };
@@ -92,6 +97,7 @@ async function list(env, table, url) {
   else if (client && TABLES[table].client_id) { where.push("client_id = ?"); binds.push(Number(client)); }
   const month = url.searchParams.get("month");
   if (month && isMonth(month) && table === "videos") { where.push("published_on LIKE ?"); binds.push(`${month}-%`); }
+  if (month && isMonth(month) && table === "promos") { where.push("date LIKE ?"); binds.push(`${month}-%`); }
   const sql = `${SELECT[table]} ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY ${ORDER[table]}`;
   const { results } = await env.CRM_DB.prepare(sql).bind(...binds).all();
   return json(results.map(withClients));
@@ -102,6 +108,7 @@ const DEFAULTS = {
   clients: { fee: 0, videos_per_month: 6, videos_total: 0, billing_day: 1, billing_every: 6, status: "attivo" },
   charges: { kind: "canone" },
   documents: { kind: "contratto" },
+  promos: { price: 0, cost: 0 },
 };
 // The client categories the CRM knows (src/lib/crm/app.ts has their labels).
 const CATEGORIES = new Set(["trattoria", "ristorante", "negozio", "street_food", "cafe"]);
@@ -112,6 +119,8 @@ const typed = (table, body) => {
     body = { ...body, categories: body.categories.filter((k) => CATEGORIES.has(k)).join(",") };
   }
   const row = values(TABLES[table], body);
+  // The page turns it into a link: only web addresses.
+  if (table === "promos" && row.url && !/^https?:\/\/\S+$/i.test(row.url)) throw new Invalid("Link non valido (deve iniziare con https://).");
   for (const [key, fallback] of Object.entries(DEFAULTS[table] ?? {})) if (key in row && row[key] === null) row[key] = fallback;
   return row;
 };
@@ -258,7 +267,7 @@ async function summary(env, url) {
   if (month === now.slice(0, 7)) await chargeOnce(env, month);
   const db = env.CRM_DB;
   const like = `${month}-%`;
-  const [clients, unpaid, recent, trend, totals, requests] = await db.batch([
+  const [clients, unpaid, recent, trend, totals, requests, promos] = await db.batch([
     db.prepare(
       `SELECT c.id, c.name, c.status, c.categories, c.billing_every, c.fee, c.videos_per_month, c.videos_total, c.end_date, c.invite_token,
          (SELECT count(*) FROM client_users WHERE client_id = c.id AND status = 'approvato') AS people,
@@ -291,10 +300,11 @@ async function summary(env, url) {
       `SELECT u.*, c.name AS client_name FROM client_users u JOIN clients c ON c.id = u.client_id
        WHERE u.status = 'in_attesa' ORDER BY u.requested_at`,
     ),
+    db.prepare("SELECT count(*) AS n, coalesce(sum(price), 0) AS price, coalesce(sum(cost), 0) AS cost FROM promos WHERE date LIKE ?").bind(like),
   ]);
   return json({
     today: now, month, clients: clients.results, unpaid: unpaid.results, recent: recent.results.map(withClients),
-    totals: totals.results[0], requests: requests.results,
+    totals: totals.results[0], requests: requests.results, promos: promos.results[0],
     // Last month's recaps not sent yet, for clients someone can receive them.
     reportsDue: (await db.prepare(
       `SELECT count(*) AS n FROM clients c WHERE c.status = 'attivo'

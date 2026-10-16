@@ -103,12 +103,25 @@ const documentFields = (withFile: boolean): Field[] => [
   { name: "doc_date", label: "Data", type: "date" },
   { name: "amount", label: "Importo (€, solo fatture)", type: "money" },
 ];
+// A promo sold on the pages: its price goes into the month's revenue, its
+// cost (the people paid to make it) comes off it.
+const promoFields = (): Field[] => [
+  { name: "venue", label: "Locale / cliente", required: true, list: clients.map((c) => c.name), hint: "Anche chi non ha il pacchetto" },
+  { name: "title", label: "Promo", hint: "Es. «Reel apertura nuovo menu»" },
+  { name: "date", label: "Data di uscita", type: "date", required: true, hint: "Conta nel fatturato di questo mese" },
+  { name: "price", label: "Prezzo (€)", type: "money", required: true },
+  { name: "cost", label: "Costo (€)", type: "money", hint: "Quanto paghi i ragazzi per farla" },
+  { name: "cost_to", label: "Pagato a", hint: "Chi l'ha fatta" },
+  { name: "url", label: "Link al post", type: "url" },
+  { name: "paid_at", label: "Incassato il", type: "date", hint: "Vuoto = il locale non ha ancora pagato" },
+  { name: "notes", label: "Note", type: "textarea" },
+];
 const FIELDS: Record<string, (row: Row) => Field[]> = {
-  clients: clientFields, videos: videoFields, charges: chargeFields, documents: (row) => documentFields(!row.id),
+  clients: clientFields, videos: videoFields, charges: chargeFields, documents: (row) => documentFields(!row.id), promos: promoFields,
 };
 const TITLES: Record<string, [string, string]> = {
   clients: ["Nuovo cliente", "Modifica cliente"], videos: ["Nuovo video", "Modifica video"], charges: ["Nuovo addebito", "Modifica addebito"],
-  documents: ["Carica documento", "Modifica documento"],
+  documents: ["Carica documento", "Modifica documento"], promos: ["Nuova promo", "Modifica promo"],
 };
 const edit = (table: string, row: Row) =>
   // The categories checkboxes want the list, the record has "key,key".
@@ -140,6 +153,7 @@ const fresh = (table: string, clientId?: number): Row => {
   if (table === "clients") return { status: "attivo", billing_day: 1, billing_every: 6, videos_per_month: 6, start_date: today() };
   if (table === "documents") return { client_id: clientId ?? clients[0]?.id, kind: "contratto", doc_date: today() };
   if (table === "videos") return { client_ids: clientId ? [clientId] : [], platform: "instagram", published_on: today() };
+  if (table === "promos") return { date: selected.startsWith(thisMonth()) || selected > thisMonth() ? today() : `${selected}-01` };
   return { client_id: clientId ?? clients[0]?.id, kind: "extra", period: thisMonth(), due_date: today() };
 };
 
@@ -218,6 +232,7 @@ async function dashboard() {
   const connected = Object.entries(s.connections).filter(([k, v]) => v && k !== "tiktokApp").length;
   const trend = new Map(s.trend.map((t: Row) => [t.month, t]));
   const months = Array.from({ length: 12 }, (_, i) => addMonths(thisMonth(), i - 11));
+  const fees = active.reduce((t: number, c: Row) => t + perMonth(c), 0);
 
   const rows = s.clients.filter((c: Row) => c.status !== "concluso").map((c: Row) => `<tr>
     <td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a>${c.status === "pausa" ? ` ${badge("pausa", "In pausa")}` : ""}</td>
@@ -235,7 +250,9 @@ async function dashboard() {
       <div class="end">${userActions(u)}</div></li>`).join("")}</ul></section>` : ""}
     <section class="kpis">
       ${kpi("Clienti attivi", String(active.length), `${s.clients.length} in totale`)}
-      ${kpi("Canoni al mese", eur(active.reduce((t: number, c: Row) => t + perMonth(c), 0)), "canoni divisi per i mesi del periodo")}
+      ${kpi("Canoni al mese", eur(fees), "canoni divisi per i mesi del periodo")}
+      ${kpi(`Promo ${month(selected)}`, eur(s.promos.price), `${s.promos.n} promo · costi ${eur(s.promos.cost)}`)}
+      ${kpi("Fatturato del mese", eur(fees + s.promos.price), `canoni + promo · margine ${eur(fees + s.promos.price - s.promos.cost)}`)}
       ${kpi(`Video ${month(selected)}`, String(s.totals.videos), "pubblicati, ognuno contato una volta")}
       ${kpi("Visualizzazioni del mese", short(s.totals.views), `${num(s.totals.interactions)} interazioni`)}
       ${kpi("Da incassare", eur(outstanding), late.length ? `${late.length} in ritardo` : "nessun ritardo", late.length ? "alert" : "")}
@@ -390,6 +407,28 @@ async function paymentsView() {
     </section>`;
 }
 
+async function promosView() {
+  const rows = await api<Row[]>(`promos?month=${selected}`);
+  const sum = (k: string) => rows.reduce((t, p) => t + (p[k] ?? 0), 0);
+  const [price, cost] = [sum("price"), sum("cost")];
+  const open = rows.filter((p) => !p.paid_at).reduce((t, p) => t + p.price, 0);
+  view.innerHTML = `${head("Promo", add("promos", "+ Promo"), "Promo vendute fuori dal pacchetto: il prezzo entra nel fatturato del mese, il costo è quanto paghi chi la fa")}
+    <div class="filters">${monthPicker(selected)}</div>
+    <section class="panel">
+      <div class="totals"><div><span>Promo</span><strong>${rows.length}</strong></div><div><span>Fatturato</span><strong>${eur(price)}</strong></div>
+        <div><span>Costi</span><strong>${eur(cost)}</strong></div><div><span>Margine</span><strong class="${price - cost < 0 ? "neg" : ""}">${eur(price - cost)}</strong></div>
+        <div><span>Da incassare</span><strong class="${open ? "warn" : ""}">${eur(open)}</strong></div></div>
+      ${table(["Data", "Locale", "Promo", "Prezzo", "Costo", "Margine", "Incasso", ""], rows.map((p) => `<tr>
+        <td>${day(p.date)}</td><td><strong>${esc(p.venue)}</strong></td>
+        <td>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.title || "Apri post")}</a>` : esc(p.title ?? "")}${p.notes ? `<small class="block mute">${esc(p.notes)}</small>` : ""}</td>
+        <td class="num">${eur(p.price)}</td><td class="num">${eur(p.cost)}${p.cost_to ? `<small class="block mute">${esc(p.cost_to)}</small>` : ""}</td>
+        <td class="num${p.price - p.cost < 0 ? " neg" : ""}"><strong>${eur(p.price - p.cost)}</strong></td>
+        <td>${p.paid_at ? `${badge("pagato", "Incassato")}<small class="block mute">${day(p.paid_at)}</small>` : badge("da_pagare", "Da incassare")}</td>
+        <td class="row-actions"><button class="btn small${p.paid_at ? "" : " primary"}" data-promo-paid="${p.id}" data-paid="${p.paid_at ? 1 : 0}">${p.paid_at ? "Annulla" : "Incassata"}</button>${rowActions("promos", p.id)}</td></tr>`),
+      `Nessuna promo in ${month(selected)}.`)}
+    </section>`;
+}
+
 async function connectionsView() {
   const s = await api(`summary?month=${thisMonth()}`);
   const c = s.connections;
@@ -522,6 +561,7 @@ async function render() {
     else if (route === "cliente") await clientView(Number(arg));
     else if (route === "video") await videosView();
     else if (route === "pagamenti") await paymentsView();
+    else if (route === "promo") await promosView();
     else if (route === "collegamenti") await connectionsView();
     else if (route === "report") await reportsView();
     else if (route === "team") await teamView();
@@ -572,6 +612,8 @@ view.addEventListener("click", (event) => {
     });
   } else if (d.pay) {
     act(() => api(`charges/${d.pay}`, { method: "PATCH", data: { paid_at: d.paid === "1" ? null : today() } }), d.paid === "1" ? "Segnato da pagare" : "Segnato pagato");
+  } else if (d.promoPaid) {
+    act(() => api(`promos/${d.promoPaid}`, { method: "PATCH", data: { paid_at: d.paid === "1" ? null : today() } }), d.paid === "1" ? "Segnata da incassare" : "Segnata incassata");
   } else if (d.dismiss) {
     dismiss(d.dismiss);
     el.closest(".note")?.remove();
