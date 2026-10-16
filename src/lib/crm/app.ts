@@ -252,8 +252,80 @@ const dismiss = (key: string) => {
 const notice = (key: string, html: string) => dismissed().includes(key) ? ""
   : `<p class="note warn closable"><span>${html}</span><button type="button" class="close" data-dismiss="${esc(key)}" aria-label="Chiudi avviso">✕</button></p>`;
 
+// Panoramica has two tabs: Generale (how the page is doing with money, fees
+// and promos together) and Visibilità costante (the package: clients, videos,
+// views). The tab is remembered while the CRM stays open.
+let overview: "generale" | "visibilita" = "generale";
+const overviewTabs = () => `<nav class="months" aria-label="Panoramica">${[["generale", "Generale"], ["visibilita", "Visibilità costante"]].map(([k, l]) =>
+  `<button type="button" data-overview="${k}" class="${k === overview ? "on" : ""}">${l}</button>`).join("")}</nav>`;
 async function dashboard() {
   const s = await api(`summary?month=${selected}`);
+  return overview === "generale" ? generalView(s) : packageView(s);
+}
+
+// The estimate the owner works with: 27% of revenue goes in taxes.
+const TAX_RATE = 0.27;
+// A client's monthly fee counts in a month while its contract runs then; a
+// paused one counts nowhere, a closed one only up to its end date.
+const feesIn = (rows: Row[], m: string) => rows.filter((c) =>
+  c.fee > 0 && (c.status === "attivo" || (c.status === "concluso" && c.end_date)) &&
+  (!c.start_date || c.start_date.slice(0, 7) <= m) && (!c.end_date || c.end_date.slice(0, 7) >= m))
+  .reduce((t, c) => t + perMonth(c), 0);
+
+function generalView(s: Row) {
+  const promoBy = new Map<string, Row>(s.promoTrend.map((p: Row) => [p.month, p]));
+  const months = Array.from({ length: 12 }, (_, i) => addMonths(selected, i - 11)).map((m) => {
+    const p = promoBy.get(m) ?? { n: 0, price: 0, cost: 0 };
+    const fees = feesIn(s.clients, m);
+    const revenue = fees + p.price;
+    const taxes = Math.round(revenue * TAX_RATE);
+    return { m, fees, promos: p.price, n: p.n, cost: p.cost, revenue, taxes, net: revenue - p.cost - taxes };
+  });
+  const now = months[11];
+  const dues = [...s.unpaid.map(chargeDue), ...s.unpaidPromos.map(promoDue)].filter(dueNow);
+  const owed = dues.reduce((t, d) => t + d.amount, 0);
+  const cash = s.collected.fees + s.collected.promos;
+  const sum = (k: string) => months.reduce((t, r) => t + (r as Row)[k], 0);
+  const top = Math.max(1, ...months.map((r) => r.revenue));
+  const pct = (part: number) => (now.revenue ? `${Math.round((part / now.revenue) * 100)}%` : "—");
+
+  view.innerHTML = `
+    ${head("Panoramica", monthPicker(selected), `Come sta andando la pagina · ${esc(month(selected))}`)}
+    ${overviewTabs()}
+    <section class="kpis">
+      ${kpi("Fatturato del mese", eur(now.revenue), `${eur(now.fees)} canoni + ${eur(now.promos)} promo`)}
+      ${kpi("Costi promo", eur(now.cost), `${now.n} promo · pagati a chi le fa`)}
+      ${kpi("Tasse stimate", eur(now.taxes), `${Math.round(TAX_RATE * 100)}% del fatturato`)}
+      ${kpi("Netto del mese", eur(now.net), `fatturato − costi − tasse · ${pct(now.net)}`, now.net < 0 ? "alert" : "good")}
+      ${kpi("Incassato nel mese", eur(cash), `${eur(s.collected.fees)} canoni · ${eur(s.collected.promos)} promo`)}
+      ${kpi("Da incassare", eur(owed), dues.length ? `${dues.length} pagamenti aperti · <a href="#/pagamenti">vedi</a>` : "tutti in regola", owed ? "alert" : "")}
+    </section>
+    <section class="panel"><h2>Fatturato e netto, ultimi 12 mesi</h2>
+      <div class="totals">
+        <div><span>Fatturato 12 mesi</span><strong>${eur(sum("revenue"))}</strong></div>
+        <div><span>di cui promo</span><strong>${eur(sum("promos"))}</strong></div>
+        <div><span>Costi promo</span><strong>${eur(sum("cost"))}</strong></div>
+        <div><span>Tasse ${Math.round(TAX_RATE * 100)}%</span><strong>${eur(sum("taxes"))}</strong></div>
+        <div><span>Netto 12 mesi</span><strong class="${sum("net") < 0 ? "neg" : "pos"}">${eur(sum("net"))}</strong></div>
+      </div>
+      <div class="chart">${months.map((r) => `<button type="button" class="col${r.m === selected ? " on" : ""}" data-pick="${r.m}" title="${esc(`${month(r.m)}: fatturato ${eur(r.revenue)} (canoni ${eur(r.fees)}, promo ${eur(r.promos)}), netto ${eur(r.net)}`)}">
+        <div class="bars"><div class="stack"><i class="promo" style="height:${(r.promos / top) * 100}%"></i><i class="in" style="height:${(r.fees / top) * 100}%"></i></div>
+          <i class="net" style="height:${(Math.max(0, r.net) / top) * 100}%"></i></div>
+        <span>${esc(shortMonth(r.m))}</span></button>`).join("")}</div>
+      <p class="legend"><i class="in"></i> Canoni <i class="promo"></i> Promo <i class="net"></i> Netto dopo costi e tasse</p>
+    </section>
+    <section class="panel"><h2>Mese per mese</h2>
+      ${table(["Mese", "Canoni", "Promo", "Fatturato", "Costi promo", `Tasse ${Math.round(TAX_RATE * 100)}%`, "Netto"], months.filter((r, i) => r.revenue || months.slice(0, i).some((x) => x.revenue) || r.m === selected).reverse().map((r) =>
+        `<tr${r.m === selected ? ' class="on"' : ""}><td>${esc(month(r.m))}</td><td class="num">${eur(r.fees)}</td><td class="num">${r.promos ? `${eur(r.promos)} <small class="mute">${r.n}</small>` : "—"}</td>
+         <td class="num"><strong>${eur(r.revenue)}</strong></td><td class="num">${r.cost ? eur(-r.cost) : "—"}</td><td class="num">${eur(-r.taxes)}</td>
+         <td class="num ${r.net < 0 ? "neg" : "pos"}"><strong>${eur(r.net)}</strong></td></tr>`), "",
+        `<tfoot><tr><td><strong>Totale</strong></td><td class="num">${eur(sum("fees"))}</td><td class="num">${eur(sum("promos"))}</td><td class="num"><strong>${eur(sum("revenue"))}</strong></td>
+         <td class="num">${eur(-sum("cost"))}</td><td class="num">${eur(-sum("taxes"))}</td><td class="num ${sum("net") < 0 ? "neg" : "pos"}"><strong>${eur(sum("net"))}</strong></td></tr></tfoot>`)}
+      <p class="explain">Canoni: il canone di ogni cliente diviso per i mesi del periodo, nei mesi in cui il contratto è attivo (i clienti in pausa non contano). Promo: nel mese di uscita. Tasse stimate al ${Math.round(TAX_RATE * 100)}% del fatturato.</p>
+    </section>`;
+}
+
+function packageView(s: Row) {
   const active = s.clients.filter((c: Row) => c.status === "attivo");
   const sum = (rows: Row[], k: string) => rows.reduce((t, r) => t + (r[k] ?? 0), 0);
   const dues = [...s.unpaid.map(chargeDue), ...s.unpaidPromos.map(promoDue)].filter(dueNow).sort(byDue);
@@ -272,7 +344,8 @@ async function dashboard() {
     <td>${c.people ? badge("yes", `${c.people} ${c.people === 1 ? "persona" : "persone"}`) : badge("no", "Nessuno")}</td></tr>`);
 
   view.innerHTML = `
-    ${head("Visibilità costante", `${monthPicker(selected)}${add("videos", "+ Video")}`, `Panoramica di ${esc(month(selected))}`)}
+    ${head("Panoramica", `${monthPicker(selected)}${add("videos", "+ Video")}`, `Visibilità costante · ${esc(month(selected))}`)}
+    ${overviewTabs()}
     ${connected ? "" : notice("piattaforme", `Nessuna piattaforma collegata: le metriche vanno inserite a mano. <a href="#/collegamenti">Collega Instagram, Facebook e TikTok →</a>`)}
     ${s.reportsDue ? notice(`report:${addMonths(thisMonth(), -1)}`, `I report di ${esc(month(addMonths(thisMonth(), -1)))} non sono ancora partiti per ${s.reportsDue} ${s.reportsDue === 1 ? "cliente" : "clienti"}. <a href="#/report">Controllali e mandali →</a>`) : ""}
     ${s.requests.length ? `<section class="panel requests"><h2>Richieste d'accesso all'area clienti</h2><ul class="list">${s.requests.map((u: Row) => `<li>
@@ -281,8 +354,6 @@ async function dashboard() {
     <section class="kpis">
       ${kpi("Clienti attivi", String(active.length), `${s.clients.length} in totale`)}
       ${kpi("Canoni al mese", eur(fees), "canoni divisi per i mesi del periodo")}
-      ${kpi(`Promo ${month(selected)}`, eur(s.promos.price), `${s.promos.n} promo · costi ${eur(s.promos.cost)}`)}
-      ${kpi("Fatturato del mese", eur(fees + s.promos.price), `canoni + promo · margine ${eur(fees + s.promos.price - s.promos.cost)}`)}
       ${kpi(`Video ${month(selected)}`, String(s.totals.videos), "pubblicati, ognuno contato una volta")}
       ${kpi("Visualizzazioni del mese", short(s.totals.views), `${num(s.totals.interactions)} interazioni`)}
       ${kpi("Da incassare", eur(outstanding), late.length ? `${late.length} in ritardo` : "nessun ritardo", late.length ? "alert" : "")}
@@ -658,6 +729,9 @@ view.addEventListener("click", (event) => {
     });
   } else if (d.pay) {
     act(() => api(`charges/${d.pay}`, { method: "PATCH", data: { paid_at: d.paid === "1" ? null : today() } }), d.paid === "1" ? "Segnato da pagare" : "Segnato pagato");
+  } else if (d.overview) {
+    overview = d.overview as typeof overview;
+    render();
   } else if (d.promoPaid) {
     act(() => api(`promos/${d.promoPaid}`, { method: "PATCH", data: { paid_at: d.paid === "1" ? null : today() } }), d.paid === "1" ? "Segnata da incassare" : "Segnata incassata");
   } else if (d.dismiss) {

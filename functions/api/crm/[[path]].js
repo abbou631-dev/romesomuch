@@ -267,9 +267,10 @@ async function summary(env, url) {
   if (month === now.slice(0, 7)) await chargeOnce(env, month);
   const db = env.CRM_DB;
   const like = `${month}-%`;
-  const [clients, unpaid, recent, trend, totals, requests, promos, unpaidPromos] = await db.batch([
+  const yearAgo = `${addMonths(month, -11)}-01`;
+  const [clients, unpaid, recent, trend, totals, requests, promos, unpaidPromos, promoTrend, collected] = await db.batch([
     db.prepare(
-      `SELECT c.id, c.name, c.status, c.categories, c.billing_every, c.fee, c.videos_per_month, c.videos_total, c.end_date, c.invite_token,
+      `SELECT c.id, c.name, c.status, c.categories, c.billing_every, c.fee, c.videos_per_month, c.videos_total, c.start_date, c.end_date, c.invite_token,
          (SELECT count(*) FROM client_users WHERE client_id = c.id AND status = 'approvato') AS people,
          (SELECT count(*) FROM video_clients WHERE client_id = c.id) AS videos_all,
          (SELECT count(*) FROM videos v JOIN video_clients l ON l.video_id = v.id
@@ -302,11 +303,21 @@ async function summary(env, url) {
     ),
     db.prepare("SELECT count(*) AS n, coalesce(sum(price), 0) AS price, coalesce(sum(cost), 0) AS cost FROM promos WHERE date LIKE ?").bind(like),
     db.prepare("SELECT * FROM promos WHERE paid_at IS NULL AND price > 0 ORDER BY date"),
+    // The general overview: promos month by month over the twelve months up
+    // to the chosen one, and the cash that came in during the chosen month.
+    db.prepare(
+      `SELECT substr(date, 1, 7) AS month, count(*) AS n, coalesce(sum(price), 0) AS price, coalesce(sum(cost), 0) AS cost
+       FROM promos WHERE date >= ? AND date <= ? GROUP BY month`,
+    ).bind(yearAgo, lastDayOf(month)),
+    db.prepare(
+      `SELECT (SELECT coalesce(sum(amount), 0) FROM charges WHERE paid_at LIKE ?1) AS fees,
+              (SELECT coalesce(sum(price), 0) FROM promos WHERE paid_at LIKE ?1) AS promos`,
+    ).bind(like),
   ]);
   return json({
     today: now, month, clients: clients.results, unpaid: unpaid.results, recent: recent.results.map(withClients),
     totals: totals.results[0], requests: requests.results, promos: promos.results[0],
-    unpaidPromos: unpaidPromos.results,
+    unpaidPromos: unpaidPromos.results, promoTrend: promoTrend.results, collected: collected.results[0],
     // Last month's recaps not sent yet, for clients someone can receive them.
     reportsDue: (await db.prepare(
       `SELECT count(*) AS n FROM clients c WHERE c.status = 'attivo'

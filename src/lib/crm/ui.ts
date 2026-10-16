@@ -97,9 +97,9 @@ export const head = (title: string, actions = "", sub = "") =>
   `<div class="head"><div><h1>${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div><div class="actions">${actions}</div></div>`;
 export const kpi = (label: string, value: string, note = "", tone = "") =>
   `<div class="kpi ${tone}"><span>${esc(label)}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ""}</div>`;
-export const table = (heads: string[], rows: string[], empty: string) =>
+export const table = (heads: string[], rows: string[], empty: string, foot = "") =>
   rows.length
-    ? `<div class="scroll"><table><thead><tr>${heads.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`
+    ? `<div class="scroll"><table><thead><tr>${heads.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>${foot}</table></div>`
     : `<p class="empty">${esc(empty)}</p>`;
 export const quota = (done: number, promised: number) => {
   if (!promised) return `<small>${done} video</small>`;
