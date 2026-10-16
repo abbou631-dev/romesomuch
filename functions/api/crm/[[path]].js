@@ -396,7 +396,8 @@ async function api(request, env, path, session) {
   const method = request.method;
   const [table, idText, action] = path;
   const id = idText ? Number(idText) : null;
-  if (idText && !Number.isInteger(id)) return json({ error: "Non trovato." }, 404);
+  // Ids are numbers; TikTok's routes carry words (connect, callback).
+  if (idText && !Number.isInteger(id) && table !== "tiktok") return json({ error: "Non trovato." }, 404);
 
   // Who is signed in; a team member's session renews on every visit.
   if (table === "me" && method === "GET") {
