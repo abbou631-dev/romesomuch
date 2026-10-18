@@ -1,0 +1,51 @@
+# Articles approved in the review portal arrive as a PR from a `journal/<slug>` branch.
+# If the PR touches only the Journal and the site builds, it is merged; Cloudflare Pages
+# then deploys `main` as it does for every other push.
+name: Journal PR
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-and-merge:
+    # Only branches pushed to this repo by its owner: a fork named journal/* never merges.
+    if: >-
+      startsWith(github.head_ref, 'journal/') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Only Journal files
+        run: |
+          bad=$(git diff --name-only origin/main...HEAD \
+            | grep -vE '^src/content/journal/[a-z0-9-]+\.md$|^src/assets/experiences/[a-z0-9-]+\.(jpe?g|png|webp)$' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::Files outside the Journal: $bad"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      # Frontmatter is validated by the journal schema in src/content.config.ts,
+      # and a cover or photo name with no file behind it fails the build.
+      - run: npm run check
+      - run: npm run build
+
+      - name: Merge
+        run: gh pr merge "$PR" --squash --delete-branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}

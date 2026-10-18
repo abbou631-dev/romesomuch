@@ -40,7 +40,8 @@ const journal = defineCollection({
   loader: glob({ pattern: "**/*.md", base: "./src/content/journal" }),
   schema: z.object({
     title: z.string(),
-    date: z.string(),
+    // Printed as written, so one shape only: "3 October 2026".
+    date: z.string().regex(/^([1-9]|[12]\d|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) 20\d\d$/),
     excerpt: z.string(),
     cover: z.string(),
   }),
