@@ -75,9 +75,9 @@ The menu leans on Tuscan classics, charcoal-grilled meat first, then ribollita, 
 <div class="locked-item"><img src="/media/restaurants/nino.jpg" alt="" loading="lazy" width="480" height="270"><h3>Nino Restaurant</h3><p>On Via Borgognona, a short walk from Piazza di Spagna, since 1934.</p></div>
 </div>
 <div class="locked-cta">
-<a class="locked-preview" href="https://stan.store/romesomuch?utm_source=romesomuch&utm_medium=journal&utm_campaign=restaurants"><img src="/media/restaurants/guide-preview.jpg" alt="Pages from the RomeSoMuch restaurant guide: the cover, the selection list and the Taverna Trilussa page" width="900" height="900" loading="lazy"></a>
+<a class="locked-preview" href="https://stan.store/romesomuch/p/the-rome-restaurant-handbook?utm_source=romesomuch&utm_medium=journal&utm_campaign=restaurants"><img src="/media/restaurants/guide-preview.jpg" alt="Pages from the RomeSoMuch restaurant guide: the cover, the selection list and the Taverna Trilussa page" width="900" height="900" loading="lazy"></a>
 <p class="locked-count">Unlock all 73 of Rome's best restaurants, sorted by category</p>
 <p class="locked-cats">Local favourites · With a view · Date night · Rustic vibe · Michelin star · Roman pizza · International</p>
-<a class="btn" href="https://stan.store/romesomuch?utm_source=romesomuch&utm_medium=journal&utm_campaign=restaurants">See all the restaurants</a>
+<a class="btn" href="https://stan.store/romesomuch/p/the-rome-restaurant-handbook?utm_source=romesomuch&utm_medium=journal&utm_campaign=restaurants">See all the restaurants</a>
 </div>
 </div>
