@@ -12,7 +12,7 @@ The streets around the fountain are among the busiest in Rome, and many menus th
 ## Le Tamerici
 
 ![the entrance or dining room of Le Tamerici in Vicolo Scavolino](../../assets/experiences/where-to-eat-near-trevi-fountain-photo-1.jpeg)
-*Photo: [Le Tamerici](https://www.letamerici.com/), used with permission*
+*Photo: [Le Tamerici](https://www.letamerici.com/)*
 
 The closest of the six, in a narrow lane about two minutes from the fountain. The cooking is mostly fish. The chef and owner, Giovanni Cappelli, grew up in Calabria and is also a sommelier, and wine is taken seriously here. At lunch you can order à la carte or from a set menu that depends on what is available that day.
 
@@ -23,7 +23,7 @@ Open Monday to Saturday for lunch, from 12 to 3, and for dinner, from 7 to half 
 ## Piccolo Buco
 
 ![the front of Piccolo Buco on Via del Lavatore, or a pizza from its oven](../../assets/experiences/where-to-eat-near-trevi-fountain-photo-2.jpeg)
-*Photo: [Piccolo Buco](https://pizzeriapiccolobuco.it/about/), used with permission*
+*Photo: [Piccolo Buco](https://pizzeriapiccolobuco.it/about/)*
 
 A small pizzeria on Via del Lavatore, about two minutes from the fountain, run by Luca Issa. It does not take bookings, so you simply turn up. The menu runs from a margherita made with burrata to a pizza alla parmigiana.
 
@@ -34,7 +34,7 @@ Open Tuesday to Sunday from noon to 11 at night, or until the dough runs out. Cl
 ## Baccano
 
 ![the front or the bar of Baccano on Via delle Muratte](../../assets/experiences/where-to-eat-near-trevi-fountain-photo-3.webp)
-*Photo: [Baccano](https://www.baccanoroma.com/), used with permission*
+*Photo: [Baccano](https://www.baccanoroma.com/)*
 
 A Mediterranean bistro and oyster bar on Via delle Muratte, about two minutes from the fountain on the way to Via del Corso. The kitchen, led by Nabil Hadj Hassen, keeps Roman cooking among its strengths but goes beyond it, building the menu around seasonal Mediterranean ingredients.
 
@@ -45,7 +45,7 @@ It is open every day, serving from lunch until late at night, which is useful af
 ## Piccolo Arancio
 
 ![the entrance of Piccolo Arancio in Vicolo Scanderbeg](../../assets/experiences/where-to-eat-near-trevi-fountain-photo-4.webp)
-*Photo: [Piccolo Arancio](https://www.piccoloarancio.it/), used with permission*
+*Photo: [Piccolo Arancio](https://www.piccoloarancio.it/)*
 
 A family restaurant in Vicolo Scanderbeg, between the Quirinale and the fountain, about three minutes away on foot. Carlo and Mara look after both the kitchen and the dining room. The menu is Roman with a few modern touches and follows the seasons: tonnarelli cacio e pepe, coda alla vaccinara (oxtail stew), fettuccine with a lamb ragù and the ravioli all'arancia that go with the name. There are two dining rooms, and tables outside in good weather.
 
@@ -56,7 +56,7 @@ Open Tuesday to Sunday, from 12 to half past three and from half past six to mid
 ## Trattoria della Stampa
 
 ![the front of Trattoria della Stampa on Via dei Maroniti](../../assets/experiences/where-to-eat-near-trevi-fountain-photo-5.jpeg)
-*Photo: [Trattoria della Stampa](https://trattoriadellastampa.it/trevi/), used with permission*
+*Photo: [Trattoria della Stampa](https://trattoriadellastampa.it/trevi/)*
 
 A Roman trattoria on Via dei Maroniti, about four minutes from the fountain. It is the Trevi branch of a small group under the same name, which dates its first trattoria to 1956, and the menu sticks to Roman cooking.
 
@@ -67,7 +67,7 @@ Its main advantage near Trevi is the timetable: open every day from noon to midn
 ## Antica Birreria Peroni
 
 ![the dining room of the Antica Birreria Peroni on Via di San Marcello](../../assets/experiences/where-to-eat-near-trevi-fountain-photo-6.jpeg)
-*Photo: [Antica Birreria Peroni](https://www.anticabirreriaperoni.net/), used with permission*
+*Photo: [Antica Birreria Peroni](https://www.anticabirreriaperoni.net/)*
 
 A beer hall founded in 1906, on Via di San Marcello, about five minutes south of the fountain. The room has kept its old-fashioned look, and the food is a mix of Roman dishes (bucatini all'amatriciana, carciofo alla giudia, abbacchio a scottadito) and wurstel to go with the Peroni.
 
