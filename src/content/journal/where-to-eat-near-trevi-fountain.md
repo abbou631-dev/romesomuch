@@ -5,9 +5,6 @@ excerpt: "Where to eat near the Trevi Fountain: six places within five minutes o
 cover: "trevi-fountain-cover"
 ---
 
-![The Trevi Fountain in daylight](../../assets/experiences/trevi-fountain-cover.jpeg)
-*Photo: [Diego Delso](https://commons.wikimedia.org/wiki/File:Fuente_de_Trevi,_Roma,_Italia,_2022-09-15,_DD_02.jpg), CC BY-SA 4.0, via Wikimedia Commons*
-
 If you want to eat well near the Trevi Fountain, walk away from the square for two to five minutes, into the lanes towards the Quirinale or across to Via di San Marcello. That short walk takes you to the six places below, which range from a family restaurant and a pizzeria that takes no bookings to a beer hall founded in 1906.
 
 The streets around the fountain are among the busiest in Rome, and many menus there are written for people passing through once. We checked every address, opening day and closing day on each restaurant's own website this week. The walking times come from OpenStreetMap at an ordinary pace, so allow a little longer when the crowd at the fountain is thick.
@@ -101,3 +98,5 @@ Yes. Trattoria della Stampa is open from noon to midnight every day, the Antica 
 ### Do I need to book?
 
 Piccolo Buco and the Antica Birreria Peroni do not take bookings, so arrive early. The other four do.
+
+*Cover photo: [Diego Delso](https://commons.wikimedia.org/wiki/File:Fuente_de_Trevi,_Roma,_Italia,_2022-09-15,_DD_02.jpg), CC BY-SA 4.0, via Wikimedia Commons*
