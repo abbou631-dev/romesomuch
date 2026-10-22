@@ -9,11 +9,11 @@ const today = new Date().toISOString().slice(0, 10);
   title="Become a RomeSoMuch UGC"
   description="Coming to Rome and making content? Apply to try our experiences and restaurants for free in exchange for content."
 >
-  <section class="band">
+  <section class="band ugc">
     <div class="wrap"><p class="crumb">Home / UGC</p><h1>Become a RomeSoMuch UGC</h1></div>
   </section>
   <div class="wrap">
-    <article class="legal">
+    <article class="legal ugc">
       <section class="lsec">
         <h2><span class="tnum">01</span> How it works</h2>
         <p>
@@ -87,3 +87,11 @@ const today = new Date().toISOString().slice(0, 10);
     </article>
   </div>
 </Base>
+
+<style>
+  /* Everything on this page reads centred, form included. */
+  .ugc{text-align:center}
+  article.ugc{margin-inline:auto}
+  .ugc :global(.lsec h2){justify-content:center}
+  .ugc :global(.enq){margin-inline:auto}
+</style>
