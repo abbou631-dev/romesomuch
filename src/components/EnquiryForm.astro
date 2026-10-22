@@ -4,7 +4,7 @@
 type Field = {
   name: string;
   label: string;
-  type?: "text" | "email" | "url" | "textarea" | "date" | "select";
+  type?: "text" | "email" | "url" | "textarea" | "date" | "select" | "checkbox";
   required?: boolean;
   help?: string;
   // Date fields only: earliest day offered, and whether weekdays are refused.
@@ -39,7 +39,15 @@ const { kind, fields, submit, hidden = {} } = Astro.props;
   <input type="hidden" name="page" value="" />
   <input type="hidden" name="lastViewed" value="" />
 
-  {fields.map(({ name, label, type = "text", required, help, min, weekendsOnly, options, placeholder }) => (
+  {fields.map(({ name, label, type = "text", required, help, min, weekendsOnly, options, placeholder }) => type === "checkbox" ? (
+    // A statement the sender agrees to: the box sits beside its sentence.
+    <p class="enq-row enq-check">
+      <label>
+        <input name={name} type="checkbox" value="Accepted" required={required} />
+        <span>{label}{required && <span class="enq-req" aria-hidden="true">*</span>}</span>
+      </label>
+    </p>
+  ) : (
     <p class="enq-row">
       <label for={`${kind}-${name}`}>
         {label}{required && <span class="enq-req" aria-hidden="true">*</span>}

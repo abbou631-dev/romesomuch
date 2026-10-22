@@ -118,10 +118,12 @@ const promoFields = (): Field[] => [
 ];
 const FIELDS: Record<string, (row: Row) => Field[]> = {
   clients: clientFields, videos: videoFields, charges: chargeFields, documents: (row) => documentFields(!row.id), promos: promoFields,
+  ugc: () => ugcFields(),
 };
 const TITLES: Record<string, [string, string]> = {
   clients: ["Nuovo cliente", "Modifica cliente"], videos: ["Nuovo video", "Modifica video"], charges: ["Nuovo addebito", "Modifica addebito"],
   documents: ["Carica documento", "Modifica documento"], promos: ["Nuova promo", "Modifica promo"],
+  ugc: ["Candidatura UGC", "Candidatura UGC"],
 };
 const edit = (table: string, row: Row) =>
   // The categories checkboxes want the list, the record has "key,key".
@@ -546,6 +548,131 @@ async function promosView() {
     </section>`;
 }
 
+// ---- UGC applications --------------------------------------------------------
+
+// Sent from the site's /ugc/ form; the CRM only adds a status, a 1–5 rating and notes.
+const UGC_STATUS = {
+  nuovo: "Nuovo", contattato: "Contattato", confermato: "Shooting confermato", completato: "Ha postato", scartato: "Scartato",
+} as Record<string, string>;
+// The form's follower bands, smallest first: their order is what "at least" compares.
+const FOLLOWERS = ["Under 5k", "5k–20k", "20k–100k", "100k–500k", "Over 500k"];
+const NICHES = ["Travel", "Food", "Lifestyle", "Couples", "Family", "Luxury", "Other"];
+const RIGHTS = { "Reposts on RomeSoMuch channels": "Repost sui nostri canali", "Reposts and paid ads": "Repost e ads a pagamento", "To discuss": "Da discutere" } as Record<string, string>;
+const INTEREST = { Experiences: "Esperienze", Restaurants: "Ristoranti", Both: "Entrambi" } as Record<string, string>;
+const ugcFields = (): Field[] => [
+  { name: "status", label: "Stato", type: "select", options: Object.entries(UGC_STATUS) },
+  { name: "rating", label: "Voto", type: "select", options: [["", "—"], ["5", "5 · da prendere subito"], ["4", "4"], ["3", "3"], ["2", "2"], ["1", "1 · non fa per noi"]] },
+  { name: "notes", label: "Note", type: "textarea", hint: "Visibili solo nel CRM" },
+];
+
+// The page's filters; kept while moving around the CRM.
+const ugcFilter = { q: "", status: "aperti", followers: "", niche: "", interest: "", rights: "", when: "", tiktok: false, sort: "recenti" };
+let ugcRows: Row[] = [];
+
+const band = (u: Row) => FOLLOWERS.indexOf(u.followers);
+// "15k", "15.000", "1,2M" → a number, for sorting by views; text it cannot read counts as 0.
+const viewsOf = (u: Row) => {
+  const m = String(u.views ?? "").toLowerCase().replace(/\s/g, "").match(/(\d+(?:[.,]\d+)?)(k|m)?/);
+  if (!m) return 0;
+  const n = parseFloat(m[1].replace(/[.,](\d{3})$/, "$1").replace(",", "."));
+  return n * (m[2] === "m" ? 1e6 : m[2] === "k" ? 1e3 : 1);
+};
+// In Rome at some point between two days (inclusive).
+const inRome = (u: Row, from: string, to: string) => !!u.arrival && u.arrival <= to && (u.departure || u.arrival) >= from;
+const ugcWhen: Record<string, [string, (u: Row) => boolean]> = {
+  ora: ["A Roma adesso", (u) => inRome(u, today(), today())],
+  "30": ["A Roma nei prossimi 30 giorni", (u) => inRome(u, today(), addDays(today(), 30))],
+  futuri: ["Arrivano più avanti", (u) => (u.arrival ?? "") > today()],
+  passati: ["Già ripartiti", (u) => !!u.departure && u.departure < today()],
+};
+const matchesUgc = (u: Row) => {
+  const f = ugcFilter;
+  if (f.status === "aperti" ? ["scartato", "completato"].includes(u.status) : f.status && u.status !== f.status) return false;
+  if (f.followers && band(u) < Number(f.followers)) return false;
+  if (f.niche && u.niche !== f.niche) return false;
+  // Someone who wants both fits either search.
+  if (f.interest && u.interest !== f.interest && u.interest !== "Both") return false;
+  if (f.rights && u.rights !== f.rights) return false;
+  if (f.when && !ugcWhen[f.when][1](u)) return false;
+  if (f.tiktok && !u.tiktok) return false;
+  if (f.q) {
+    const text = [u.name, u.email, u.country, u.instagram, u.tiktok, u.languages, u.message, u.notes, u.party].join(" ").toLowerCase();
+    if (!f.q.toLowerCase().split(/\s+/).every((word) => text.includes(word))) return false;
+  }
+  return true;
+};
+const UGC_SORT: Record<string, [string, (a: Row, b: Row) => number]> = {
+  recenti: ["Più recenti", (a, b) => b.created_at.localeCompare(a.created_at)],
+  follower: ["Più follower", (a, b) => band(b) - band(a) || viewsOf(b) - viewsOf(a)],
+  views: ["Più views", (a, b) => viewsOf(b) - viewsOf(a)],
+  voto: ["Voto più alto", (a, b) => (b.rating ?? 0) - (a.rating ?? 0) || band(b) - band(a)],
+  arrivo: ["Arrivo più vicino", (a, b) => (a.arrival ?? "9999").localeCompare(b.arrival ?? "9999")],
+};
+
+// A handle or a pasted profile link, as a link to the profile. Only web addresses become links.
+const profile = (value: string | null, base: string, label: string) => {
+  if (!value) return "";
+  const text = value.trim();
+  const href = /^https?:\/\/\S+$/i.test(text) ? text : /^@?[\w.]+$/.test(text) ? `${base}${text.replace(/^@/, "")}` : "";
+  return href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${label}</a>` : `<span class="mute">${label}: ${esc(text)}</span>`;
+};
+// Free text where people paste links: the links become clickable, the rest stays text.
+const linkify = (text: string | null) => esc(text ?? "").replace(/https?:\/\/[^\s<]+/g, (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
+const stay = (u: Row) => (u.arrival ? `${day(u.arrival)}${u.departure && u.departure !== u.arrival ? ` → ${day(u.departure)}` : ""}` : "—");
+
+const ugcRow = (u: Row) => {
+  const details: [string, string][] = ([
+    ["Lavori migliori", linkify(u.portfolio)], ["Cosa consegnerebbe", esc(u.deliverables ?? "")], ["Chi viene", esc(u.party ?? "")],
+    ["Lingue", esc(u.languages ?? "")], ["Messaggio", esc(u.message ?? "")], ["Note nostre", esc(u.notes ?? "")],
+  ] as [string, string][]).filter(([, v]) => v);
+  return `<tr>
+    <td><strong>${esc(u.name)}</strong><small class="block mute">${esc(u.country ?? "")}${u.country ? " · " : ""}<a href="mailto:${esc(u.email)}">${esc(u.email)}</a></small>
+      <small class="block">${[profile(u.instagram, "https://www.instagram.com/", "Instagram"), profile(u.tiktok, "https://www.tiktok.com/@", "TikTok")].filter(Boolean).join(" · ")}</small>
+      ${details.length ? `<details class="ugc-more"><summary>Dettagli</summary><dl>${details.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></details>` : ""}</td>
+    <td>${esc(u.followers ?? "—")}<small class="block mute">${u.views ? `${esc(u.views)} views` : ""}</small></td>
+    <td>${esc(u.niche ?? "—")}<small class="block mute">${esc(INTEREST[u.interest] ?? u.interest ?? "")}</small></td>
+    <td>${stay(u)}</td>
+    <td><small>${esc(RIGHTS[u.rights] ?? u.rights ?? "—")}</small></td>
+    <td>${badge(`ugc-${u.status}`, UGC_STATUS[u.status] ?? u.status)}${u.rating ? `<small class="block">${"★".repeat(u.rating)}<span class="mute">${"★".repeat(5 - u.rating)}</span></small>` : ""}
+      <small class="block mute">ricevuta ${day(u.created_at)}</small></td>
+    <td class="row-actions">${rowActions("ugc", u.id)}</td></tr>`;
+};
+function drawUgc() {
+  const rows = ugcRows.filter(matchesUgc).sort(UGC_SORT[ugcFilter.sort][1]);
+  document.getElementById("ugc-list")!.innerHTML = `<p class="sub">${rows.length} di ${ugcRows.length} candidature</p>` +
+    table(["Creator", "Follower", "Nicchia", "A Roma", "Diritti", "Stato", ""], rows.map(ugcRow), "Nessuna candidatura con questi filtri.");
+}
+
+async function ugcView() {
+  ugcRows = await api<Row[]>("ugc");
+  const f = ugcFilter;
+  const select = (key: string, label: string, options: [string, string][]) =>
+    `<label>${label} <select data-ugc="${key}">${options.map(([k, l]) => `<option value="${esc(k)}"${String((f as Row)[key]) === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
+  const soon = ugcRows.filter((u) => u.status !== "scartato" && ugcWhen["30"][1](u)).length;
+  view.innerHTML = `${head("UGC", "", "Le candidature dal modulo romesomuch.com/ugc/: filtra per trovare i creator giusti")}
+    <div class="kpis">
+      ${kpi("Candidature", num(ugcRows.length))}
+      ${kpi("Da guardare", num(ugcRows.filter((u) => u.status === "nuovo").length), "stato Nuovo", ugcRows.some((u) => u.status === "nuovo") ? "warn" : "")}
+      ${kpi("A Roma nei prossimi 30 giorni", num(soon), "esclusi gli scartati")}
+      ${kpi("Shooting confermati", num(ugcRows.filter((u) => u.status === "confermato").length))}
+    </div>
+    <section class="panel">
+      <div class="filters">
+        <label>Cerca <input type="search" data-ugc="q" value="${esc(f.q)}" placeholder="Nome, profilo, paese, lingua…" /></label>
+        ${select("status", "Stato", [["aperti", "Da gestire (no scartati né conclusi)"], ["", "Tutti"], ...Object.entries(UGC_STATUS)])}
+        ${select("followers", "Follower almeno", [["", "Qualsiasi"], ...FOLLOWERS.map((b, i) => [String(i), b] as [string, string]).slice(1)])}
+        ${select("niche", "Nicchia", [["", "Tutte"], ...NICHES.map((n) => [n, n] as [string, string])])}
+        ${select("interest", "Vuole provare", [["", "Qualsiasi"], ["Experiences", "Esperienze"], ["Restaurants", "Ristoranti"]])}
+        ${select("rights", "Diritti sui contenuti", [["", "Qualsiasi"], ...Object.entries(RIGHTS)])}
+        ${select("when", "Quando a Roma", [["", "Sempre"], ...Object.entries(ugcWhen).map(([k, [l]]) => [k, l] as [string, string])])}
+        ${select("sort", "Ordina per", Object.entries(UGC_SORT).map(([k, [l]]) => [k, l] as [string, string]))}
+        <label class="check"><input type="checkbox" data-ugc="tiktok"${f.tiktok ? " checked" : ""} /> Ha TikTok</label>
+      </div>
+      <div id="ugc-list"></div>
+    </section>`;
+  drawUgc();
+}
+
 async function connectionsView() {
   const s = await api(`summary?month=${thisMonth()}`);
   const c = s.connections;
@@ -679,6 +806,7 @@ async function render() {
     else if (route === "video") await videosView();
     else if (route === "pagamenti") await paymentsView();
     else if (route === "promo") await promosView();
+    else if (route === "ugc") await ugcView();
     else if (route === "collegamenti") await connectionsView();
     else if (route === "report") await reportsView();
     else if (route === "team") await teamView();
@@ -798,7 +926,18 @@ view.addEventListener("click", (event) => {
   }
 });
 
+// The UGC filters redraw only the list, so typing in the search box keeps its focus.
+const ugcInput = (event: Event) => {
+  const el = event.target as HTMLInputElement | HTMLSelectElement;
+  const key = el.dataset.ugc;
+  if (!key) return;
+  (ugcFilter as Row)[key] = el instanceof HTMLInputElement && el.type === "checkbox" ? el.checked : el.value;
+  drawUgc();
+};
+view.addEventListener("input", ugcInput);
+
 view.addEventListener("change", (event) => {
+  if ((event.target as HTMLElement).dataset.ugc) return ugcInput(event);
   const el = event.target as HTMLInputElement | HTMLSelectElement;
   if ("month" in el.dataset && el.value) { selected = el.value; render(); }
   else if ("reportMonth" in el.dataset && el.value) { reportMonth = el.value; render(); }

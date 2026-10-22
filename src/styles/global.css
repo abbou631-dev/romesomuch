@@ -461,6 +461,8 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
    and drawn back with a background chevron that follows the text colour. */
 .enq select{-webkit-appearance:none;appearance:none;padding-right:40px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) calc(50% + 1px),calc(100% - 14px) calc(50% + 1px);background-size:6px 6px,6px 6px;background-repeat:no-repeat}
 .enq textarea{resize:vertical;line-height:1.6}
+.enq-check label{display:flex;gap:12px;align-items:flex-start;text-align:left;text-transform:none;letter-spacing:0;font-size:14px;font-weight:500;line-height:1.55;cursor:pointer}
+.enq .enq-check input{width:18px;height:18px;flex:none;margin-top:2px;padding:0;accent-color:var(--yellow-deep);cursor:pointer}
 .enq input:hover,.enq textarea:hover,.enq select:hover{border-color:var(--ink)}
 .enq input:focus-visible,.enq textarea:focus-visible,.enq select:focus-visible{outline:none;border-color:var(--yellow-deep);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
 .enq-fine{font-size:12.5px;color:var(--muted);line-height:1.55;font-weight:500;margin-bottom:18px}

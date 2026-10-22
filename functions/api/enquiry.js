@@ -30,27 +30,22 @@ const FORMS = {
   },
   ugc: {
     subject: "UGC application",
-    required: ["name", "email", "instagram", "portfolio", "followers", "niche", "arrival", "departure", "interest", "rights"],
+    required: ["name", "email", "instagram", "portfolio", "followers", "niche", "arrival", "departure", "interest", "rights", "agreement"],
     fields: [
       "name", "email", "country", "instagram", "tiktok", "portfolio", "followers", "views", "niche",
-      "languages", "arrival", "departure", "group", "interest", "deliverables", "rights", "message",
+      "languages", "arrival", "departure", "group", "interest", "deliverables", "rights", "message", "agreement",
     ],
     // Arrival and departure must be real dates, in that order.
     stay: ["arrival", "departure"],
-    // Each application also becomes a row in the Notion database
-    // "RomeSoMuch — UGC applications", where the team sets its Status.
-    notion: {
-      database: "51ca3303d8cf4966860fef42cc7f6702",
-      title: "name",
-      email: "email",
-      text: {
-        country: "From", instagram: "Instagram", tiktok: "TikTok", portfolio: "Best work",
-        views: "Average views", languages: "Languages", group: "Who is coming",
-        deliverables: "Would deliver", message: "Message",
+    // Each application is also kept in the CRM (/crm/#/ugc): form field → column.
+    crm: {
+      table: "ugc",
+      columns: {
+        name: "name", email: "email", country: "country", instagram: "instagram", tiktok: "tiktok",
+        portfolio: "portfolio", followers: "followers", views: "views", niche: "niche", languages: "languages",
+        arrival: "arrival", departure: "departure", group: "party", interest: "interest",
+        deliverables: "deliverables", rights: "rights", message: "message", agreement: "agreement", page: "page",
       },
-      select: { followers: "Followers", niche: "Niche", interest: "Wants to try", rights: "Usage rights" },
-      range: { property: "In Rome", from: "arrival", to: "departure" },
-      status: { property: "Status", value: "New" },
     },
   },
   partner: {
@@ -98,6 +93,7 @@ const LABELS = {
   interest: "Wants to try",
   deliverables: "Would deliver",
   rights: "Usage rights",
+  agreement: "Accepted the commitment to post",
   message: "Message",
   topic: "Reason",
   page: "Sent from",
@@ -111,35 +107,19 @@ const clean = (value) => String(value ?? "").trim().slice(0, LIMIT);
 
 const looksLikeEmail = (value) => /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(value);
 
-// Notion caps a single text run at 2000 characters; LIMIT allows 4000.
-const richText = (value) =>
-  (value.match(/[\s\S]{1,2000}/g) ?? []).map((content) => ({ type: "text", text: { content } }));
-
-// Turns a submission into a Notion page in the form's database. Returns whether it landed.
-const saveToNotion = async (map, values, token) => {
-  const properties = {
-    Name: { title: richText(values[map.title]) },
-    Email: { email: values[map.email] },
-    [map.status.property]: { select: { name: map.status.value } },
-    [map.range.property]: { date: { start: values[map.range.from], end: values[map.range.to] || null } },
-  };
-  for (const [field, property] of Object.entries(map.text)) {
-    if (values[field]) properties[property] = { rich_text: richText(values[field]) };
+// Turns a submission into a row of the form's CRM table. Returns whether it landed.
+const saveToCrm = async (map, values, db) => {
+  const entries = Object.entries(map.columns).filter(([field]) => values[field]);
+  try {
+    await db
+      .prepare(`INSERT INTO ${map.table} (${entries.map(([, column]) => column).join(", ")}) VALUES (${entries.map(() => "?").join(", ")})`)
+      .bind(...entries.map(([field]) => values[field]))
+      .run();
+    return true;
+  } catch (error) {
+    console.log("the CRM rejected the enquiry", error);
+    return false;
   }
-  for (const [field, property] of Object.entries(map.select)) {
-    if (values[field]) properties[property] = { select: { name: values[field] } };
-  }
-  const saved = await fetch("https://api.notion.com/v1/pages", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Notion-Version": "2022-06-28",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ parent: { database_id: map.database }, properties }),
-  });
-  if (!saved.ok) console.log("notion rejected the enquiry", saved.status, await saved.text());
-  return saved.ok;
 };
 
 const reply = (request, status, message) => {
@@ -176,6 +156,10 @@ export const onRequestPost = async ({ request, env }) => {
   for (const field of form.fields) values[field] = clean(body[field]);
 
   const missing = form.required.filter((field) => !values[field]);
+  // A box to tick, not a field to fill in.
+  if (missing.length === 1 && missing[0] === "agreement") {
+    return reply(request, 400, "Please tick the box to confirm you will post about the business if you take part.");
+  }
   if (missing.length) {
     return reply(request, 400, `Please fill in: ${missing.map((f) => LABELS[f]).join(", ")}.`);
   }
@@ -198,8 +182,8 @@ export const onRequestPost = async ({ request, env }) => {
     if (to < from) return reply(request, 400, "The day you leave Rome comes before the day you arrive.");
   }
 
-  const notionToken = form.notion && env.NOTION_TOKEN;
-  if (!env.RESEND_API_KEY && !notionToken) {
+  const crm = form.crm && env.CRM_DB;
+  if (!env.RESEND_API_KEY && !crm) {
     // Nothing was delivered, so never tell the sender it was.
     return reply(request, 500, "The form is not configured yet. Please email us instead.");
   }
@@ -223,7 +207,7 @@ export const onRequestPost = async ({ request, env }) => {
 
   // Either destination is enough: the row and the email each carry the whole
   // application, so one failing alone loses nothing.
-  const saved = notionToken ? await saveToNotion(form.notion, values, notionToken) : false;
+  const saved = crm ? await saveToCrm(form.crm, values, env.CRM_DB) : false;
 
   let mailed = false;
   if (env.RESEND_API_KEY) {
