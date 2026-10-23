@@ -15,7 +15,7 @@ export async function staffSession(request, env) {
   if (!parts) return null;
   if (parts[0] === "crm") return { role: "owner" };
   if (parts[0] !== "team") return null;
-  const member = await env.CRM_DB.prepare("SELECT id, name, email, session_version FROM team_members WHERE id = ?")
+  const member = await env.CRM_DB.prepare("SELECT id, name, email, session_version, can_titles FROM team_members WHERE id = ?")
     .bind(Number(parts[1])).first();
   return member && String(member.session_version) === parts[2] ? { role: "team", ...member } : null;
 }

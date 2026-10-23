@@ -36,6 +36,8 @@ let clients: Row[] = [];
 // "owner" sees everything; "team" only Clienti and Video, without money.
 let role = "owner";
 const isTeam = () => role === "team";
+// A team member may open Titoli video only when the owner allowed it.
+let canTitles = true;
 const clientName = (id: number) => clients.find((c) => c.id === id)?.name ?? "—";
 const clientLink = (id: number) => `<a href="#/cliente/${id}">${esc(clientName(id))}</a>`;
 const clientLinks = (ids: number[] = []) => ids.map(clientLink).join(", ") || "—";
@@ -773,10 +775,11 @@ async function sendReports(ids: number[]) {
 async function teamView() {
   const members = await api<Row[]>("team");
   view.innerHTML = `${head("Team", '<button class="btn primary" data-add-member>+ Aggiungi al team</button>',
-      "Chi è nel team vede solo Clienti e Video: inserisce i video, niente canoni, pagamenti, documenti, report o accessi.")}
+      "Chi è nel team vede solo Clienti e Video: inserisce i video, niente canoni, pagamenti, documenti, report o accessi. Titoli video solo se lo attivi tu.")}
     <section class="panel">${members.length ? `<ul class="list">${members.map((m) => `<li><div><strong>${esc(m.name || m.email)}</strong>
       <small>${esc(m.email)} · ultimo accesso ${m.last_seen ? ago(m.last_seen.replace(" ", "T") + "Z") : "mai"}</small></div>
-      <div class="end"><button class="link danger" data-remove-member="${m.id}">Rimuovi</button></div></li>`).join("")}</ul>`
+      <div class="end"><label class="check"><input type="checkbox" data-member-titles="${m.id}"${m.can_titles ? " checked" : ""} /> Titoli video</label>
+        <button class="link danger" data-remove-member="${m.id}">Rimuovi</button></div></li>`).join("")}</ul>`
       : '<p class="empty">Nessuno ancora. Aggiungi un membro: riceve un\'email con il link per entrare.</p>'}</section>
     <p class="explain">Per entrare: romesomuch.com/crm/ › "Fai parte del team?" › la sua email › il link che riceve. Resta collegato su quel dispositivo.</p>`;
 }
@@ -840,7 +843,7 @@ async function render() {
     a.classList.toggle("on", target === route || (route === "cliente" && target === "clienti"));
   });
   // The team lands on Video and never opens the owner's pages.
-  if (isTeam() && !["clienti", "cliente", "video", "titoli"].includes(route)) {
+  if (isTeam() && !["clienti", "cliente", "video", ...(canTitles ? ["titoli"] : [])].includes(route)) {
     location.hash = "#/video";
     return;
   }
@@ -989,15 +992,25 @@ view.addEventListener("change", (event) => {
   else if ("reportMonth" in el.dataset && el.value) { reportMonth = el.value; render(); }
   else if ("videoClient" in el.dataset) { videoClient = el.value; render(); }
   else if ("payState" in el.dataset) { payState = el.value; render(); }
+  else if ("memberTitles" in el.dataset) {
+    const on = (el as HTMLInputElement).checked;
+    act(() => api(`team/${el.dataset.memberTitles}`, { method: "PATCH", data: { can_titles: on } }), on ? "Titoli video attivato" : "Titoli video tolto");
+  }
 });
 
 export async function start() {
   try {
-    role = (await api<Row>("me")).role;
+    const me = await api<Row>("me");
+    role = me.role;
+    canTitles = !isTeam() || Boolean(me.can_titles);
   } catch {
     return;
   }
-  if (isTeam()) document.querySelectorAll("[data-owner]").forEach((a) => a.remove());
+  if (isTeam()) {
+    document.querySelectorAll("[data-owner]").forEach((a) => {
+      if (!(canTitles && a.getAttribute("href") === "#/titoli")) a.remove();
+    });
+  }
   addEventListener("hashchange", render);
   render();
 }
