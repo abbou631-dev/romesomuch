@@ -5,11 +5,12 @@ import Shell from "../../components/private/Shell.astro";
 import logo from "../../assets/logo.svg";
 
 // The second value marks what only the owner sees; the team gets Clienti
-// and Video (the server enforces the same, see functions/api/crm).
+// Video and Titoli video (the server enforces the same, see functions/api/crm).
 const nav: [string, string, boolean][] = [
   ["#/", "Panoramica", true],
   ["#/clienti", "Clienti", false],
   ["#/video", "Video", false],
+  ["#/titoli", "Titoli video", false],
   ["#/pagamenti", "Pagamenti", true],
   ["#/promo", "Promo", true],
   ["#/ugc", "UGC", true],

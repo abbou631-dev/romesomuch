@@ -786,6 +786,51 @@ const addMember = () =>
     { name: "email", label: "Email", type: "email", required: true, hint: "Riceve subito un'email con il link per entrare (vale 7 giorni)" },
   ], {}, (d) => api("team", { method: "POST", data: d }), render);
 
+// ---- video titles ------------------------------------------------------------------
+
+// Titles for one video: the request goes to the Video Ideas agent through the
+// connector on the agents' server, and the answer lands here a few minutes later.
+const TITLE_STATUS = {
+  in_attesa: "In coda", in_corso: "L'agente ci lavora", pronto: "Pronto", errore: "Errore",
+} as Record<string, string>;
+const titleOpen = (t: Row) => t.status === "in_attesa" || t.status === "in_corso";
+let titlesTimer = 0;
+
+const titleCard = (t: Row) => `<section class="panel title-req">
+    <div class="panel-head"><h2>${badge(`title-${t.status}`, TITLE_STATUS[t.status] ?? t.status)}
+      <small class="mute">${esc(ago(t.created_at))}${t.issue ? ` · ${esc(t.issue)}` : ""}${t.created_by && t.created_by !== "owner" ? ` · ${esc(t.created_by)}` : ""}</small></h2>
+      <button type="button" class="btn small" data-del="titles" data-id="${t.id}">Elimina</button></div>
+    <p class="brief">${esc(t.brief)}</p>
+    ${t.answer ? `<div class="answer">${esc(t.answer)}</div>`
+      : t.status === "errore" ? `<p class="note neg">${esc(t.error || "L'agente non ha risposto.")}</p>`
+      : '<p class="mute">Di solito servono 3–5 minuti. La pagina si aggiorna da sola.</p>'}
+  </section>`;
+
+async function titlesView() {
+  const rows = await api<Row[]>("titles");
+  view.innerHTML = `${head("Titoli video", "", "Descrivi un video su un solo posto: l'agente guarda i reel virali dei creator e propone 10 titoli")}
+    <form id="title-form" class="panel">
+      <label for="brief"><strong>Il video</strong></label>
+      <textarea id="brief" name="brief" rows="5" maxlength="3000" required
+        placeholder="Es. Jazz bar sotterraneo a Trastevere, date night, sax dal vivo, candele, cocktail a 12 €. Girato con la mia ragazza."></textarea>
+      <p class="mute">Scrivi solo dettagli veri (zona, prezzo, atmosfera, chi c'è): l'agente non inventa niente.</p>
+      <button type="submit" class="btn primary">Chiedi i titoli</button>
+    </form>
+    ${rows.length ? rows.map(titleCard).join("") : '<p class="empty">Nessuna richiesta ancora.</p>'}`;
+  clearTimeout(titlesTimer);
+  if (rows.some(titleOpen)) {
+    titlesTimer = window.setTimeout(() => { if (location.hash.startsWith("#/titoli")) render(); }, 15000);
+  }
+}
+
+view.addEventListener("submit", (event) => {
+  const el = event.target as HTMLFormElement;
+  if (el.id !== "title-form") return;
+  event.preventDefault();
+  const brief = (el.elements.namedItem("brief") as HTMLTextAreaElement).value;
+  act(() => api("titles", { method: "POST", data: { brief } }), "Richiesta inviata all'agente");
+});
+
 // ---- routing and events ------------------------------------------------------------
 
 async function render() {
@@ -795,7 +840,7 @@ async function render() {
     a.classList.toggle("on", target === route || (route === "cliente" && target === "clienti"));
   });
   // The team lands on Video and never opens the owner's pages.
-  if (isTeam() && !["clienti", "cliente", "video"].includes(route)) {
+  if (isTeam() && !["clienti", "cliente", "video", "titoli"].includes(route)) {
     location.hash = "#/video";
     return;
   }
@@ -807,6 +852,7 @@ async function render() {
     else if (route === "pagamenti") await paymentsView();
     else if (route === "promo") await promosView();
     else if (route === "ugc") await ugcView();
+    else if (route === "titoli") await titlesView();
     else if (route === "collegamenti") await connectionsView();
     else if (route === "report") await reportsView();
     else if (route === "team") await teamView();

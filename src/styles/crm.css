@@ -390,3 +390,12 @@ tr.on td { background: var(--wash); }
 .ugc-more dt { color: var(--mute); font-weight: 600; }
 .ugc-more dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .filters .check { flex-direction: row; align-items: center; gap: 6px; }
+
+/* Video titles */
+.b-title-in_attesa, .b-title-in_corso { background: #fbefdc; color: var(--amber); }
+.b-title-pronto { background: #e3f3ea; color: var(--green); }
+.b-title-errore { color: var(--red); }
+#title-form textarea { width: 100%; margin: 8px 0 4px; font: inherit; padding: 10px; border: 1px solid var(--hair); border-radius: 8px; box-sizing: border-box; }
+.title-req h2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 15px; }
+.title-req .brief { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--mute); margin: 0 0 12px; }
+.title-req .answer { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }

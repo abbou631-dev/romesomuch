@@ -338,15 +338,65 @@ async function summary(env, url) {
   });
 }
 
+// ---- video titles ------------------------------------------------------------------
+
+// Titles for one video: the CRM saves the request, the connector on the agents'
+// server (romesomuch-agents/crm-bridge) hands it to the Video Ideas agent and
+// writes the answer back through the bridge routes below.
+const TITLE_STATUS = new Set(["in_attesa", "in_corso", "pronto", "errore"]);
+const BRIEF_MAX = 3000;
+
+async function titles(request, env, id, session) {
+  const db = env.CRM_DB;
+  if (!id && request.method === "GET") {
+    return json((await db.prepare("SELECT * FROM title_requests ORDER BY id DESC LIMIT 50").all()).results);
+  }
+  if (!id && request.method === "POST") {
+    const brief = String((await request.json()).brief ?? "").trim();
+    if (brief.length < 20) throw new Invalid("Descrivi il video in qualche riga: il posto, cosa succede, i dettagli veri.");
+    if (brief.length > BRIEF_MAX) throw new Invalid(`Massimo ${BRIEF_MAX} caratteri.`);
+    const by = session.role === "team" ? session.name || session.email : "owner";
+    return json(await db.prepare("INSERT INTO title_requests (brief, created_by) VALUES (?, ?) RETURNING *").bind(brief, by).first(), 201);
+  }
+  if (id && request.method === "DELETE") {
+    await db.prepare("DELETE FROM title_requests WHERE id = ?").bind(id).run();
+    return json({ ok: true });
+  }
+  return json({ error: "Non trovato." }, 404);
+}
+
+// The connector's side, by its own key: open requests, then their progress.
+async function bridge(request, env, path) {
+  const db = env.CRM_DB;
+  const id = Number(path[2]);
+  if (path[1] !== "titles") return json({ error: "Non trovato." }, 404);
+  if (!path[2] && request.method === "GET") {
+    return json((await db.prepare("SELECT id, brief, status, issue FROM title_requests WHERE status IN ('in_attesa', 'in_corso') ORDER BY id").all()).results);
+  }
+  if (Number.isInteger(id) && request.method === "PATCH") {
+    const body = await request.json();
+    if (!TITLE_STATUS.has(body.status)) throw new Invalid("Stato non valido.");
+    const done = body.status === "pronto" || body.status === "errore";
+    await db.prepare(
+      `UPDATE title_requests SET status = ?, issue = coalesce(?, issue), answer = coalesce(?, answer), error = ?,
+         answered_at = CASE WHEN ? THEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now') ELSE answered_at END WHERE id = ?`,
+    ).bind(body.status, body.issue ?? null, body.answer ? String(body.answer).slice(0, 20000) : null,
+      body.error ? String(body.error).slice(0, 500) : null, done ? 1 : 0, id).run();
+    return json({ ok: true });
+  }
+  return json({ error: "Non trovato." }, 404);
+}
+
 // ---- team ------------------------------------------------------------------------
 
-// What a team member may do: look up clients (without money) and handle videos.
+// What a team member may do: look up clients (without money), handle videos
+// and ask for video titles.
 const TEAM_CAN = (method, path) => {
   const [table, id, action] = path;
   if (action) return false;
   if (table === "me") return method === "GET";
   if (table === "clients") return method === "GET" && !id;
-  if (table === "videos") return ["GET", "POST", "PATCH", "DELETE"].includes(method);
+  if (table === "videos" || table === "titles") return ["GET", "POST", "PATCH", "DELETE"].includes(method);
   return table === "refresh" && method === "POST";
 };
 // The client fields a team member sees: no fee, billing, VAT number, invite link or access.
@@ -418,6 +468,7 @@ async function api(request, env, path, session) {
     });
   }
   if (table === "team") return team(request, env, url, id);
+  if (table === "titles") return titles(request, env, id, session);
   if (table === "summary" && method === "GET") return summary(env, url);
   if (table === "charge-month" && method === "POST") {
     const { period } = await request.json();
@@ -482,8 +533,16 @@ async function api(request, env, path, session) {
 }
 
 export async function onRequest({ request, env, params }) {
-  if (!sameOrigin(request)) return json({ error: "Origine non consentita." }, 403);
   const path = [].concat(params.path ?? []);
+  // The title connector on the agents' server: no cookie, its own key, so the
+  // same-origin check (against cross-site forms riding a session) does not apply.
+  if (path[0] === "bridge") {
+    if (!env.BRIDGE_KEY || !(await same(request.headers.get("X-Bridge-Key") ?? "", env.BRIDGE_KEY))) {
+      return json({ error: "Accesso richiesto." }, 401);
+    }
+    return guarded(() => bridge(request, env, path));
+  }
+  if (!sameOrigin(request)) return json({ error: "Origine non consentita." }, 403);
   if (path[0] === "login" && request.method === "POST") return guarded(() => login(request, env));
   if (path[0] === "logout" && request.method === "POST") {
     return redirect("/crm/login/", { "Set-Cookie": setCookie(STAFF_COOKIE, "", 0) });
