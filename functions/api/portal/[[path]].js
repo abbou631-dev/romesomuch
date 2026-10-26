@@ -8,6 +8,7 @@ import { json, redirect, today, addMonths, isMonth, guarded, sameOrigin, setCook
 import { CLIENT_COOKIE, VIEW_COOKIE, signedInClient } from "../../../server/sessions.js";
 import { sendLinks, sessionCookie, sha256, mail } from "../../../server/access.js";
 import { refresh } from "../../../server/platforms.js";
+import { withFacebook } from "../../../server/crossposts.js";
 import { download } from "../../../server/files.js";
 
 // Where the agency hears about new access requests.
@@ -124,7 +125,7 @@ async function videos(env, client, month, ctx) {
   if (results.length <= 6) await reading; else ctx.waitUntil(reading);
   const { results: rows } = await env.CRM_DB.prepare(`SELECT ${VIDEO} FROM videos WHERE ${FEATURES} AND published_on LIKE ? ORDER BY published_on DESC, id DESC`)
     .bind(client.id, pattern).all();
-  return json(rows);
+  return json(withFacebook(rows));
 }
 
 export async function onRequest({ request, env, params, waitUntil }) {

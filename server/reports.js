@@ -3,6 +3,7 @@
 // agency presses the button, one client per request.
 import { addMonths } from "./common.js";
 import { mail } from "./access.js";
+import { platformViews, withFacebook } from "./crossposts.js";
 
 const monthName = (period) =>
   new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${period}-01T00:00:00Z`));
@@ -20,7 +21,7 @@ export async function reportList(env, period, onlyId) {
   const db = env.CRM_DB;
   const only = onlyId ? "AND l.client_id = ?" : "";
   const bind = (statement, ...values) => statement.bind(...values, ...(onlyId ? [onlyId] : []));
-  const [clients, now, before, done, people, videos, platforms] = await db.batch([
+  const [clients, now, before, done, people, videos] = await db.batch([
     db.prepare(
       `SELECT c.id, c.name, c.contact, c.videos_total, c.end_date,
          (SELECT sent_at FROM monthly_reports WHERE client_id = c.id AND period = ?) AS sent_at
@@ -30,15 +31,14 @@ export async function reportList(env, period, onlyId) {
     bind(db.prepare(`SELECT l.client_id, ${SUMS} ${JOIN} WHERE v.published_on LIKE ? ${only} GROUP BY l.client_id`), `${addMonths(period, -1)}-%`),
     bind(db.prepare(`SELECT l.client_id, count(*) AS videos ${JOIN} WHERE v.published_on < ? ${only} GROUP BY l.client_id`), `${addMonths(period, 1)}-01`),
     bind(db.prepare(`SELECT l.client_id, l.name, l.email FROM client_users l WHERE l.status = 'approvato' ${only}`)),
-    bind(db.prepare(`SELECT l.client_id, v.title, v.url, v.views, v.published_on ${JOIN} WHERE v.published_on LIKE ? ${only} ORDER BY v.published_on`), `${period}-%`),
-    bind(db.prepare(`SELECT l.client_id, v.platform, coalesce(sum(v.views), 0) AS views ${JOIN} WHERE v.published_on LIKE ? ${only} GROUP BY l.client_id, v.platform`), `${period}-%`),
+    bind(db.prepare(`SELECT l.client_id, v.platform, v.title, v.url, v.views, v.published_on ${JOIN} WHERE v.published_on LIKE ? ${only} ORDER BY v.published_on`), `${period}-%`),
   ]);
   const by = (rows) => new Map(rows.results.map((r) => [r.client_id, r]));
   const group = (rows) => rows.results.reduce((m, r) => m.set(r.client_id, [...(m.get(r.client_id) ?? []), r]), new Map());
-  const [nowBy, beforeBy, doneBy, peopleBy, videosBy, platformsBy] = [by(now), by(before), by(done), group(people), group(videos), group(platforms)];
+  const [nowBy, beforeBy, doneBy, peopleBy, videosBy] = [by(now), by(before), by(done), group(people), group(videos)];
   return clients.results.map((c) => ({
     ...c, period, month: nowBy.get(c.id) ?? EMPTY, before: beforeBy.get(c.id) ?? EMPTY, done: doneBy.get(c.id)?.videos ?? 0,
-    people: peopleBy.get(c.id) ?? [], videos: videosBy.get(c.id) ?? [], platforms: platformsBy.get(c.id) ?? [],
+    people: peopleBy.get(c.id) ?? [], videos: videosBy.get(c.id) ?? [],
   }));
 }
 
@@ -59,13 +59,14 @@ const VIEWS_PER_CUSTOMER = 5000;
 // to single videos: the client area has those.
 export function reportText(r, origin, name) {
   const m = r.month;
-  const views = new Map(r.platforms.map((p) => [p.platform, p.views]));
+  // Instagram with its Facebook copies, as Instagram shows it (crossposts.js).
+  const views = platformViews(r.videos);
   const first = String(name ?? "").trim().split(" ")[0];
   const previous = monthName(addMonths(r.period, -1)).split(" ")[0];
   const change = r.before.views
     ? ` (${Math.round(((m.views - r.before.views) / r.before.views) * 100) >= 0 ? "+" : ""}${Math.round(((m.views - r.before.views) / r.before.views) * 100)}% rispetto a ${previous})`
     : "";
-  const best = [...r.videos].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0];
+  const best = withFacebook(r.videos).sort((a, b) => (b.views ?? 0) - (a.views ?? 0))[0];
   const lines = [
     first ? `Ciao ${first},` : "Ciao!",
     "",

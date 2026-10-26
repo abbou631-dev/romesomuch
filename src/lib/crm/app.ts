@@ -5,6 +5,7 @@ import {
   type Field, type Row, apiFor, say, form, esc, eur, num, short, day, month, shortMonth, ago, today, thisMonth,
   addMonths, addDays, head, kpi, table, quota, bars, badge, platform, interactions, PLATFORM,
 } from "./ui";
+import { withFacebook } from "../../../server/crossposts.js";
 
 const api = apiFor("/api/crm", "/crm/login/");
 const view = document.getElementById("view")!;
@@ -229,30 +230,13 @@ const dueRows = (dues: Due[]) => dues.map((d) => {
 });
 const dueHeads = ["Chi", "Voce", "Mese", "Importo", "Scadenza", "Stato", ""];
 
-// Instagram shows a reel shared to Facebook with the views of both, so on a
-// client's page the Facebook copy of a video (same day, same title) joins its
-// Instagram row and the numbers are added up, as the app shows them.
-const METRICS = ["views", "reach", "likes", "comments", "shares", "saves"];
-const sameVideo = (a: Row, b: Row) => a.published_on === b.published_on && String(a.title ?? "").trim().toLowerCase() === String(b.title ?? "").trim().toLowerCase();
-function withFacebook(videos: Row[]) {
-  const joined = new Set<Row>();
-  const rows = videos.map((v) => {
-    const fb = v.platform === "instagram" && v.title && videos.find((f) => f.platform === "facebook" && !joined.has(f) && sameVideo(v, f));
-    if (!fb) return v;
-    joined.add(fb);
-    const sum = Object.fromEntries(METRICS.map((k) => [k, v[k] == null && fb[k] == null ? null : (v[k] ?? 0) + (fb[k] ?? 0)]));
-    return { ...v, ...sum, ig: v, fb };
-  });
-  return rows.filter((v) => !joined.has(v));
-}
-
 const videoRows = (videos: Row[], showClient = true) => videos.map((v) => {
   const parts: Row[] = v.fb ? [v.ig, v.fb] : [v];
   const errors = parts.filter((p) => p.metrics_error).map((p) => `<small class="block err">${v.fb ? `${esc(PLATFORM[p.platform])}: ` : ""}${esc(p.metrics_error)}</small>`).join("");
   const read = parts.map((p) => p.metrics_at).sort()[0];
   return `<tr>
   <td>${day(v.published_on)}</td>${showClient ? `<td>${clientLinks(v.client_ids)}</td>` : ""}
-  <td>${parts.map((p) => platform(p.platform)).join(" ")}</td>
+  <td>${platform(v.platform)}</td>
   <td><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "Apri video")}</a>${v.fb ? ` <small class="mute">· <a href="${esc(v.fb.url)}" target="_blank" rel="noopener">su Facebook</a></small>` : ""}${!showClient && v.client_ids?.length > 1 ? `<small class="block mute">con ${v.client_ids.length - 1} altri locali</small>` : ""}${errors}</td>
   <td class="num">${num(v.views)}${v.fb ? `<small class="block mute">${num(v.ig.views)} IG · ${num(v.fb.views)} FB</small>` : ""}</td><td class="num">${num(v.reach)}</td><td class="num">${num(interactions(v))}</td>
   <td><small class="mute">${parts.every((p) => p.metrics_at) ? ago(read) : "a mano"}</small></td>
@@ -401,7 +385,7 @@ function packageView(s: Row) {
         }).join("")}</ul>${dues.length > 10 ? `<a class="more" href="#/pagamenti">Tutti i ${dues.length} →</a>` : ""}` : '<p class="empty">Tutti in regola.</p>'}
       </section>
       <section class="panel"><h2>Ultimi video</h2>
-        ${s.recent.length ? `<ul class="list">${s.recent.map((v: Row) => `<li><div><span>${clientLinks(v.client_ids)}</span><small>${platform(v.platform)} ${day(v.published_on)} · <a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "apri")}</a></small></div>
+        ${s.recent.length ? `<ul class="list">${withFacebook(s.recent).map((v: Row) => `<li><div><span>${clientLinks(v.client_ids)}</span><small>${platform(v.platform)} ${day(v.published_on)} · <a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "apri")}</a></small></div>
           <div class="end"><strong>${short(v.views)}</strong><small class="mute">views</small></div></li>`).join("")}</ul>` : '<p class="empty">Nessun video ancora.</p>'}
       </section>
     </div>`;
@@ -436,7 +420,7 @@ function clientVideos(id: number, videos: Row[]) {
       <div class="actions"><label class="inline">Mese <select data-client-month="${id}"><option value="">Tutti</option>${months.map((m) => `<option value="${m}"${m === picked ? " selected" : ""}>${esc(month(m))}</option>`).join("")}</select></label>
         <button class="btn" data-refresh-client="${id}">Aggiorna metriche</button>${add("videos", "+ Video", id)}</div></div>
       ${table(videoHeads(false), videoRows(shown, false), picked ? `Nessun video in ${month(picked)}.` : "Nessun video ancora.")}
-      <p class="explain">Come su Instagram: se un video è uscito anche su Facebook (stesso giorno e titolo), le sue visualizzazioni e interazioni si sommano nella riga Instagram.</p></section>`;
+      <p class="explain">Come su Instagram: se un video è uscito anche su Facebook (stesso giorno e titolo), i numeri di Facebook si sommano nella riga Instagram.</p></section>`;
 }
 
 // The team's client page: details and videos, nothing about money or access.
@@ -527,7 +511,7 @@ async function clientView(id: number) {
 let videoClient = "";
 async function videosView() {
   const all = await api<Row[]>(`videos?month=${selected}`);
-  const rows = all.filter((v) => !videoClient || v.client_ids.includes(Number(videoClient)));
+  const rows = withFacebook(all.filter((v) => !videoClient || v.client_ids.includes(Number(videoClient))));
   view.innerHTML = `${head("Video", `<button class="btn" data-refresh-all>Aggiorna metriche</button>${add("videos", "+ Video")}`)}
     <div class="filters">${monthPicker(selected)}
       <label>Cliente <select data-video-client><option value="">Tutti</option>${clientOptions().map(([k, l]) => `<option value="${k}"${k === videoClient ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label></div>
