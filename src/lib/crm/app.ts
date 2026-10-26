@@ -230,20 +230,13 @@ const dueRows = (dues: Due[]) => dues.map((d) => {
 });
 const dueHeads = ["Chi", "Voce", "Mese", "Importo", "Scadenza", "Stato", ""];
 
-const videoRows = (videos: Row[], showClient = true) => videos.map((v) => {
-  const parts: Row[] = v.fb ? [v.ig, v.fb] : [v];
-  const errors = parts.filter((p) => p.metrics_error).map((p) => `<small class="block err">${v.fb ? `${esc(PLATFORM[p.platform])}: ` : ""}${esc(p.metrics_error)}</small>`).join("");
-  const read = parts.map((p) => p.metrics_at).sort()[0];
-  return `<tr>
+const videoRows = (videos: Row[], showClient = true) => videos.map((v) => `<tr>
   <td>${day(v.published_on)}</td>${showClient ? `<td>${clientLinks(v.client_ids)}</td>` : ""}
   <td>${platform(v.platform)}</td>
-  <td><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "Apri video")}</a>${v.fb ? ` <small class="mute">· <a href="${esc(v.fb.url)}" target="_blank" rel="noopener">su Facebook</a></small>` : ""}${!showClient && v.client_ids?.length > 1 ? `<small class="block mute">con ${v.client_ids.length - 1} altri locali</small>` : ""}${errors}</td>
-  <td class="num">${num(v.views)}${v.fb ? `<small class="block mute">${num(v.ig.views)} IG · ${num(v.fb.views)} FB</small>` : ""}</td><td class="num">${num(v.reach)}</td><td class="num">${num(interactions(v))}</td>
-  <td><small class="mute">${parts.every((p) => p.metrics_at) ? ago(read) : "a mano"}</small></td>
-  <td class="row-actions"><button class="link" data-refresh="${parts.map((p) => p.id).join(",")}">Aggiorna</button>${v.fb
-    ? parts.map((p) => `<small class="block mute">${esc(PLATFORM[p.platform])}</small>${rowActions("videos", p.id)}`).join("")
-    : rowActions("videos", v.id)}</td></tr>`;
-});
+  <td><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "Apri video")}</a>${!showClient && v.client_ids?.length > 1 ? `<small class="block mute">con ${v.client_ids.length - 1} altri locali</small>` : ""}${v.metrics_error ? `<small class="block err">${esc(v.metrics_error)}</small>` : ""}</td>
+  <td class="num">${num(v.views)}</td><td class="num">${num(v.reach)}</td><td class="num">${num(interactions(v))}</td>
+  <td><small class="mute">${v.metrics_at ? ago(v.metrics_at) : "a mano"}</small></td>
+  <td class="row-actions"><button class="link" data-refresh="${v.id}">Aggiorna</button>${rowActions("videos", v.id)}</td></tr>`);
 const videoHeads = (showClient = true) =>
   ["Data", ...(showClient ? ["Cliente"] : []), "", "Video", "Visualizzazioni", "Raggiunti", "Interazioni", "Metriche", ""];
 
@@ -414,13 +407,14 @@ let clientMonth = { id: 0, month: "" };
 function clientVideos(id: number, videos: Row[]) {
   const picked = clientMonth.id === id ? clientMonth.month : "";
   const months = [...new Set(videos.map((v) => v.published_on.slice(0, 7)))].sort().reverse();
-  const shown = withFacebook(videos.filter((v) => !picked || v.published_on.startsWith(picked)));
-  const total = shown.reduce((t, v) => t + (v.views ?? 0), 0);
+  const inMonth = videos.filter((v) => !picked || v.published_on.startsWith(picked));
+  // The real total: each platform's own views, the Facebook copy counted once.
+  const total = inMonth.reduce((t, v) => t + (v.views ?? 0), 0);
   return `<section class="panel"><div class="panel-head"><h2>Video ${picked ? `<small class="mute">${esc(month(picked))} · ${short(total)} views</small>` : ""}</h2>
       <div class="actions"><label class="inline">Mese <select data-client-month="${id}"><option value="">Tutti</option>${months.map((m) => `<option value="${m}"${m === picked ? " selected" : ""}>${esc(month(m))}</option>`).join("")}</select></label>
         <button class="btn" data-refresh-client="${id}">Aggiorna metriche</button>${add("videos", "+ Video", id)}</div></div>
-      ${table(videoHeads(false), videoRows(shown, false), picked ? `Nessun video in ${month(picked)}.` : "Nessun video ancora.")}
-      <p class="explain">Come su Instagram: se un video è uscito anche su Facebook (stesso giorno e titolo), i numeri di Facebook si sommano nella riga Instagram.</p></section>`;
+      ${table(videoHeads(false), videoRows(withFacebook(inMonth), false), picked ? `Nessun video in ${month(picked)}.` : "Nessun video ancora.")}
+      </section>`;
 }
 
 // The team's client page: details and videos, nothing about money or access.
