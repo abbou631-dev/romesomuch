@@ -229,13 +229,37 @@ const dueRows = (dues: Due[]) => dues.map((d) => {
 });
 const dueHeads = ["Chi", "Voce", "Mese", "Importo", "Scadenza", "Stato", ""];
 
-const videoRows = (videos: Row[], showClient = true) => videos.map((v) => `<tr>
+// Instagram shows a reel shared to Facebook with the views of both, so on a
+// client's page the Facebook copy of a video (same day, same title) joins its
+// Instagram row and the numbers are added up, as the app shows them.
+const METRICS = ["views", "reach", "likes", "comments", "shares", "saves"];
+const sameVideo = (a: Row, b: Row) => a.published_on === b.published_on && String(a.title ?? "").trim().toLowerCase() === String(b.title ?? "").trim().toLowerCase();
+function withFacebook(videos: Row[]) {
+  const joined = new Set<Row>();
+  const rows = videos.map((v) => {
+    const fb = v.platform === "instagram" && v.title && videos.find((f) => f.platform === "facebook" && !joined.has(f) && sameVideo(v, f));
+    if (!fb) return v;
+    joined.add(fb);
+    const sum = Object.fromEntries(METRICS.map((k) => [k, v[k] == null && fb[k] == null ? null : (v[k] ?? 0) + (fb[k] ?? 0)]));
+    return { ...v, ...sum, ig: v, fb };
+  });
+  return rows.filter((v) => !joined.has(v));
+}
+
+const videoRows = (videos: Row[], showClient = true) => videos.map((v) => {
+  const parts: Row[] = v.fb ? [v.ig, v.fb] : [v];
+  const errors = parts.filter((p) => p.metrics_error).map((p) => `<small class="block err">${v.fb ? `${esc(PLATFORM[p.platform])}: ` : ""}${esc(p.metrics_error)}</small>`).join("");
+  const read = parts.map((p) => p.metrics_at).sort()[0];
+  return `<tr>
   <td>${day(v.published_on)}</td>${showClient ? `<td>${clientLinks(v.client_ids)}</td>` : ""}
-  <td>${platform(v.platform)}</td>
-  <td><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "Apri video")}</a>${!showClient && v.client_ids?.length > 1 ? `<small class="block mute">con ${v.client_ids.length - 1} altri locali</small>` : ""}${v.metrics_error ? `<small class="block err">${esc(v.metrics_error)}</small>` : ""}</td>
-  <td class="num">${num(v.views)}</td><td class="num">${num(v.reach)}</td><td class="num">${num(interactions(v))}</td>
-  <td><small class="mute">${v.metrics_at ? ago(v.metrics_at) : "a mano"}</small></td>
-  <td class="row-actions"><button class="link" data-refresh="${v.id}">Aggiorna</button>${rowActions("videos", v.id)}</td></tr>`);
+  <td>${parts.map((p) => platform(p.platform)).join(" ")}</td>
+  <td><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || "Apri video")}</a>${v.fb ? ` <small class="mute">· <a href="${esc(v.fb.url)}" target="_blank" rel="noopener">su Facebook</a></small>` : ""}${!showClient && v.client_ids?.length > 1 ? `<small class="block mute">con ${v.client_ids.length - 1} altri locali</small>` : ""}${errors}</td>
+  <td class="num">${num(v.views)}${v.fb ? `<small class="block mute">${num(v.ig.views)} IG · ${num(v.fb.views)} FB</small>` : ""}</td><td class="num">${num(v.reach)}</td><td class="num">${num(interactions(v))}</td>
+  <td><small class="mute">${parts.every((p) => p.metrics_at) ? ago(read) : "a mano"}</small></td>
+  <td class="row-actions"><button class="link" data-refresh="${parts.map((p) => p.id).join(",")}">Aggiorna</button>${v.fb
+    ? parts.map((p) => `<small class="block mute">${esc(PLATFORM[p.platform])}</small>${rowActions("videos", p.id)}`).join("")
+    : rowActions("videos", v.id)}</td></tr>`;
+});
 const videoHeads = (showClient = true) =>
   ["Data", ...(showClient ? ["Cliente"] : []), "", "Video", "Visualizzazioni", "Raggiunti", "Interazioni", "Metriche", ""];
 
@@ -400,6 +424,21 @@ async function clientsView() {
     <section class="panel">${table(["Cliente", "Stato", "Canone", `Video di ${month(thisMonth())}`, "Fine contratto", "Da incassare", "Area clienti"], rows, "Nessun cliente. Aggiungi il primo.")}</section>`;
 }
 
+// A client's videos, all of them or one month's (months with videos only).
+// The choice is kept while the same client stays open.
+let clientMonth = { id: 0, month: "" };
+function clientVideos(id: number, videos: Row[]) {
+  const picked = clientMonth.id === id ? clientMonth.month : "";
+  const months = [...new Set(videos.map((v) => v.published_on.slice(0, 7)))].sort().reverse();
+  const shown = withFacebook(videos.filter((v) => !picked || v.published_on.startsWith(picked)));
+  const total = shown.reduce((t, v) => t + (v.views ?? 0), 0);
+  return `<section class="panel"><div class="panel-head"><h2>Video ${picked ? `<small class="mute">${esc(month(picked))} · ${short(total)} views</small>` : ""}</h2>
+      <div class="actions"><label class="inline">Mese <select data-client-month="${id}"><option value="">Tutti</option>${months.map((m) => `<option value="${m}"${m === picked ? " selected" : ""}>${esc(month(m))}</option>`).join("")}</select></label>
+        <button class="btn" data-refresh-client="${id}">Aggiorna metriche</button>${add("videos", "+ Video", id)}</div></div>
+      ${table(videoHeads(false), videoRows(shown, false), picked ? `Nessun video in ${month(picked)}.` : "Nessun video ancora.")}
+      <p class="explain">Come su Instagram: se un video è uscito anche su Facebook (stesso giorno e titolo), le sue visualizzazioni e interazioni si sommano nella riga Instagram.</p></section>`;
+}
+
 // The team's client page: details and videos, nothing about money or access.
 async function teamClientView(c: Row) {
   const videos = await api<Row[]>(`videos?client_id=${c.id}`);
@@ -424,8 +463,7 @@ async function teamClientView(c: Row) {
     </section>
     <section class="panel"><h2>Scheda</h2><dl class="info">${info.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
       ${c.notes ? `<p class="notes">${esc(c.notes)}</p>` : ""}</section>
-    <section class="panel"><div class="panel-head"><h2>Video</h2><div class="actions"><button class="btn" data-refresh-client="${c.id}">Aggiorna metriche</button>${add("videos", "+ Video", c.id)}</div></div>
-      ${table(videoHeads(false), videoRows(videos, false), "Nessun video ancora.")}</section>`;
+    ${clientVideos(c.id, videos)}`;
 }
 
 async function clientView(id: number) {
@@ -477,8 +515,7 @@ async function clientView(id: number) {
           : '<p class="empty">Ancora nessuno.</p>'}
       </section>
     </div>
-    <section class="panel"><div class="panel-head"><h2>Video</h2><div class="actions"><button class="btn" data-refresh-client="${id}">Aggiorna metriche</button>${add("videos", "+ Video", id)}</div></div>
-      ${table(videoHeads(false), videoRows(videos, false), "Nessun video ancora.")}</section>
+    ${clientVideos(id, videos)}
     <section class="panel"><div class="panel-head"><h2>Documenti <small class="mute">il cliente li vede in "I tuoi documenti"</small></h2>${add("documents", "+ Carica", id)}</div>
       ${table(["Documento", "Tipo", "Data", "Importo", ""], docs.map((d) => `<tr><td><a href="/api/crm/files/${d.id}" target="_blank" rel="noopener">${esc(d.name)}</a></td>
         <td>${esc(DOC[d.kind])}</td><td>${day(d.doc_date)}</td><td class="num">${d.amount ? eur(d.amount) : ""}</td><td class="row-actions">${rowActions("documents", d.id)}</td></tr>`),
@@ -959,7 +996,11 @@ view.addEventListener("click", (event) => {
       .then(() => { if (tab) tab.location.href = "/area-clienti/"; else location.href = "/area-clienti/"; })
       .catch((error) => { tab?.close(); say(error.message, true); });
   } else if (d.refresh) {
-    act(async () => refreshed(await api("refresh", { method: "POST", data: { id: Number(d.refresh) } })), "");
+    act(async () => {
+      let updated = 0;
+      for (const id of d.refresh!.split(",")) updated += (await api<Row>("refresh", { method: "POST", data: { id: Number(id) } })).updated;
+      return refreshed(updated);
+    }, "");
   } else if (d.refreshClient) {
     act(() => refreshEvery({ client_id: Number(d.refreshClient) }), "");
   } else if ("refreshAll" in d) {
@@ -991,6 +1032,7 @@ view.addEventListener("change", (event) => {
   if ("month" in el.dataset && el.value) { selected = el.value; render(); }
   else if ("reportMonth" in el.dataset && el.value) { reportMonth = el.value; render(); }
   else if ("videoClient" in el.dataset) { videoClient = el.value; render(); }
+  else if ("clientMonth" in el.dataset) { clientMonth = { id: Number(el.dataset.clientMonth), month: el.value }; render(); }
   else if ("payState" in el.dataset) { payState = el.value; render(); }
   else if ("memberTitles" in el.dataset) {
     const on = (el as HTMLInputElement).checked;
