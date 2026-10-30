@@ -31,6 +31,7 @@ const today = new Date().toISOString().slice(0, 10);
           fields={[
             { name: "name", label: "Name", required: true },
             { name: "email", label: "Email", type: "email", required: true },
+            { name: "whatsapp", label: "WhatsApp", type: "tel", required: true, help: "With the country code, e.g. +44 7700 900123." },
             { name: "country", label: "Where you are from" },
             { name: "instagram", label: "Instagram", required: true, help: "Your handle or profile link." },
             { name: "tiktok", label: "TikTok", help: "Your handle or profile link, if you have one." },

@@ -32,7 +32,7 @@ const TABLES = {
   },
   // Applications arrive from the site's /ugc/ form (functions/api/enquiry.js);
   // here the agency only judges them.
-  ugc: { status: "t", rating: "i", notes: "t" },
+  ugc: { status: "t", rating: "i", notes: "t", whatsapp: "t" },
 };
 const ORDER = {
   clients: "status = 'attivo' DESC, name COLLATE NOCASE",

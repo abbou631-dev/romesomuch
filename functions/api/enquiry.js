@@ -30,9 +30,9 @@ const FORMS = {
   },
   ugc: {
     subject: "UGC application",
-    required: ["name", "email", "instagram", "portfolio", "followers", "niche", "arrival", "departure", "interest", "rights", "agreement"],
+    required: ["name", "email", "whatsapp", "instagram", "portfolio", "followers", "niche", "arrival", "departure", "interest", "rights", "agreement"],
     fields: [
-      "name", "email", "country", "instagram", "tiktok", "portfolio", "followers", "views", "niche",
+      "name", "email", "whatsapp", "country", "instagram", "tiktok", "portfolio", "followers", "views", "niche",
       "languages", "arrival", "departure", "group", "interest", "deliverables", "rights", "message", "agreement",
     ],
     // Arrival and departure must be real dates, in that order.
@@ -41,7 +41,7 @@ const FORMS = {
     crm: {
       table: "ugc",
       columns: {
-        name: "name", email: "email", country: "country", instagram: "instagram", tiktok: "tiktok",
+        name: "name", email: "email", whatsapp: "whatsapp", country: "country", instagram: "instagram", tiktok: "tiktok",
         portfolio: "portfolio", followers: "followers", views: "views", niche: "niche", languages: "languages",
         arrival: "arrival", departure: "departure", group: "party", interest: "interest",
         deliverables: "deliverables", rights: "rights", message: "message", agreement: "agreement", page: "page",
@@ -68,6 +68,7 @@ const LABELS = {
   name: "Name",
   role: "Role",
   email: "Email",
+  whatsapp: "WhatsApp",
   city: "City",
   website: "Website",
   topic: "About",
@@ -165,6 +166,11 @@ export const onRequestPost = async ({ request, env }) => {
   }
   if (!looksLikeEmail(values.email)) {
     return reply(request, 400, "That email address does not look right.");
+  }
+
+  // A phone number with its country code: digits, give or take spaces and signs.
+  if (values.whatsapp && !/^\+?[\d\s().-]{7,20}$/.test(values.whatsapp)) {
+    return reply(request, 400, "That WhatsApp number does not look right. Please include the country code.");
   }
 
   const dated = form.weekendOnly && values[form.weekendOnly];
