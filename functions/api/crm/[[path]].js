@@ -31,8 +31,8 @@ const TABLES = {
     venue: "t", title: "t", date: "d", price: "i", cost: "i", cost_to: "t", url: "t", paid_at: "d", notes: "t",
   },
   // Applications arrive from the site's /ugc/ form (functions/api/enquiry.js);
-  // here the agency only judges them.
-  ugc: { status: "t", rating: "i", notes: "t", whatsapp: "t" },
+  // here the agency only adds a missing WhatsApp number.
+  ugc: { whatsapp: "t" },
 };
 const ORDER = {
   clients: "status = 'attivo' DESC, name COLLATE NOCASE",
@@ -114,10 +114,7 @@ const DEFAULTS = {
   charges: { kind: "canone" },
   documents: { kind: "contratto" },
   promos: { price: 0, cost: 0 },
-  ugc: { status: "nuovo" },
 };
-// Where a UGC application stands (src/lib/crm/app.ts has their labels).
-const UGC_STATUS = new Set(["nuovo", "contattato", "confermato", "completato", "scartato"]);
 // The client categories the CRM knows (src/lib/crm/app.ts has their labels).
 const CATEGORIES = new Set(["trattoria", "ristorante", "negozio", "street_food", "cafe"]);
 
@@ -129,8 +126,6 @@ const typed = (table, body) => {
   const row = values(TABLES[table], body);
   // The page turns it into a link: only web addresses.
   if (table === "promos" && row.url && !/^https?:\/\/\S+$/i.test(row.url)) throw new Invalid("Link non valido (deve iniziare con https://).");
-  if (table === "ugc" && row.status && !UGC_STATUS.has(row.status)) throw new Invalid("Stato non valido.");
-  if (table === "ugc" && row.rating != null && !(row.rating >= 1 && row.rating <= 5)) throw new Invalid("Il voto va da 1 a 5.");
   for (const [key, fallback] of Object.entries(DEFAULTS[table] ?? {})) if (key in row && row[key] === null) row[key] = fallback;
   return row;
 };

@@ -393,9 +393,6 @@ body.portal td:first-child { white-space: nowrap; }
 tr.on td { background: var(--wash); }
 
 /* UGC applications */
-.b-ugc-nuovo { background: #fbefdc; color: var(--amber); }
-.b-ugc-confermato, .b-ugc-completato { background: #e3f3ea; color: var(--green); }
-.b-ugc-scartato { color: var(--mute); }
 /* search and sort on one line, the other filters folded under it */
 .ugc-bar { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
 .ugc-bar input { flex: 1; min-width: 0; }
@@ -420,7 +417,6 @@ tr.on td { background: var(--wash); }
 .creator { border: 1px solid var(--hair); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .creator header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .creator h3 { font-size: 17px; margin: 0 0 2px; }
-.creator .state { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
 .creator .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; background: var(--wash); border-radius: 8px; padding: 10px 12px; }
 .creator .facts dt { font-size: 11px; color: var(--mute); font-weight: 600; }
 .creator .facts dd { margin: 0; font-weight: 600; font-size: 13px; overflow-wrap: anywhere; }
@@ -430,7 +426,6 @@ tr.on td { background: var(--wash); }
 .creator .contacts > a:not(.btn) { border: 1px solid var(--hair); border-radius: 999px; padding: 4px 10px; font-size: 12px; }
 .creator .contacts .btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .btn.wa { background: #e3f3ea; border-color: var(--green); color: var(--green); }
-.creator .notes { margin: 0; font-size: 13px; }
 .creator footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--hair); padding-top: 10px; }
 .ugc-more { font-size: 13px; }
 .ugc-more summary { cursor: pointer; font-weight: 600; }

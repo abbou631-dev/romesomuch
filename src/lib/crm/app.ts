@@ -577,10 +577,7 @@ async function promosView() {
 
 // ---- UGC applications --------------------------------------------------------
 
-// Sent from the site's /ugc/ form; the CRM only adds a status, a 1–5 rating and notes.
-const UGC_STATUS = {
-  nuovo: "Nuovo", contattato: "Contattato", confermato: "Shooting confermato", completato: "Ha postato", scartato: "Scartato",
-} as Record<string, string>;
+// Sent from the site's /ugc/ form; the CRM only fills in a missing WhatsApp number.
 // The form's follower bands, smallest first: their order is what "at least" compares.
 const FOLLOWERS = ["Under 5k", "5k–20k", "20k–100k", "100k–500k", "Over 500k"];
 const NICHES = ["Travel", "Food", "Lifestyle", "Couples", "Family", "Luxury", "Other"];
@@ -588,13 +585,10 @@ const RIGHTS = { "Reposts on RomeSoMuch channels": "Repost sui nostri canali", "
 const INTEREST = { Experiences: "Esperienze", Restaurants: "Ristoranti", Both: "Entrambi" } as Record<string, string>;
 const ugcFields = (): Field[] => [
   { name: "whatsapp", label: "WhatsApp", type: "tel", hint: "Col prefisso del paese, es. +44 7700 900123" },
-  { name: "status", label: "Stato", type: "select", options: Object.entries(UGC_STATUS) },
-  { name: "rating", label: "Voto", type: "select", options: [["", "—"], ["5", "5 · da prendere subito"], ["4", "4"], ["3", "3"], ["2", "2"], ["1", "1 · non fa per noi"]] },
-  { name: "notes", label: "Note", type: "textarea", hint: "Visibili solo nel CRM" },
 ];
 
 // The page's filters; kept while moving around the CRM.
-const ugcFilter = { q: "", status: "aperti", followers: "", niche: "", interest: "", rights: "", when: "", tiktok: false, sort: "recenti" };
+const ugcFilter = { q: "", followers: "", niche: "", interest: "", rights: "", when: "", tiktok: false, sort: "recenti" };
 let ugcRows: Row[] = [];
 
 const band = (u: Row) => FOLLOWERS.indexOf(u.followers);
@@ -615,7 +609,6 @@ const ugcWhen: Record<string, [string, (u: Row) => boolean]> = {
 };
 const matchesUgc = (u: Row) => {
   const f = ugcFilter;
-  if (f.status === "aperti" ? ["scartato", "completato"].includes(u.status) : f.status && u.status !== f.status) return false;
   if (f.followers && band(u) < Number(f.followers)) return false;
   if (f.niche && u.niche !== f.niche) return false;
   // Someone who wants both fits either search.
@@ -624,7 +617,7 @@ const matchesUgc = (u: Row) => {
   if (f.when && !ugcWhen[f.when][1](u)) return false;
   if (f.tiktok && !u.tiktok) return false;
   if (f.q) {
-    const text = [u.name, u.email, u.whatsapp, u.country, u.instagram, u.tiktok, u.languages, u.message, u.notes, u.party].join(" ").toLowerCase();
+    const text = [u.name, u.email, u.whatsapp, u.country, u.instagram, u.tiktok, u.languages, u.message, u.party].join(" ").toLowerCase();
     if (!f.q.toLowerCase().split(/\s+/).every((word) => text.includes(word))) return false;
   }
   return true;
@@ -633,7 +626,6 @@ const UGC_SORT: Record<string, [string, (a: Row, b: Row) => number]> = {
   recenti: ["Più recenti", (a, b) => b.created_at.localeCompare(a.created_at)],
   follower: ["Più follower", (a, b) => band(b) - band(a) || viewsOf(b) - viewsOf(a)],
   views: ["Più views", (a, b) => viewsOf(b) - viewsOf(a)],
-  voto: ["Voto più alto", (a, b) => (b.rating ?? 0) - (a.rating ?? 0) || band(b) - band(a)],
   arrivo: ["Arrivo più vicino", (a, b) => (a.arrival ?? "9999").localeCompare(b.arrival ?? "9999")],
 };
 
@@ -655,7 +647,6 @@ const whatsapp = (u: Row) => {
   const digits = String(u.whatsapp ?? "").replace(/\D/g, "").replace(/^00/, "");
   return digits.length >= 7 ? `https://wa.me/${digits}` : "";
 };
-const stars = (n: number) => `${"★".repeat(n)}<span class="mute">${"★".repeat(5 - n)}</span>`;
 
 // One application as a card: who, the four numbers that matter, how to reach
 // them, the rest folded away.
@@ -680,17 +671,15 @@ const ugcCard = (u: Row) => {
   return `<article class="creator">
     <header>
       <div><h3>${esc(u.name)}</h3><small class="mute">${u.country ? `${esc(u.country)} · ` : ""}ricevuta ${day(u.created_at)}</small></div>
-      <div class="state">${badge(`ugc-${u.status}`, UGC_STATUS[u.status] ?? u.status)}${u.rating ? `<small>${stars(u.rating)}</small>` : ""}</div>
     </header>
     <dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
     <div class="contacts">${contacts.join("")}</div>
-    ${u.notes ? `<p class="notes">${esc(u.notes)}</p>` : ""}
     ${details.length ? `<details class="ugc-more"><summary>Dettagli</summary><dl>${details.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></details>` : ""}
-    <footer><button class="btn small primary" data-edit="ugc" data-id="${u.id}">Stato, voto e note</button><button class="link danger" data-del="ugc" data-id="${u.id}">Elimina</button></footer>
+    <footer>${wa ? `<button class="link" data-edit="ugc" data-id="${u.id}">Cambia numero</button>` : "<span></span>"}<button class="link danger" data-del="ugc" data-id="${u.id}">Elimina</button></footer>
   </article>`;
 };
 // How many filters differ from the defaults, shown on the folded filter bar.
-const ugcActive = () => Object.entries(ugcFilter).filter(([k, v]) => !["q", "sort", "status"].includes(k) && v).length + (ugcFilter.status !== "aperti" ? 1 : 0);
+const ugcActive = () => Object.entries(ugcFilter).filter(([k, v]) => !["q", "sort"].includes(k) && v).length;
 function drawUgc() {
   const rows = ugcRows.filter(matchesUgc).sort(UGC_SORT[ugcFilter.sort][1]);
   const n = ugcActive();
@@ -707,13 +696,11 @@ async function ugcView() {
   const f = ugcFilter;
   const select = (key: string, label: string, options: [string, string][]) =>
     `<label>${label} <select data-ugc="${key}">${options.map(([k, l]) => `<option value="${esc(k)}"${String((f as Row)[key]) === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
-  const soon = ugcRows.filter((u) => u.status !== "scartato" && ugcWhen["30"][1](u)).length;
   view.innerHTML = `${head("UGC", "", "Le candidature dal modulo romesomuch.com/ugc/: filtra per trovare i creator giusti")}
     <div class="kpis">
       ${kpi("Candidature", num(ugcRows.length))}
-      ${kpi("Da guardare", num(ugcRows.filter((u) => u.status === "nuovo").length), "stato Nuovo", ugcRows.some((u) => u.status === "nuovo") ? "warn" : "")}
-      ${kpi("A Roma nei prossimi 30 giorni", num(soon), "esclusi gli scartati")}
-      ${kpi("Shooting confermati", num(ugcRows.filter((u) => u.status === "confermato").length))}
+      ${kpi("A Roma adesso", num(ugcRows.filter(ugcWhen.ora[1]).length))}
+      ${kpi("A Roma nei prossimi 30 giorni", num(ugcRows.filter(ugcWhen["30"][1]).length))}
     </div>
     <div class="ugc-bar">
       <input type="search" data-ugc="q" value="${esc(f.q)}" placeholder="Cerca…" aria-label="Cerca" />
@@ -722,7 +709,6 @@ async function ugcView() {
     <details class="ugc-filters" data-ugc-filters${ugcFiltersOpen ? " open" : ""}>
       <summary>Filtri <span id="ugc-active" class="count"></span></summary>
       <div class="filters">
-        ${select("status", "Stato", [["aperti", "Da gestire (no scartati né conclusi)"], ["", "Tutti"], ...Object.entries(UGC_STATUS)])}
         ${select("followers", "Follower almeno", [["", "Qualsiasi"], ...FOLLOWERS.map((b, i) => [String(i), b] as [string, string]).slice(1)])}
         ${select("niche", "Nicchia", [["", "Tutte"], ...NICHES.map((n) => [n, n] as [string, string])])}
         ${select("interest", "Vuole provare", [["", "Qualsiasi"], ["Experiences", "Esperienze"], ["Restaurants", "Ristoranti"]])}
