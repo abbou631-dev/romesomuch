@@ -387,8 +387,12 @@ function packageView(s: Row) {
 }
 
 // A contract ending this month: the name goes red, time to call about renewing.
+// One that started in the last 30 days goes green: a new client. Red wins.
 const expiring = (c: Row) => c.end_date?.slice(0, 7) === thisMonth();
-const clientCell = (c: Row) => `<a href="#/cliente/${c.id}"${expiring(c) ? ' class="due" title="Il contratto scade questo mese: chiama per il rinnovo"' : ""}><strong>${esc(c.name)}</strong></a>`;
+const isNew = (c: Row) => Boolean(c.start_date) && c.start_date <= today() && c.start_date > addDays(today(), -30);
+const nameMark = (c: Row) => expiring(c) ? ' class="due" title="Il contratto scade questo mese: chiama per il rinnovo"'
+  : isNew(c) ? ' class="fresh" title="Cliente nuovo: contratto iniziato da meno di un mese"' : "";
+const clientCell = (c: Row) => `<a href="#/cliente/${c.id}"${nameMark(c)}><strong>${esc(c.name)}</strong></a>`;
 
 async function teamClientsView() {
   const rows = clients.filter(inCategory).map((c) => `<tr><td>${clientCell(c)}<div class="cats-row">${categoryTags(c)}</div></td>

@@ -36,6 +36,7 @@ small { font-size: 12px; }
 .warn { color: var(--amber); }
 .neg { color: var(--red); }
 a.due { color: var(--red); }
+a.fresh { color: var(--green); }
 
 .logo { display: block; height: 22px; width: auto; }
 
