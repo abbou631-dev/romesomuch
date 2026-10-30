@@ -35,6 +35,7 @@ small { font-size: 12px; }
 .block { display: block; }
 .warn { color: var(--amber); }
 .neg { color: var(--red); }
+a.due { color: var(--red); }
 
 .logo { display: block; height: 22px; width: auto; }
 
@@ -100,6 +101,16 @@ small { font-size: 12px; }
   border-bottom: 2px solid transparent;
 }
 .side nav a.on { color: var(--ink); border-color: var(--gold); }
+/* How many notifications wait (set by app.ts; empty when none). */
+.side nav a[data-count]:not([data-count=""])::after {
+  content: attr(data-count);
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+}
 .logout { grid-row: 1; grid-column: 2; }
 
 main { padding: 20px 16px 64px; max-width: 1280px; }

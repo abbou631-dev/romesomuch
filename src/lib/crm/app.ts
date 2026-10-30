@@ -188,6 +188,10 @@ const userActions = (u: Row) => u.status === "in_attesa"
 
 // ---- shared pieces --------------------------------------------------------------
 
+const requestList = (rows: Row[]) => `<ul class="list">${rows.map((u) => `<li>
+  <div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)} · per ${clientLink(u.client_id)} · ${day(u.requested_at)}</small></div>
+  <div class="end">${userActions(u)}</div></li>`).join("")}</ul>`;
+
 const add = (table: string, label: string, clientId?: number) =>
   `<button class="btn primary" data-add="${table}"${clientId ? ` data-client="${clientId}"` : ""}>${esc(label)}</button>`;
 const rowActions = (table: string, id: number) =>
@@ -353,9 +357,7 @@ function packageView(s: Row) {
     ${overviewTabs()}
     ${connected ? "" : notice("piattaforme", `Nessuna piattaforma collegata: le metriche vanno inserite a mano. <a href="#/collegamenti">Collega Instagram, Facebook e TikTok →</a>`)}
     ${s.reportsDue ? notice(`report:${addMonths(thisMonth(), -1)}`, `I report di ${esc(month(addMonths(thisMonth(), -1)))} non sono ancora partiti per ${s.reportsDue} ${s.reportsDue === 1 ? "cliente" : "clienti"}. <a href="#/report">Controllali e mandali →</a>`) : ""}
-    ${s.requests.length ? `<section class="panel requests"><h2>Richieste d'accesso all'area clienti</h2><ul class="list">${s.requests.map((u: Row) => `<li>
-      <div><strong>${esc(u.name || u.email)}</strong><small>${esc(u.email)} · per ${clientLink(u.client_id)} · ${day(u.requested_at)}</small></div>
-      <div class="end">${userActions(u)}</div></li>`).join("")}</ul></section>` : ""}
+    ${s.requests.length ? `<section class="panel requests"><h2>Richieste d'accesso all'area clienti</h2>${requestList(s.requests)}</section>` : ""}
     <section class="kpis">
       ${kpi("Clienti attivi", String(active.length), `${s.clients.length} in totale`)}
       ${kpi("Canoni al mese", eur(fees), "canoni divisi per i mesi del periodo")}
@@ -384,8 +386,12 @@ function packageView(s: Row) {
     </div>`;
 }
 
+// A contract ending this month: the name goes red, time to call about renewing.
+const expiring = (c: Row) => c.end_date?.slice(0, 7) === thisMonth();
+const clientCell = (c: Row) => `<a href="#/cliente/${c.id}"${expiring(c) ? ' class="due" title="Il contratto scade questo mese: chiama per il rinnovo"' : ""}><strong>${esc(c.name)}</strong></a>`;
+
 async function teamClientsView() {
-  const rows = clients.filter(inCategory).map((c) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a><div class="cats-row">${categoryTags(c)}</div></td>
+  const rows = clients.filter(inCategory).map((c) => `<tr><td>${clientCell(c)}<div class="cats-row">${categoryTags(c)}</div></td>
     <td>${badge(c.status, STATUS[c.status])}</td><td>${quota(c.videos_month, c.videos_per_month)}</td><td>${day(c.end_date)}</td><td>${esc(c.contact ?? "")}</td></tr>`);
   view.innerHTML = `${head("Clienti")}${categoryFilter(clients)}
     <section class="panel">${table(["Cliente", "Stato", `Video di ${month(thisMonth())}`, "Fine contratto", "Referente"], rows, "Nessun cliente.")}</section>`;
@@ -394,7 +400,7 @@ async function teamClientsView() {
 async function clientsView() {
   if (isTeam()) return teamClientsView();
   const s = await api(`summary?month=${thisMonth()}`);
-  const rows = s.clients.filter(inCategory).map((c: Row) => `<tr><td><a href="#/cliente/${c.id}"><strong>${esc(c.name)}</strong></a><div class="cats-row">${categoryTags(c)}</div></td>
+  const rows = s.clients.filter(inCategory).map((c: Row) => `<tr><td>${clientCell(c)}<div class="cats-row">${categoryTags(c)}</div></td>
     <td>${badge(c.status, STATUS[c.status])}</td><td class="num">${eur(c.fee)}<small class="block mute">${esc((EVERY[c.billing_every] ?? "").toLowerCase())}</small></td><td>${quota(c.videos, c.videos_per_month)}</td><td>${day(c.end_date)}</td>
     <td class="num ${c.outstanding ? "warn" : ""}">${eur(c.outstanding)}</td><td>${c.people ? badge("yes", String(c.people)) : badge("no", "—")}${c.pending ? ` ${badge("da_pagare", `${c.pending} in attesa`)}` : ""}</td></tr>`);
   view.innerHTML = `${head("Clienti", add("clients", "+ Nuovo cliente"))}${categoryFilter(s.clients)}
@@ -849,6 +855,15 @@ view.addEventListener("submit", (event) => {
   act(() => api("titles", { method: "POST", data: { brief } }), "Richiesta inviata all'agente");
 });
 
+// Notifiche: the owner's inbox. Access requests to the client area are
+// approved or refused here, without opening each client; the nav link shows
+// how many are waiting.
+let requests: Row[] = [];
+function notificationsView() {
+  view.innerHTML = `${head("Notifiche")}
+    <section class="panel requests"><h2>Richieste d'accesso all'area clienti</h2>${requests.length ? requestList(requests) : '<p class="empty">Nessuna richiesta in attesa.</p>'}</section>`;
+}
+
 // ---- routing and events ------------------------------------------------------------
 
 async function render() {
@@ -864,7 +879,12 @@ async function render() {
   }
   try {
     clients = await api<Row[]>("clients");
-    if (route === "clienti") await clientsView();
+    if (!isTeam()) {
+      requests = await api<Row[]>("users");
+      document.querySelector<HTMLElement>('[data-nav][href="#/notifiche"]')?.setAttribute("data-count", requests.length ? String(requests.length) : "");
+    }
+    if (route === "notifiche") notificationsView();
+    else if (route === "clienti") await clientsView();
     else if (route === "cliente") await clientView(Number(arg));
     else if (route === "video") await videosView();
     else if (route === "pagamenti") await paymentsView();

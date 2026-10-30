@@ -196,6 +196,14 @@ async function people(request, env, url, id, action) {
   const db = env.CRM_DB;
   const method = request.method;
   const origin = url.origin;
+  // Without a client: every request still waiting, for the Notifiche page.
+  if (!id && method === "GET" && !url.searchParams.has("client_id")) {
+    const { results } = await db.prepare(
+      `SELECT u.*, c.name AS client_name FROM client_users u JOIN clients c ON c.id = u.client_id
+       WHERE u.status = 'in_attesa' ORDER BY u.requested_at`,
+    ).all();
+    return json(results);
+  }
   if (!id && method === "GET") {
     const client = Number(url.searchParams.get("client_id"));
     const { results } = await db.prepare(
