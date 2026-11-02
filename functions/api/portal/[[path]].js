@@ -128,6 +128,21 @@ async function videos(env, client, month, ctx) {
   return json(withFacebook(rows));
 }
 
+// The UGC creators for the venue's "Creator UGC" tab. Contacts, links and
+// free text (where people paste handles) only for creators who ticked the
+// form's consent to share them with partner venues; the rest show a first name.
+const UGC_OPEN = ["id", "country", "followers", "views", "niche", "languages", "arrival", "departure", "party", "interest", "deliverables", "rights", "created_at"];
+const UGC_SHARED = ["name", "email", "whatsapp", "instagram", "tiktok", "portfolio", "message"];
+async function creators(env) {
+  const { results } = await env.CRM_DB.prepare("SELECT * FROM ugc ORDER BY created_at DESC, id DESC").all();
+  return json(results.map((u) => {
+    const row = Object.fromEntries(UGC_OPEN.map((k) => [k, u[k]]));
+    if (u.share_contacts) for (const k of UGC_SHARED) row[k] = u[k];
+    else row.name = String(u.name ?? "").trim().split(/\s+/)[0] || "Creator";
+    return row;
+  }));
+}
+
 export async function onRequest({ request, env, params, waitUntil }) {
   if (!sameOrigin(request)) return json({ error: "Origine non consentita." }, 403);
   const url = new URL(request.url);
@@ -165,6 +180,7 @@ export async function onRequest({ request, env, params, waitUntil }) {
        WHERE client_id = ? ORDER BY doc_date IS NULL, doc_date DESC, uploaded_at DESC`,
     ).bind(client.id).all()).results));
   }
+  if (action === "ugc" && method === "GET") return guarded(() => creators(env));
   // Only the venue's own files.
   if (action === "files" && Number.isInteger(Number(idText)) && method === "GET") return guarded(() => download(env, Number(idText), client.id));
   return json({ error: "Non trovato." }, 404);

@@ -1,17 +1,15 @@
-// The client area: one venue's videos, documents and an estimate of the
-// customers they brought, over /api/portal (functions/api/portal). Metrics
+// The client area: one venue's videos, documents and the UGC creators it can
+// invite, over /api/portal (functions/api/portal). Metrics
 // older than 15 minutes are read again from the platforms when a month opens.
 
 import {
   type Row, apiFor, esc, eur, num, short, day, month, shortMonth, ago, thisMonth, head, kpi, table, bars, platform,
 } from "./ui";
+import { ugcSection, mountUgc, ugcInput } from "./ugc";
 
 const api = apiFor("/api/portal", "/area-clienti/login/");
 const view = document.getElementById("view")!;
 
-// The agency's rule of thumb: about one new customer every 5,000 views.
-const VIEWS_PER_CUSTOMER = 5000;
-const customers = (views: number) => Math.round(views / VIEWS_PER_CUSTOMER);
 
 let data: Row;
 let selected = thisMonth();
@@ -35,7 +33,7 @@ function greeting() {
 }
 
 const tabs = (on: string) => `<nav class="tabs" aria-label="Sezioni">${[
-  ["#/", "Andamento"], ["#/documenti", "I tuoi documenti"], ["#/previsioni", "Previsioni"],
+  ["#/", "Andamento"], ["#/documenti", "I tuoi documenti"], ["#/ugc", "Creator UGC"],
 ].map(([href, label]) => `<a href="${href}"${href === on ? ' class="on" aria-current="page"' : ""}>${label}</a>`).join("")}</nav>`;
 
 // ---- Andamento ---------------------------------------------------------------
@@ -125,29 +123,23 @@ async function documents() {
 
 // ---- Previsioni ------------------------------------------------------------------
 
-function forecast() {
-  const c = data.client;
-  const months: Row[] = data.months;
-  const views = data.totals.views;
-  const done = data.totals.videos;
-  const average = done ? views / done : 0;
-  const left = Math.max(0, (c.videos_total || 0) - done);
-  const thisOne = months.find((m) => m.month === thisMonth()) ?? { views: 0 };
-  let running = 0;
-  const rows: Row[] = months.map((m) => ({ ...m, customers: customers(m.views), total: customers((running += m.views)) }));
-
-  view.innerHTML = `${greeting()}${tabs("#/previsioni")}
-    <section class="kpis">
-      ${kpi("Possibili nuovi clienti finora", `~${num(customers(views))}`, `da ${short(views)} visualizzazioni`, "good")}
-      ${kpi("Questo mese", `~${num(customers(thisOne.views))}`, `${short(thisOne.views)} visualizzazioni`)}
-      ${left ? kpi("Entro fine contratto", `~${num(customers(views + left * average))}`, `se i ${left} video mancanti vanno come la media (${short(average)} visualizzazioni)`) : ""}
+// Creators who applied to RomeSoMuch, for the venue to invite: what UGC is,
+// then the cards. Contacts come only for creators who agreed to share them.
+async function creators() {
+  const rows = await api<Row[]>("ugc");
+  const write = `mailto:romesomuch@gmail.com?subject=${encodeURIComponent(`Creator UGC per ${data.client.name}`)}`;
+  view.innerHTML = `${greeting()}${tabs("#/ugc")}
+    <section class="panel ugc-intro"><h2>Cosa sono gli UGC</h2>
+      <p>UGC vuol dire <em>user generated content</em>: video e foto creati da persone reali. Qui trovi piccoli influencer e content creator che passano da Roma e si sono candidati con noi: puoi invitarli a provare il tuo locale e, in cambio, lo raccontano e lo pubblicizzano ai loro follower.</p>
+      <p>L'accesso è <strong>gratuito</strong> e puoi scegliere come usarlo:</p>
+      <ul>
+        <li><strong>In autonomia:</strong> usa i filtri per trovare i creator giusti e contattali direttamente, quando hanno accettato di condividere i loro contatti.</li>
+        <li><strong>Con noi:</strong> scrivici e ci occupiamo noi di tutto, dalla scelta dei creator al contatto e all'organizzazione della visita.</li>
+      </ul>
+      <p><a class="btn primary" href="${esc(write)}">Scrivici</a></p>
     </section>
-    <section class="panel"><h2>Possibili clienti mese per mese</h2>
-      ${bars(rows.map((m) => ({ key: m.month, label: shortMonth(m.month), value: m.customers, title: `${month(m.month)}: ~${m.customers} clienti da ${num(m.views)} visualizzazioni` })), thisMonth())}
-      ${table(["Mese", "Visualizzazioni", "Possibili clienti", "Totale dall'inizio"], [...rows].reverse().map((m) =>
-        `<tr><td>${esc(month(m.month))}</td><td class="num">${num(m.views)}</td><td class="num">~${num(m.customers)}</td><td class="num"><strong>~${num(m.total)}</strong></td></tr>`), "")}
-    </section>
-    <p class="explain">È una stima, non un dato misurato: dalla nostra esperienza, in media ogni ${num(VIEWS_PER_CUSTOMER)} visualizzazioni portano circa un nuovo cliente nel locale. Il numero reale dipende dal locale, dal periodo e dal tipo di video.</p>`;
+    ${ugcSection(rows, false)}`;
+  mountUgc(view);
 }
 
 // ---- routing -------------------------------------------------------------------
@@ -156,10 +148,11 @@ const fail = (error: Error) => (view.innerHTML = `<p class="empty">Impossibile c
 
 function render() {
   const route = location.hash.replace(/^#\/?/, "");
-  const work = route === "documenti" ? documents() : route === "previsioni" ? Promise.resolve(forecast()) : overview();
+  const work = route === "documenti" ? documents() : route === "ugc" ? creators() : overview();
   work.catch(fail);
 }
 
+view.addEventListener("input", ugcInput);
 view.addEventListener("click", (event) => {
   const el = (event.target as HTMLElement).closest<HTMLElement>("[data-month]");
   if (!el || el.dataset.month === selected) return;
