@@ -132,7 +132,7 @@ async function creators() {
       <p>UGC vuol dire <em>user generated content</em>: video e foto creati da persone reali. Qui trovi piccoli influencer e content creator che passano da Roma e si sono candidati con noi: puoi invitarli a provare il tuo locale e, in cambio, lo raccontano e lo pubblicizzano ai loro follower.</p>
       <p>L'accesso è <strong>gratuito</strong> e puoi scegliere come usarlo:</p>
       <ul>
-        <li><strong>In autonomia:</strong> usa i filtri per trovare i creator giusti e contattali direttamente, quando hanno accettato di condividere i loro contatti.</li>
+        <li><strong>In autonomia:</strong> usa i filtri per trovare i creator giusti e contattali direttamente sui loro profili Instagram e TikTok, o via email e WhatsApp quando li hanno condivisi.</li>
         <li><strong>Con noi:</strong> scrivici e ci occupiamo noi di tutto, dalla scelta dei creator al contatto e all'organizzazione della visita.</li>
       </ul>
     </section>
