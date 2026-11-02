@@ -9,11 +9,10 @@ import { type Row, esc, num, day, today, addDays, kpi } from "./ui";
 // The form's follower bands, smallest first: their order is what "at least" compares.
 const FOLLOWERS = ["Under 5k", "5k–20k", "20k–100k", "100k–500k", "Over 500k"];
 const NICHES = ["Travel", "Food", "Lifestyle", "Couples", "Family", "Luxury", "Other"];
-const RIGHTS = { "Reposts on RomeSoMuch channels": "Repost sui nostri canali", "Reposts and paid ads": "Repost e ads a pagamento", "To discuss": "Da discutere" } as Record<string, string>;
 const INTEREST = { Experiences: "Esperienze", Restaurants: "Ristoranti", Both: "Entrambi" } as Record<string, string>;
 
 // The page's filters; kept while moving around the page.
-const filter = { q: "", followers: "", niche: "", interest: "", rights: "", when: "", tiktok: false, sort: "recenti" };
+const filter = { q: "", followers: "", niche: "", interest: "", when: "", tiktok: false, sort: "recenti" };
 let rows: Row[] = [];
 let staff = false;
 
@@ -39,7 +38,6 @@ const matches = (u: Row) => {
   if (f.niche && u.niche !== f.niche) return false;
   // Someone who wants both fits either search.
   if (f.interest && u.interest !== f.interest && u.interest !== "Both") return false;
-  if (f.rights && u.rights !== f.rights) return false;
   if (f.when && !WHEN[f.when][1](u)) return false;
   if (f.tiktok && !u.tiktok) return false;
   if (f.q) {
@@ -94,7 +92,7 @@ const card = (u: Row) => {
     ["Nicchia", esc(u.niche ?? "—")], ["A Roma", stay(u)],
   ];
   const details: [string, string][] = ([
-    ["Vuole provare", esc(INTEREST[u.interest] ?? u.interest ?? "")], ["Diritti", esc(RIGHTS[u.rights] ?? u.rights ?? "")],
+    ["Vuole provare", esc(INTEREST[u.interest] ?? u.interest ?? "")],
     ["Lavori migliori", linkify(u.portfolio)], ["Cosa consegnerebbe", esc(u.deliverables ?? "")], ["Chi viene", esc(u.party ?? "")],
     ["Lingue", esc(u.languages ?? "")], ["Messaggio", esc(u.message ?? "")],
   ] as [string, string][]).filter(([, v]) => v);
@@ -151,7 +149,6 @@ export function ugcSection(list: Row[], asStaff: boolean) {
         ${select("followers", "Follower almeno", [["", "Qualsiasi"], ...FOLLOWERS.map((b, i) => [String(i), b] as [string, string]).slice(1)])}
         ${select("niche", "Nicchia", [["", "Tutte"], ...NICHES.map((n) => [n, n] as [string, string])])}
         ${select("interest", "Vuole provare", [["", "Qualsiasi"], ["Experiences", "Esperienze"], ["Restaurants", "Ristoranti"]])}
-        ${select("rights", "Diritti sui contenuti", [["", "Qualsiasi"], ...Object.entries(RIGHTS)])}
         ${select("when", "Quando a Roma", [["", "Sempre"], ...Object.entries(WHEN).map(([k, [l]]) => [k, l] as [string, string])])}
         <label class="check"><input type="checkbox" data-ugc="tiktok"${f.tiktok ? " checked" : ""} /> Ha TikTok</label>
       </div>
