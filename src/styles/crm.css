@@ -314,9 +314,6 @@ body.portal main { margin: 0 auto; max-width: 1180px; }
 .months { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; scrollbar-width: none; }
 .months button { font: inherit; font-weight: 600; border: 1px solid var(--hair); background: var(--paper); border-radius: 999px; padding: 6px 14px; white-space: nowrap; cursor: pointer; }
 .months button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.delta { font-weight: 700; }
-.delta.up { color: var(--green); }
-.delta.down { color: var(--red); }
 .videos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 @media (min-width: 720px) { .videos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1000px) { .videos { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

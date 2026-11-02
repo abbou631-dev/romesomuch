@@ -18,12 +18,6 @@ let selected = thisMonth();
 // The video list's own filter: a month, or "all"; the month chips set it too.
 let videoMonth = thisMonth();
 
-const delta = (now: number, before: number) => {
-  if (!before) return "";
-  const change = Math.round(((now - before) / before) * 100);
-  if (!change) return `<span class="delta">= mese prima</span>`;
-  return `<span class="delta ${change > 0 ? "up" : "down"}">${change > 0 ? "+" : ""}${change}% sul mese prima</span>`;
-};
 const interactionsOf = (m: Row) => (m.likes ?? 0) + (m.comments ?? 0) + (m.shares ?? 0) + (m.saves ?? 0);
 
 // "Ciao Marco" (the person signed in, else the venue's contact), then the
@@ -69,16 +63,15 @@ async function overview() {
   const months: Row[] = data.months;
   const index = months.findIndex((m) => m.month === selected);
   const current = months[index] ?? { videos: 0, views: 0, reach: 0 };
-  const before = months[index - 1] ?? { videos: 0, views: 0, reach: 0 };
 
   view.innerHTML = `${greeting()}${tabs("#/")}
     <nav class="months" aria-label="Mese">${[...months].reverse().map((m) =>
       `<button type="button" data-month="${m.month}" class="${m.month === selected ? "on" : ""}">${esc(month(m.month))}</button>`).join("")}</nav>
     <section class="kpis">
       ${kpi("Video pubblicati", String(current.videos), esc(month(selected)))}
-      ${kpi("Visualizzazioni", short(current.views), delta(current.views, before.views))}
-      ${kpi("Account raggiunti", short(current.reach), delta(current.reach, before.reach))}
-      ${kpi("Interazioni", short(interactionsOf(current)), delta(interactionsOf(current), interactionsOf(before)) || "mi piace, commenti, condivisioni, salvataggi")}
+      ${kpi("Visualizzazioni", short(current.views), "tutte le piattaforme")}
+      ${kpi("Account raggiunti", short(current.reach))}
+      ${kpi("Interazioni", short(interactionsOf(current)), "mi piace, commenti, condivisioni, salvataggi")}
     </section>
     <section class="panel"><h2>Andamento mese per mese</h2>
       ${bars(months.map((m) => ({ key: m.month, label: shortMonth(m.month), value: m.views, title: `${month(m.month)}: ${num(m.views)} visualizzazioni, ${m.videos} video` })), selected, "data-month")}

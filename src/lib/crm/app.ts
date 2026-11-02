@@ -765,10 +765,9 @@ async function reportsView() {
   reports = await api<Row[]>(`reports?month=${reportMonth}`);
   const due = reports.filter((r) => !r.sent_at && r.people.length);
   const rows = reports.map((r) => {
-    const change = r.before.views ? Math.round(((r.month.views - r.before.views) / r.before.views) * 100) : null;
     return `<tr><td><a href="#/cliente/${r.id}"><strong>${esc(r.name)}</strong></a></td>
       <td class="num">${r.month.videos}</td>
-      <td class="num">${num(r.month.views)}${change === null ? "" : ` <small class="${change >= 0 ? "pos" : "neg"}">${change > 0 ? "+" : ""}${change}%</small>`}</td>
+      <td class="num">${num(r.month.views)}</td>
       <td class="num">~${num(Math.round(r.month.views / 5000))}</td>
       <td>${r.people.length ? r.people.map((p: Row) => esc(p.name || p.email)).join(", ") : '<span class="mute">nessuno con accesso</span>'}</td>
       <td>${r.sent_at ? badge("pagato", `Inviato ${day(r.sent_at.slice(0, 10))}`) : r.people.length ? badge("da_pagare", "Da inviare") : '<span class="mute">—</span>'}</td>
