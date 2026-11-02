@@ -30,10 +30,10 @@ const FORMS = {
   },
   ugc: {
     subject: "UGC application",
-    required: ["name", "email", "whatsapp", "instagram", "portfolio", "followers", "niche", "arrival", "departure", "interest", "rights", "agreement"],
+    required: ["name", "email", "whatsapp", "instagram", "portfolio", "followers", "niche", "arrival", "departure", "interest", "agreement"],
     fields: [
       "name", "email", "whatsapp", "country", "instagram", "tiktok", "portfolio", "followers", "views", "niche",
-      "languages", "arrival", "departure", "group", "interest", "deliverables", "rights", "message", "agreement", "share",
+      "languages", "arrival", "departure", "group", "interest", "deliverables", "message", "agreement", "share",
     ],
     // Arrival and departure must be real dates, in that order.
     stay: ["arrival", "departure"],
@@ -44,7 +44,7 @@ const FORMS = {
         name: "name", email: "email", whatsapp: "whatsapp", country: "country", instagram: "instagram", tiktok: "tiktok",
         portfolio: "portfolio", followers: "followers", views: "views", niche: "niche", languages: "languages",
         arrival: "arrival", departure: "departure", group: "party", interest: "interest",
-        deliverables: "deliverables", rights: "rights", message: "message", agreement: "agreement", share: "share_contacts", page: "page",
+        deliverables: "deliverables", message: "message", agreement: "agreement", share: "share_contacts", page: "page",
       },
     },
   },
@@ -93,7 +93,6 @@ const LABELS = {
   group: "Who is coming",
   interest: "Wants to try",
   deliverables: "Would deliver",
-  rights: "Usage rights",
   agreement: "Accepted the commitment to post",
   share: "Contacts shared with partner venues",
   message: "Message",

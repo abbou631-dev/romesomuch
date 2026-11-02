@@ -72,14 +72,6 @@ const today = new Date().toISOString().slice(0, 10);
               ],
             },
             { name: "deliverables", label: "What you would deliver", help: "For example: one reel and three stories per experience, plus raw footage." },
-            {
-              name: "rights", label: "Can we use your content?", type: "select", required: true,
-              options: [
-                { value: "Reposts on RomeSoMuch channels", label: "Reposts on our channels" },
-                { value: "Reposts and paid ads", label: "Reposts and paid ads" },
-                { value: "To discuss", label: "Let's discuss" },
-              ],
-            },
             { name: "message", label: "Anything else", type: "textarea" },
             {
               name: "share", type: "checkbox",
@@ -87,7 +79,7 @@ const today = new Date().toISOString().slice(0, 10);
             },
             {
               name: "agreement", type: "checkbox", required: true,
-              label: "If I take part in a shoot, I agree to post and promote the business on Instagram, Facebook and TikTok as agreed with RomeSoMuch, to mark the posts as advertising, and to publish nothing that harms it.",
+              label: "If I take part in a shoot, I agree to post and promote the business on Instagram, Facebook and TikTok as agreed with RomeSoMuch, to mark the posts as advertising, to let RomeSoMuch and the business repost the content, and to publish nothing that harms it.",
             },
           ]}
         />
