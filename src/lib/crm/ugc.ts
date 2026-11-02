@@ -1,7 +1,8 @@
 // The UGC creators who applied from the site's /ugc/ form, as cards with
 // filters. Shared by the CRM (/crm/#/ugc, every application with its contacts)
 // and the client area (/area-clienti/#/ugc), where the server sends a
-// creator's contacts only when they agreed to share them with partner venues.
+// creator's email, WhatsApp and full name only when they agreed to share them
+// with partner venues; social handles are public and always shown.
 
 import { type Row, esc, num, day, today, addDays, kpi } from "./ui";
 
@@ -57,12 +58,15 @@ const SORT: Record<string, [string, (a: Row, b: Row) => number]> = {
   arrivo: ["Arrivo più vicino", (a, b) => (a.arrival ?? "9999").localeCompare(b.arrival ?? "9999")],
 };
 
-// A handle or a pasted profile link, as a link to the profile. Only web addresses become links.
+// A handle or a pasted profile link, as "Instagram · @handle" linking to the
+// profile. Only web addresses become links.
 const profile = (value: string | null, base: string, label: string) => {
   if (!value) return "";
   const text = value.trim();
   const href = /^https?:\/\/\S+$/i.test(text) ? text : /^@?[\w.]+$/.test(text) ? `${base}${text.replace(/^@/, "")}` : "";
-  return href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${label}</a>` : `<span class="mute">${label}: ${esc(text)}</span>`;
+  if (!href) return `<span class="mute">${label}: ${esc(text)}</span>`;
+  const handle = (href.replace(/[?#].*$/, "").replace(/\/+$/, "").split("/").pop() ?? "").replace(/^@/, "");
+  return `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${label}${handle ? ` · @${esc(handle)}` : ""}</a>`;
 };
 // Free text where people paste links: the links become clickable, the rest stays text.
 const linkify = (text: string | null) => esc(text ?? "").replace(/https?:\/\/[^\s<]+/g, (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
@@ -83,15 +87,15 @@ const askUs = (u: Row) =>
 // them, the rest folded away. The CRM adds the agency's own actions.
 const card = (u: Row) => {
   const wa = whatsapp(u);
-  const contacts = u.email
-    ? [
-      `<a class="btn small" href="${esc(gmail(u))}" target="_blank" rel="noopener noreferrer" title="Scrivi da Gmail">✉︎ ${esc(u.email)}</a>`,
-      wa ? `<a class="btn small wa" href="${esc(wa)}" target="_blank" rel="noopener noreferrer">WhatsApp · ${esc(u.whatsapp)}</a>`
-        : staff ? `<button class="link mute" data-edit="ugc" data-id="${u.id}">+ WhatsApp</button>` : "",
-      profile(u.instagram, "https://www.instagram.com/", "Instagram"),
-      profile(u.tiktok, "https://www.tiktok.com/@", "TikTok"),
-    ].filter(Boolean)
-    : [`<span class="mute">Contatti riservati.</span> <a class="btn small" href="${esc(askUs(u))}">Scrivici, lo contattiamo noi</a>`];
+  // Social handles are public; email and WhatsApp come only when shared.
+  const contacts = [
+    u.email ? `<a class="btn small" href="${esc(gmail(u))}" target="_blank" rel="noopener noreferrer" title="Scrivi da Gmail">✉︎ ${esc(u.email)}</a>` : "",
+    wa ? `<a class="btn small wa" href="${esc(wa)}" target="_blank" rel="noopener noreferrer">WhatsApp · ${esc(u.whatsapp)}</a>`
+      : staff ? `<button class="link mute" data-edit="ugc" data-id="${u.id}">+ WhatsApp</button>` : "",
+    profile(u.instagram, "https://www.instagram.com/", "Instagram"),
+    profile(u.tiktok, "https://www.tiktok.com/@", "TikTok"),
+    u.email ? "" : `<a class="btn small" href="${esc(askUs(u))}">Scrivici, lo contattiamo noi</a>`,
+  ].filter(Boolean);
   const facts: [string, string][] = [
     ["Follower", esc(u.followers ?? "—")], ["Views", esc(u.views ?? "—")],
     ["Nicchia", esc(u.niche ?? "—")], ["A Roma", stay(u)],

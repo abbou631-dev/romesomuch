@@ -127,7 +127,6 @@ async function documents() {
 // then the cards. Contacts come only for creators who agreed to share them.
 async function creators() {
   const rows = await api<Row[]>("ugc");
-  const write = `mailto:romesomuch@gmail.com?subject=${encodeURIComponent(`Creator UGC per ${data.client.name}`)}`;
   view.innerHTML = `${greeting()}${tabs("#/ugc")}
     <section class="panel ugc-intro"><h2>Cosa sono gli UGC</h2>
       <p>UGC vuol dire <em>user generated content</em>: video e foto creati da persone reali. Qui trovi piccoli influencer e content creator che passano da Roma e si sono candidati con noi: puoi invitarli a provare il tuo locale e, in cambio, lo raccontano e lo pubblicizzano ai loro follower.</p>
@@ -136,7 +135,6 @@ async function creators() {
         <li><strong>In autonomia:</strong> usa i filtri per trovare i creator giusti e contattali direttamente, quando hanno accettato di condividere i loro contatti.</li>
         <li><strong>Con noi:</strong> scrivici e ci occupiamo noi di tutto, dalla scelta dei creator al contatto e all'organizzazione della visita.</li>
       </ul>
-      <p><a class="btn primary" href="${esc(write)}">Scrivici</a></p>
     </section>
     ${ugcSection(rows, false)}`;
   mountUgc(view);

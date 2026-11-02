@@ -128,11 +128,12 @@ async function videos(env, client, month, ctx) {
   return json(withFacebook(rows));
 }
 
-// The UGC creators for the venue's "Creator UGC" tab. Contacts, links and
-// free text (where people paste handles) only for creators who ticked the
-// form's consent to share them with partner venues; the rest show a first name.
-const UGC_OPEN = ["id", "country", "followers", "views", "niche", "languages", "arrival", "departure", "party", "interest", "deliverables", "rights", "created_at"];
-const UGC_SHARED = ["name", "email", "whatsapp", "instagram", "tiktok", "portfolio", "message"];
+// The UGC creators for the venue's "Creator UGC" tab. Social handles are
+// public and always sent; full name, email, WhatsApp, portfolio and the free
+// message only for creators who ticked the form's consent to share them with
+// partner venues; the rest show a first name.
+const UGC_OPEN = ["id", "country", "instagram", "tiktok", "followers", "views", "niche", "languages", "arrival", "departure", "party", "interest", "deliverables", "rights", "created_at"];
+const UGC_SHARED = ["name", "email", "whatsapp", "portfolio", "message"];
 async function creators(env) {
   const { results } = await env.CRM_DB.prepare("SELECT * FROM ugc ORDER BY created_at DESC, id DESC").all();
   return json(results.map((u) => {
