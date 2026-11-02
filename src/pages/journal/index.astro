@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
+import TripPrompt from "../../components/TripPrompt.astro";
 import Shot from "../../components/Shot.astro";
 import { newestFirst } from "../../lib/site";
 
@@ -26,4 +27,5 @@ const posts = newestFirst(await getCollection("journal"));
       </a>
     ))}
   </div>
+  <TripPrompt />
 </Base>

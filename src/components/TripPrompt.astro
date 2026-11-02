@@ -1,0 +1,66 @@
+---
+// Journal readers who are planning a trip get one nudge towards the tours.
+// Asked once per browser: any answer, the close button or Esc stores it.
+---
+<dialog class="trip" id="trip" aria-labelledby="trip-q1">
+  <button class="trip-x" type="button" data-trip-close aria-label="Close">×</button>
+  <div data-trip-step="1">
+    <p class="lbl">Quick question</p>
+    <h2 id="trip-q1">Are you coming to <span class="hl">Rome?</span></h2>
+    <div class="trip-act">
+      <button class="btn" type="button" data-trip-yes autofocus>Yes, I am</button>
+      <button class="btn ghost" type="button" data-trip-close>Not this time</button>
+    </div>
+  </div>
+  <div data-trip-step="2" hidden>
+    <p class="lbl">Great</p>
+    <h2 id="trip-q2">Want to see our <span class="hl">tours?</span></h2>
+    <p class="trip-txt">Vespa rides, cooking classes, Vatican and Colosseum visits, booked in a minute.</p>
+    <div class="trip-act">
+      <a class="btn" href="/experiences/all/" data-trip-go>See our tours</a>
+      <button class="btn ghost" type="button" data-trip-close>Maybe later</button>
+    </div>
+  </div>
+</dialog>
+
+<script is:inline>
+  (() => {
+    const KEY = "rsm-trip-asked";
+    const dialog = document.getElementById("trip");
+    if (!dialog || typeof dialog.showModal !== "function") return;
+    try {
+      if (localStorage.getItem(KEY)) return;
+    } catch {
+      return; // no storage: never risk asking on every page
+    }
+    const remember = () => {
+      try { localStorage.setItem(KEY, "1"); } catch { /* ignore */ }
+    };
+
+    dialog.addEventListener("close", remember);
+    dialog.querySelectorAll("[data-trip-close]").forEach((b) => b.addEventListener("click", () => dialog.close()));
+    dialog.querySelector("[data-trip-go]").addEventListener("click", remember);
+    dialog.querySelector("[data-trip-yes]").addEventListener("click", () => {
+      dialog.querySelector('[data-trip-step="1"]').hidden = true;
+      dialog.querySelector('[data-trip-step="2"]').hidden = false;
+      dialog.setAttribute("aria-labelledby", "trip-q2");
+      dialog.querySelector("[data-trip-go]").focus();
+    });
+    // Clicking the backdrop closes it too.
+    dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });
+
+    // Let the reader start the article first.
+    setTimeout(() => { if (!document.querySelector("dialog[open]")) dialog.showModal(); }, 6000);
+  })();
+</script>
+
+<style>
+  .trip{text-align:center;width:min(460px,calc(100vw - 32px));padding:36px 32px 30px;border:0;border-radius:var(--r-shot);background:var(--paper);color:var(--ink);box-shadow:var(--shadow-lift)}
+  .trip::backdrop{background:rgba(10,10,10,.55)}
+  .trip h2{font-size:clamp(34px,8vw,46px);margin-top:10px}
+  .trip-txt{margin-top:14px;color:var(--muted);font-weight:500}
+  .trip-act{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:24px}
+  .trip-act .btn{flex:0 1 auto}
+  .trip-x{position:absolute;top:10px;right:12px;width:36px;height:36px;border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:var(--muted)}
+  .trip-x:hover{color:var(--ink)}
+</style>

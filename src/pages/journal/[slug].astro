@@ -2,6 +2,7 @@
 import type { GetStaticPaths } from "astro";
 import { getCollection, render } from "astro:content";
 import Base from "../../layouts/Base.astro";
+import TripPrompt from "../../components/TripPrompt.astro";
 import Shot from "../../components/Shot.astro";
 
 export const getStaticPaths = (async () => {
@@ -22,4 +23,5 @@ const { Content } = await render(post);
       <Content />
     </article>
   </div>
+  <TripPrompt />
 </Base>
