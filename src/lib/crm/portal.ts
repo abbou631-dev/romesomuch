@@ -133,8 +133,9 @@ async function creators() {
       <p>L'accesso è <strong>gratuito</strong> e puoi scegliere come usarlo:</p>
       <ul>
         <li><strong>In autonomia:</strong> usa i filtri per trovare i creator giusti e contattali direttamente sui loro profili Instagram e TikTok, o via email e WhatsApp quando li hanno condivisi.</li>
-        <li><strong>Con noi:</strong> scrivici e ci occupiamo noi di tutto, dalla scelta dei creator al contatto e all'organizzazione della visita.</li>
+        <li><strong>Con noi:</strong> affidalo a noi e ci occupiamo di tutto, dalla scelta dei creator al contatto e all'organizzazione della visita.</li>
       </ul>
+      <p id="ugc-help"><button type="button" class="btn primary" data-ugc-help>Affidalo a noi</button></p>
     </section>
     ${ugcSection(rows, false)}`;
   mountUgc(view);
@@ -151,6 +152,22 @@ function render() {
 }
 
 view.addEventListener("input", ugcInput);
+// "Affidalo a noi": the agency gets an email and takes over the UGC side.
+view.addEventListener("click", async (event) => {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-ugc-help]");
+  if (!button) return;
+  button.disabled = true;
+  const box = document.getElementById("ugc-help")!;
+  try {
+    const result = await api<Row>("ugc-help", { method: "POST", data: {} });
+    box.innerHTML = result.preview
+      ? '<span class="note">Anteprima: in questa vista la richiesta non viene inviata.</span>'
+      : '<span class="note pos">Richiesta inviata: ti contattiamo a breve per organizzare tutto.</span>';
+  } catch (error) {
+    button.disabled = false;
+    box.insertAdjacentHTML("beforeend", ` <span class="note neg">${esc((error as Error).message)}</span>`);
+  }
+});
 view.addEventListener("click", (event) => {
   const el = (event.target as HTMLElement).closest<HTMLElement>("[data-month]");
   if (!el || el.dataset.month === selected) return;

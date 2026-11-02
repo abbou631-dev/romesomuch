@@ -182,6 +182,19 @@ export async function onRequest({ request, env, params, waitUntil }) {
     ).bind(client.id).all()).results));
   }
   if (action === "ugc" && method === "GET") return guarded(() => creators(env));
+  // "Affidalo a noi" on the Creator UGC tab: the venue hands the UGC work to the agency.
+  if (action === "ugc-help" && method === "POST") {
+    return guarded(async () => {
+      if (client.preview) return json({ ok: true, preview: true });
+      const who = [client.user_name, client.user_email && `<${client.user_email}>`].filter(Boolean).join(" ");
+      const sent = await mail(env, {
+        to: notifyTo(env),
+        subject: `UGC · ${client.name} vuole affidarci i creator`,
+        text: `${client.name} ha premuto "Affidalo a noi" nell'area clienti: chiede a RomeSoMuch di occuparsi dei creator UGC (scelta, contatto, organizzazione della visita).\n\nRichiesta di: ${who || "—"}\n\nRicontattalo per organizzare.`,
+      });
+      return sent ? json({ ok: true }) : json({ error: "Invio non riuscito, riprova più tardi." }, 502);
+    });
+  }
   // Only the venue's own files.
   if (action === "files" && Number.isInteger(Number(idText)) && method === "GET") return guarded(() => download(env, Number(idText), client.id));
   return json({ error: "Non trovato." }, 404);

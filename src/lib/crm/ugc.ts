@@ -6,9 +6,6 @@
 
 import { type Row, esc, num, day, today, addDays, kpi } from "./ui";
 
-// Where venues write when a creator's contacts are not shared.
-const AGENCY_EMAIL = "romesomuch@gmail.com";
-
 // The form's follower bands, smallest first: their order is what "at least" compares.
 const FOLLOWERS = ["Under 5k", "5k–20k", "20k–100k", "100k–500k", "Over 500k"];
 const NICHES = ["Travel", "Food", "Lifestyle", "Couples", "Family", "Luxury", "Other"];
@@ -79,9 +76,6 @@ const whatsapp = (u: Row) => {
   const digits = String(u.whatsapp ?? "").replace(/\D/g, "").replace(/^00/, "");
   return digits.length >= 7 ? `https://wa.me/${digits}` : "";
 };
-// A venue asking the agency to reach a creator whose contacts are private.
-const askUs = (u: Row) =>
-  `mailto:${AGENCY_EMAIL}?subject=${encodeURIComponent(`Creator UGC: ${u.name} (n. ${u.id})`)}&body=${encodeURIComponent(`Ciao, ci interessa il creator ${u.name} (n. ${u.id}). Potete contattarlo per noi?`)}`;
 
 // One application as a card: who, the four numbers that matter, how to reach
 // them, the rest folded away. The CRM adds the agency's own actions.
@@ -94,7 +88,6 @@ const card = (u: Row) => {
       : staff ? `<button class="link mute" data-edit="ugc" data-id="${u.id}">+ WhatsApp</button>` : "",
     profile(u.instagram, "https://www.instagram.com/", "Instagram"),
     profile(u.tiktok, "https://www.tiktok.com/@", "TikTok"),
-    u.email ? "" : `<a class="btn small" href="${esc(askUs(u))}">Scrivici, lo contattiamo noi</a>`,
   ].filter(Boolean);
   const facts: [string, string][] = [
     ["Follower", esc(u.followers ?? "—")], ["Views", esc(u.views ?? "—")],
