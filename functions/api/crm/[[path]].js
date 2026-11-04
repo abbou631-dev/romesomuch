@@ -393,7 +393,8 @@ async function bridge(request, env, path) {
 // ---- team ------------------------------------------------------------------------
 
 // What a team member may do: look up clients (without money), handle videos,
-// and ask for video titles when the owner allowed it on the Team page.
+// and, when the owner allowed it on the Team page, ask for video titles or
+// browse the UGC creators (and fill in a missing WhatsApp number).
 const TEAM_CAN = (method, path, member) => {
   const [table, id, action] = path;
   if (action) return false;
@@ -401,6 +402,7 @@ const TEAM_CAN = (method, path, member) => {
   if (table === "clients") return method === "GET" && !id;
   if (table === "videos") return ["GET", "POST", "PATCH", "DELETE"].includes(method);
   if (table === "titles") return Boolean(member.can_titles) && ["GET", "POST", "DELETE"].includes(method);
+  if (table === "ugc") return Boolean(member.can_ugc) && ["GET", "PATCH"].includes(method);
   return table === "refresh" && method === "POST";
 };
 // The client fields a team member sees: no fee, billing, VAT number, invite link or access.
@@ -411,7 +413,7 @@ const forTeam = (client) => Object.fromEntries(TEAM_CLIENT.map((k) => [k, client
 async function team(request, env, url, id) {
   const db = env.CRM_DB;
   if (!id && request.method === "GET") {
-    return json((await db.prepare("SELECT id, name, email, can_titles, last_seen, created_at FROM team_members ORDER BY name COLLATE NOCASE").all()).results);
+    return json((await db.prepare("SELECT id, name, email, can_titles, can_ugc, last_seen, created_at FROM team_members ORDER BY name COLLATE NOCASE").all()).results);
   }
   if (!id && request.method === "POST") {
     const body = await request.json();
@@ -427,8 +429,11 @@ async function team(request, env, url, id) {
     return json({ ok: true }, 201);
   }
   if (id && request.method === "PATCH") {
-    const { can_titles } = await request.json();
-    await db.prepare("UPDATE team_members SET can_titles = ? WHERE id = ?").bind(can_titles ? 1 : 0, id).run();
+    // One permission per request: only the flags sent change.
+    const body = await request.json();
+    for (const flag of ["can_titles", "can_ugc"]) {
+      if (flag in body) await db.prepare(`UPDATE team_members SET ${flag} = ? WHERE id = ?`).bind(body[flag] ? 1 : 0, id).run();
+    }
     return json({ ok: true });
   }
   if (id && request.method === "DELETE") {
@@ -472,7 +477,7 @@ async function api(request, env, path, session) {
   if (table === "me" && method === "GET") {
     if (session.role !== "team") return json({ role: "owner" });
     await env.CRM_DB.prepare("UPDATE team_members SET last_seen = datetime('now') WHERE id = ?").bind(session.id).run();
-    return new Response(JSON.stringify({ role: "team", name: session.name, email: session.email, can_titles: Boolean(session.can_titles) }), {
+    return new Response(JSON.stringify({ role: "team", name: session.name, email: session.email, can_titles: Boolean(session.can_titles), can_ugc: Boolean(session.can_ugc) }), {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Set-Cookie": await teamCookie(env, session) },
     });
   }
