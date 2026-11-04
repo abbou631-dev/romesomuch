@@ -11,8 +11,21 @@ interface Props {
   // Link-only pages: kept out of search engines, and shown without the site's
   // navigation so the page has one way forward.
   unlisted?: boolean;
+  // Structured data for this page (schema.org objects), e.g. an article and its FAQ.
+  schema?: object[];
+  // Absolute URL of the picture shared with the link (social cards, AI previews).
+  image?: string;
+  type?: "website" | "article";
 }
-const { title, description = "Tours, food and day trips in Rome, booked in a couple of taps.", active = "", unlisted = false } = Astro.props;
+const {
+  title,
+  description = "Tours, food and day trips in Rome, booked in a couple of taps.",
+  active = "",
+  unlisted = false,
+  schema = [],
+  image,
+  type = "website",
+} = Astro.props;
 
 // Every page names its one address on the bare domain, so the www copy never
 // counts as a second site.
@@ -44,7 +57,15 @@ const identity = Astro.url.pathname === "/" && JSON.stringify([
     <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192" />
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:site_name" content="RomeSoMuch" />
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    {image && <meta property="og:image" content={image} />}
+    <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
     {identity && <script type="application/ld+json" set:html={identity} />}
+    {schema.length > 0 && <script type="application/ld+json" set:html={JSON.stringify(schema)} />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

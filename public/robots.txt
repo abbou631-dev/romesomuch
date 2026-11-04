@@ -1,2 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /crm/
+Disallow: /area-clienti/
+
+Sitemap: https://romesomuch.com/sitemap-index.xml

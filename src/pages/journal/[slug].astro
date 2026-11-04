@@ -4,6 +4,9 @@ import { getCollection, render } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import TripPrompt from "../../components/TripPrompt.astro";
 import Shot from "../../components/Shot.astro";
+import { getImage } from "astro:assets";
+import { photo } from "../../lib/images";
+import { articleSchema } from "../../lib/seo";
 
 export const getStaticPaths = (async () => {
   const posts = await getCollection("journal");
@@ -12,8 +15,12 @@ export const getStaticPaths = (async () => {
 
 const { post } = Astro.props;
 const { Content } = await render(post);
+const url = new URL(`/journal/${post.id}/`, Astro.site).href;
+const cover = await getImage({ src: photo(post.data.cover), width: 1200, format: "jpg" });
+const image = new URL(cover.src, Astro.site).href;
+const schema = articleSchema({ ...post.data, url, image, body: post.body });
 ---
-<Base title={`${post.data.title} — RomeSoMuch`} description={post.data.excerpt}>
+<Base title={`${post.data.title} — RomeSoMuch`} description={post.data.excerpt} schema={schema} image={image} type="article">
   <div class="wrap">
     <article class="article">
       <p class="crumb" style="opacity:1;color:var(--muted)"><a href="/journal/">← Journal</a></p>
