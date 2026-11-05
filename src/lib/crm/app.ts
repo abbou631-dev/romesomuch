@@ -41,6 +41,9 @@ const isTeam = () => role === "team";
 // A team member may open Titoli video only when the owner allowed it.
 let canTitles = true;
 let canUgc = true;
+let canLeads = true;
+// The signed-in team member's name: a new lead is theirs by default.
+let myName = "";
 const clientName = (id: number) => clients.find((c) => c.id === id)?.name ?? "—";
 const clientLink = (id: number) => `<a href="#/cliente/${id}">${esc(clientName(id))}</a>`;
 const clientLinks = (ids: number[] = []) => ids.map(clientLink).join(", ") || "—";
@@ -123,12 +126,12 @@ const promoFields = (): Field[] => [
 ];
 const FIELDS: Record<string, (row: Row) => Field[]> = {
   clients: clientFields, videos: videoFields, charges: chargeFields, documents: (row) => documentFields(!row.id), promos: promoFields,
-  ugc: () => ugcFields(),
+  ugc: () => ugcFields(), leads: () => leadFields(),
 };
 const TITLES: Record<string, [string, string]> = {
   clients: ["Nuovo cliente", "Modifica cliente"], videos: ["Nuovo video", "Modifica video"], charges: ["Nuovo addebito", "Modifica addebito"],
   documents: ["Carica documento", "Modifica documento"], promos: ["Nuova promo", "Modifica promo"],
-  ugc: ["Candidatura UGC", "Candidatura UGC"],
+  ugc: ["Candidatura UGC", "Candidatura UGC"], leads: ["Nuovo lead", "Modifica lead"],
 };
 const edit = (table: string, row: Row) =>
   // The categories checkboxes want the list, the record has "key,key".
@@ -160,9 +163,65 @@ const fresh = (table: string, clientId?: number): Row => {
   if (table === "clients") return { status: "attivo", billing_day: 1, billing_every: 6, videos_per_month: 6, start_date: today() };
   if (table === "documents") return { client_id: clientId ?? clients[0]?.id, kind: "contratto", doc_date: today() };
   if (table === "videos") return { client_ids: clientId ? [clientId] : [], platform: "instagram", published_on: today() };
+  if (table === "leads") return { status: "contattato", contacted_on: today(), contacted_by: myName };
   if (table === "promos") return { date: selected.startsWith(thisMonth()) || selected > thisMonth() ? today() : `${selected}-01` };
   return { client_id: clientId ?? clients[0]?.id, kind: "extra", period: thisMonth(), due_date: today() };
 };
+
+// ---- leads -------------------------------------------------------------------
+
+// Venues contacted that might become clients.
+const LEAD = {
+  contattato: "Contattato", interessato: "Interessato", trattativa: "In trattativa", cliente: "Diventato cliente", perso: "Non interessato",
+} as Record<string, string>;
+const CHANNEL = { instagram: "Instagram", whatsapp: "WhatsApp", telefono: "Telefono", email: "Email", di_persona: "Di persona" } as Record<string, string>;
+const leadFields = (): Field[] => [
+  { name: "name", label: "Locale", required: true },
+  { name: "status", label: "Stato", type: "select", options: Object.entries(LEAD) },
+  { name: "category", label: "Categoria", type: "select", options: [["", "—"], ...Object.entries(CATEGORY)] },
+  { name: "zone", label: "Zona", hint: "Es. Trastevere, Prati" },
+  { name: "contacted_on", label: "Contattato il", type: "date" },
+  { name: "channel", label: "Come", type: "select", options: [["", "—"], ...Object.entries(CHANNEL)] },
+  { name: "contacted_by", label: "Contattato da", hint: "Chi di noi l'ha sentito" },
+  { name: "next_on", label: "Ricontattare il", type: "date", hint: "Vuoto = nessun richiamo in programma" },
+  { name: "contact", label: "Referente", hint: "La persona con cui avete parlato" },
+  { name: "phone", label: "Telefono / WhatsApp", type: "tel" },
+  { name: "email", label: "Email", type: "email" },
+  { name: "instagram", label: "Instagram del locale" },
+  { name: "notes", label: "Note", type: "textarea", hint: "Cosa vi siete detti, prezzo proposto, obiezioni" },
+];
+// The Leads page's filter: a status, "aperti" (still in play) or "" for all.
+let leadState = "aperti";
+const openLead = (l: Row) => l.status !== "cliente" && l.status !== "perso";
+const leadIn = (l: Row) => !leadState || (leadState === "aperti" ? openLead(l) : l.status === leadState);
+async function leadsView() {
+  const rows = await api<Row[]>("leads");
+  const late = rows.filter((l) => openLead(l) && l.next_on && l.next_on <= today());
+  const count = (k: string) => (k === "aperti" ? rows.filter(openLead) : k ? rows.filter((l) => l.status === k) : rows).length;
+  const tabs = `<nav class="months cats" aria-label="Stato">${[["aperti", "Aperti"], ...Object.entries(LEAD), ["", "Tutti"]].map(([k, l]) =>
+    `<button type="button" data-lead-state="${k}" class="${k === leadState ? "on" : ""}">${esc(l)} <small>${count(k)}</small></button>`).join("")}</nav>`;
+  const reach = (l: Row) => [
+    l.contact ? esc(l.contact) : "",
+    l.phone ? `<a href="https://wa.me/${esc(String(l.phone).replace(/\D/g, "").replace(/^00/, ""))}" target="_blank" rel="noopener noreferrer">${esc(l.phone)}</a>` : "",
+    l.email ? `<a href="mailto:${esc(l.email)}">${esc(l.email)}</a>` : "",
+    l.instagram ? `<a href="https://instagram.com/${esc(String(l.instagram).replace(/^@|.*instagram\.com\//g, "").replace(/\/.*$/, ""))}" target="_blank" rel="noopener noreferrer">@${esc(String(l.instagram).replace(/^@|.*instagram\.com\//g, "").replace(/\/.*$/, ""))}</a>` : "",
+  ].filter(Boolean).join("<br>");
+  const list = rows.filter(leadIn).map((l) => `<tr>
+    <td><strong>${esc(l.name)}</strong>${l.category || l.zone ? `<small class="block mute">${esc([CATEGORY[l.category], l.zone].filter(Boolean).join(" · "))}</small>` : ""}</td>
+    <td><select data-lead-status="${l.id}" aria-label="Stato di ${esc(l.name)}">${Object.entries(LEAD).map(([k, t]) => `<option value="${k}"${k === l.status ? " selected" : ""}>${t}</option>`).join("")}</select></td>
+    <td>${l.contacted_on ? day(l.contacted_on) : "—"}<small class="block mute">${esc([CHANNEL[l.channel], l.contacted_by].filter(Boolean).join(" · "))}</small></td>
+    <td>${l.next_on ? `<span class="${openLead(l) && l.next_on <= today() ? "neg" : ""}">${day(l.next_on)}</span>` : "—"}</td>
+    <td>${reach(l) || "—"}</td>
+    <td>${l.notes ? `<small>${esc(l.notes)}</small>` : ""}</td>
+    <td class="row-actions">${rowActions("leads", l.id)}</td></tr>`);
+  view.innerHTML = `${head("Leads", add("leads", "+ Lead"), "I locali che abbiamo contattato e che potrebbero diventare clienti")}
+    <section class="kpis">${kpi("Aperti", String(count("aperti")), "contattati, interessati o in trattativa")}
+      ${kpi("Da ricontattare", String(late.length), "data di richiamo oggi o passata", late.length ? "warn" : "")}
+      ${kpi("Diventati clienti", String(count("cliente")), `su ${rows.length} contattati`)}</section>
+    <section class="panel">${tabs}
+      ${table(["Locale", "Stato", "Contattato", "Ricontattare", "Contatti", "Note", ""], list, rows.length ? "Nessun lead in questo stato." : "Nessun lead ancora: aggiungi il primo locale contattato.")}
+    </section>`;
+}
 
 // ---- client-area access ------------------------------------------------------
 
@@ -690,11 +749,12 @@ async function sendReports(ids: number[]) {
 async function teamView() {
   const members = await api<Row[]>("team");
   view.innerHTML = `${head("Team", '<button class="btn primary" data-add-member>+ Aggiungi al team</button>',
-      "Chi è nel team vede solo Clienti e Video: inserisce i video, niente canoni, pagamenti, documenti, report o accessi. Titoli video e UGC solo se li attivi tu.")}
+      "Chi è nel team vede solo Clienti e Video: inserisce i video, niente canoni, pagamenti, documenti, report o accessi. Titoli video, UGC e Leads solo se li attivi tu.")}
     <section class="panel">${members.length ? `<ul class="list">${members.map((m) => `<li><div><strong>${esc(m.name || m.email)}</strong>
       <small>${esc(m.email)} · ultimo accesso ${m.last_seen ? ago(m.last_seen.replace(" ", "T") + "Z") : "mai"}</small></div>
       <div class="end"><label class="check"><input type="checkbox" data-member-titles="${m.id}"${m.can_titles ? " checked" : ""} /> Titoli video</label>
         <label class="check"><input type="checkbox" data-member-ugc="${m.id}"${m.can_ugc ? " checked" : ""} /> UGC</label>
+        <label class="check"><input type="checkbox" data-member-leads="${m.id}"${m.can_leads ? " checked" : ""} /> Leads</label>
         <button class="link danger" data-remove-member="${m.id}">Rimuovi</button></div></li>`).join("")}</ul>`
       : '<p class="empty">Nessuno ancora. Aggiungi un membro: riceve un\'email con il link per entrare.</p>'}</section>
     <p class="explain">Per entrare: romesomuch.com/crm/ › "Fai parte del team?" › la sua email › il link che riceve. Resta collegato su quel dispositivo.</p>`;
@@ -768,7 +828,7 @@ async function render() {
     a.classList.toggle("on", target === route || (route === "cliente" && target === "clienti"));
   });
   // The team lands on Video and never opens the owner's pages.
-  if (isTeam() && !["clienti", "cliente", "video", ...(canTitles ? ["titoli"] : []), ...(canUgc ? ["ugc"] : [])].includes(route)) {
+  if (isTeam() && !["clienti", "cliente", "video", ...(canTitles ? ["titoli"] : []), ...(canUgc ? ["ugc"] : []), ...(canLeads ? ["leads"] : [])].includes(route)) {
     location.hash = "#/video";
     return;
   }
@@ -785,6 +845,7 @@ async function render() {
     else if (route === "pagamenti") await paymentsView();
     else if (route === "promo") await promosView();
     else if (route === "ugc") await ugcView();
+    else if (route === "leads") await leadsView();
     else if (route === "titoli") await titlesView();
     else if (route === "collegamenti") await connectionsView();
     else if (route === "report") await reportsView();
@@ -900,6 +961,9 @@ view.addEventListener("click", (event) => {
     act(() => refreshEvery({}), "");
   } else if ("chargeMonth" in d) {
     act(async () => `${(await api("charge-month", { method: "POST", data: { period: selected } })).created} canoni creati per ${month(selected)}`, "");
+  } else if ("leadState" in d) {
+    leadState = d.leadState ?? "";
+    render();
   } else if ("category" in d) {
     category = d.category ?? "";
     render();
@@ -927,6 +991,13 @@ view.addEventListener("change", (event) => {
     const on = (el as HTMLInputElement).checked;
     act(() => api(`team/${el.dataset.memberUgc}`, { method: "PATCH", data: { can_ugc: on } }), on ? "UGC attivato" : "UGC tolto");
   }
+  else if ("memberLeads" in el.dataset) {
+    const on = (el as HTMLInputElement).checked;
+    act(() => api(`team/${el.dataset.memberLeads}`, { method: "PATCH", data: { can_leads: on } }), on ? "Leads attivato" : "Leads tolto");
+  }
+  else if ("leadStatus" in el.dataset) {
+    act(() => api(`leads/${el.dataset.leadStatus}`, { method: "PATCH", data: { status: el.value } }), "Stato aggiornato");
+  }
 });
 
 export async function start() {
@@ -935,13 +1006,15 @@ export async function start() {
     role = me.role;
     canTitles = !isTeam() || Boolean(me.can_titles);
     canUgc = !isTeam() || Boolean(me.can_ugc);
+    canLeads = !isTeam() || Boolean(me.can_leads);
+    myName = me.name ?? "";
   } catch {
     return;
   }
   if (isTeam()) {
     document.querySelectorAll("[data-owner]").forEach((a) => {
       const href = a.getAttribute("href");
-      if (!((canTitles && href === "#/titoli") || (canUgc && href === "#/ugc"))) a.remove();
+      if (!((canTitles && href === "#/titoli") || (canUgc && href === "#/ugc") || (canLeads && href === "#/leads"))) a.remove();
     });
   }
   addEventListener("hashchange", render);

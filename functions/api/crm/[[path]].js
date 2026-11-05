@@ -33,6 +33,10 @@ const TABLES = {
   // Applications arrive from the site's /ugc/ form (functions/api/enquiry.js);
   // here the agency only adds a missing WhatsApp number.
   ugc: { whatsapp: "t" },
+  leads: {
+    name: "t", category: "t", zone: "t", contact: "t", phone: "t", email: "t", instagram: "t", channel: "t",
+    contacted_on: "d", contacted_by: "t", status: "t", next_on: "d", notes: "t",
+  },
 };
 const ORDER = {
   clients: "status = 'attivo' DESC, name COLLATE NOCASE",
@@ -41,6 +45,7 @@ const ORDER = {
   documents: "doc_date IS NULL, doc_date DESC, uploaded_at DESC",
   promos: "date DESC, id DESC",
   ugc: "created_at DESC, id DESC",
+  leads: "status IN ('cliente', 'perso'), next_on IS NULL, next_on, contacted_on DESC, id DESC",
 };
 // Clients come with who can open their area (approved people, pending
 // requests) and how many of the month's videos are done.
@@ -58,6 +63,7 @@ const SELECT = {
   charges: "SELECT * FROM charges",
   promos: "SELECT * FROM promos",
   ugc: "SELECT * FROM ugc",
+  leads: "SELECT * FROM leads",
   // The clients a video features, as a JSON array (see withClients).
   videos: "SELECT v.*, (SELECT json_group_array(client_id) FROM video_clients WHERE video_id = v.id) AS client_ids FROM videos v",
 };
@@ -114,9 +120,12 @@ const DEFAULTS = {
   charges: { kind: "canone" },
   documents: { kind: "contratto" },
   promos: { price: 0, cost: 0 },
+  leads: { status: "contattato" },
 };
 // The client categories the CRM knows (src/lib/crm/app.ts has their labels).
 const CATEGORIES = new Set(["trattoria", "ristorante", "negozio", "street_food", "cafe"]);
+// Where a lead stands (labels in LEAD in src/lib/crm/app.ts).
+const LEAD_STATUS = new Set(["contattato", "interessato", "trattativa", "cliente", "perso"]);
 
 const typed = (table, body) => {
   // Categories arrive as a list of keys and are kept as "key,key".
@@ -124,6 +133,8 @@ const typed = (table, body) => {
     body = { ...body, categories: body.categories.filter((k) => CATEGORIES.has(k)).join(",") };
   }
   const row = values(TABLES[table], body);
+  if (table === "leads" && "name" in row && !row.name) throw new Invalid("Scrivi il nome del locale.");
+  if (table === "leads" && row.status && !LEAD_STATUS.has(row.status)) throw new Invalid("Stato non valido.");
   // The page turns it into a link: only web addresses.
   if (table === "promos" && row.url && !/^https?:\/\/\S+$/i.test(row.url)) throw new Invalid("Link non valido (deve iniziare con https://).");
   for (const [key, fallback] of Object.entries(DEFAULTS[table] ?? {})) if (key in row && row[key] === null) row[key] = fallback;
@@ -394,7 +405,7 @@ async function bridge(request, env, path) {
 
 // What a team member may do: look up clients (without money), handle videos,
 // and, when the owner allowed it on the Team page, ask for video titles or
-// browse the UGC creators (and fill in a missing WhatsApp number).
+// browse the UGC creators (and fill in a missing WhatsApp number), or keep the leads.
 const TEAM_CAN = (method, path, member) => {
   const [table, id, action] = path;
   if (action) return false;
@@ -403,6 +414,7 @@ const TEAM_CAN = (method, path, member) => {
   if (table === "videos") return ["GET", "POST", "PATCH", "DELETE"].includes(method);
   if (table === "titles") return Boolean(member.can_titles) && ["GET", "POST", "DELETE"].includes(method);
   if (table === "ugc") return Boolean(member.can_ugc) && ["GET", "PATCH"].includes(method);
+  if (table === "leads") return Boolean(member.can_leads) && ["GET", "POST", "PATCH", "DELETE"].includes(method);
   return table === "refresh" && method === "POST";
 };
 // The client fields a team member sees: no fee, billing, VAT number, invite link or access.
@@ -413,7 +425,7 @@ const forTeam = (client) => Object.fromEntries(TEAM_CLIENT.map((k) => [k, client
 async function team(request, env, url, id) {
   const db = env.CRM_DB;
   if (!id && request.method === "GET") {
-    return json((await db.prepare("SELECT id, name, email, can_titles, can_ugc, last_seen, created_at FROM team_members ORDER BY name COLLATE NOCASE").all()).results);
+    return json((await db.prepare("SELECT id, name, email, can_titles, can_ugc, can_leads, last_seen, created_at FROM team_members ORDER BY name COLLATE NOCASE").all()).results);
   }
   if (!id && request.method === "POST") {
     const body = await request.json();
@@ -431,7 +443,7 @@ async function team(request, env, url, id) {
   if (id && request.method === "PATCH") {
     // One permission per request: only the flags sent change.
     const body = await request.json();
-    for (const flag of ["can_titles", "can_ugc"]) {
+    for (const flag of ["can_titles", "can_ugc", "can_leads"]) {
       if (flag in body) await db.prepare(`UPDATE team_members SET ${flag} = ? WHERE id = ?`).bind(body[flag] ? 1 : 0, id).run();
     }
     return json({ ok: true });
@@ -477,7 +489,7 @@ async function api(request, env, path, session) {
   if (table === "me" && method === "GET") {
     if (session.role !== "team") return json({ role: "owner" });
     await env.CRM_DB.prepare("UPDATE team_members SET last_seen = datetime('now') WHERE id = ?").bind(session.id).run();
-    return new Response(JSON.stringify({ role: "team", name: session.name, email: session.email, can_titles: Boolean(session.can_titles), can_ugc: Boolean(session.can_ugc) }), {
+    return new Response(JSON.stringify({ role: "team", name: session.name, email: session.email, can_titles: Boolean(session.can_titles), can_ugc: Boolean(session.can_ugc), can_leads: Boolean(session.can_leads) }), {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Set-Cookie": await teamCookie(env, session) },
     });
   }
