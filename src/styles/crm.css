@@ -439,3 +439,32 @@ tr.on td { background: var(--wash); }
 .title-req h2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 15px; }
 .title-req .brief { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--mute); margin: 0 0 12px; }
 .title-req .answer { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+
+/* ---- leads: one colour per status ---- */
+.lead-state { font-weight: 700; border-width: 1px; }
+.ls-contattato { background: #e6effb; color: #1f5fa8; border-color: #c5d8f2; }
+.ls-interessato { background: #fbefdc; color: var(--amber); border-color: #f1d9b0; }
+.ls-trattativa { background: #efe6fb; color: #6a3fb0; border-color: #d9c8f2; }
+.ls-cliente { background: #e3f3ea; color: var(--green); border-color: #bfe3cd; }
+.ls-perso { background: var(--wash); color: var(--mute); }
+small.by { color: var(--ink, inherit); margin-top: 2px; }
+
+/* ---- phones: every CRM table becomes a stack of cards, one per row ---- */
+@media (max-width: 719px) {
+  .scroll:has(table.stack) { overflow: visible; margin: 0; padding: 0; }
+  table.stack, table.stack tbody, table.stack tfoot, table.stack tr, table.stack td { display: block; width: 100%; }
+  table.stack thead { display: none; }
+  table.stack tr { border: 1px solid var(--hair); border-radius: 14px; padding: 6px 14px; margin-bottom: 10px; background: var(--paper); }
+  table.stack tfoot tr { border-color: var(--ink); }
+  table.stack td, tfoot table.stack td { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 7px 0; border: 0; border-top: 1px solid var(--hair); text-align: right; white-space: normal; }
+  table.stack td > .cell { min-width: 0; overflow-wrap: anywhere; }
+  table.stack td::before { content: attr(data-label); flex-shrink: 0; max-width: 45%; text-align: left; font-size: 12px; font-weight: 600; color: var(--mute); }
+  /* The first cell is the card's title, the actions its footer. */
+  table.stack td:first-child { display: block; border-top: 0; text-align: left; font-size: 16px; }
+  table.stack td:first-child::before, table.stack td[data-label=""]::before { display: none; }
+  table.stack td[data-label=""] { justify-content: flex-end; }
+  table.stack td:empty { display: none; }
+  table.stack td:first-child .cell small.block { margin-top: 2px; }
+  table.stack .row-actions { text-align: right; }
+  table.stack td > .cell:has(select) { flex-shrink: 0; }
+}

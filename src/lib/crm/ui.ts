@@ -101,6 +101,24 @@ export const table = (heads: string[], rows: string[], empty: string, foot = "")
   rows.length
     ? `<div class="scroll"><table><thead><tr>${heads.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>${foot}</table></div>`
     : `<p class="empty">${esc(empty)}</p>`;
+// On phones a table reads as one card per row: each cell carries its column
+// name (CSS shows it as a label, see .stack in crm.css).
+export function stackTables(root: HTMLElement) {
+  root.querySelectorAll<HTMLTableElement>(".scroll table").forEach((t) => {
+    const heads = [...t.querySelectorAll("thead th")].map((th) => th.textContent?.trim() ?? "");
+    t.querySelectorAll("tbody tr, tfoot tr").forEach((tr) =>
+      [...tr.children].forEach((td, i) => {
+        td.setAttribute("data-label", heads[i] ?? "");
+        // One box per cell, so lines and links inside stay together beside the label.
+        if (td.classList.contains("row-actions") || !td.childNodes.length) return;
+        const box = document.createElement("div");
+        box.className = "cell";
+        box.append(...td.childNodes);
+        td.append(box);
+      }));
+    t.classList.add("stack");
+  });
+}
 export const quota = (done: number, promised: number) => {
   if (!promised) return `<small>${done} video</small>`;
   const ratio = Math.min(1, done / promised);

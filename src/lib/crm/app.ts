@@ -3,7 +3,7 @@
 
 import {
   type Field, type Row, apiFor, say, form, esc, eur, num, short, day, month, shortMonth, ago, today, thisMonth,
-  addMonths, addDays, head, kpi, table, quota, bars, badge, platform, interactions, PLATFORM,
+  addMonths, addDays, head, kpi, table, stackTables, quota, bars, badge, platform, interactions, PLATFORM,
 } from "./ui";
 import { withFacebook } from "../../../server/crossposts.js";
 import { ugcSection, mountUgc, ugcInput } from "./ugc";
@@ -163,7 +163,7 @@ const fresh = (table: string, clientId?: number): Row => {
   if (table === "clients") return { status: "attivo", billing_day: 1, billing_every: 6, videos_per_month: 6, start_date: today() };
   if (table === "documents") return { client_id: clientId ?? clients[0]?.id, kind: "contratto", doc_date: today() };
   if (table === "videos") return { client_ids: clientId ? [clientId] : [], platform: "instagram", published_on: today() };
-  if (table === "leads") return { status: "contattato", contacted_on: today(), contacted_by: myName };
+  if (table === "leads") return { status: "contattato", contacted_on: today(), contacted_by: myName || OWNER_NAME };
   if (table === "promos") return { date: selected.startsWith(thisMonth()) || selected > thisMonth() ? today() : `${selected}-01` };
   return { client_id: clientId ?? clients[0]?.id, kind: "extra", period: thisMonth(), due_date: today() };
 };
@@ -190,6 +190,8 @@ const leadFields = (): Field[] => [
   { name: "instagram", label: "Instagram del locale" },
   { name: "notes", label: "Note", type: "textarea", hint: "Cosa vi siete detti, prezzo proposto, obiezioni" },
 ];
+// Who "Contattato da" names when the owner adds a lead.
+const OWNER_NAME = "Youness";
 // The Leads page's filter: a status, "aperti" (still in play) or "" for all.
 let leadState = "aperti";
 const openLead = (l: Row) => l.status !== "cliente" && l.status !== "perso";
@@ -208,8 +210,9 @@ async function leadsView() {
   ].filter(Boolean).join("<br>");
   const list = rows.filter(leadIn).map((l) => `<tr>
     <td><strong>${esc(l.name)}</strong>${l.category || l.zone ? `<small class="block mute">${esc([CATEGORY[l.category], l.zone].filter(Boolean).join(" · "))}</small>` : ""}</td>
-    <td><select data-lead-status="${l.id}" aria-label="Stato di ${esc(l.name)}">${Object.entries(LEAD).map(([k, t]) => `<option value="${k}"${k === l.status ? " selected" : ""}>${t}</option>`).join("")}</select></td>
-    <td>${l.contacted_on ? day(l.contacted_on) : "—"}<small class="block mute">${esc([CHANNEL[l.channel], l.contacted_by].filter(Boolean).join(" · "))}</small></td>
+    <td><select class="lead-state ls-${esc(l.status)}" data-lead-status="${l.id}" aria-label="Stato di ${esc(l.name)}">${Object.entries(LEAD).map(([k, t]) => `<option value="${k}"${k === l.status ? " selected" : ""}>${t}</option>`).join("")}</select></td>
+    <td>${l.contacted_on ? day(l.contacted_on) : "—"}${l.channel ? `<small class="block mute">via ${esc(CHANNEL[l.channel] ?? l.channel)}</small>` : ""}
+      ${l.contacted_by ? `<small class="block by">Contattato da <strong>${esc(l.contacted_by)}</strong></small>` : ""}</td>
     <td>${l.next_on ? `<span class="${openLead(l) && l.next_on <= today() ? "neg" : ""}">${day(l.next_on)}</span>` : "—"}</td>
     <td>${reach(l) || "—"}</td>
     <td>${l.notes ? `<small>${esc(l.notes)}</small>` : ""}</td>
@@ -851,6 +854,7 @@ async function render() {
     else if (route === "report") await reportsView();
     else if (route === "team") await teamView();
     else await dashboard();
+    stackTables(view);
   } catch (error) {
     view.innerHTML = `<p class="empty">Impossibile caricare: ${esc((error as Error).message)}</p>`;
   }
