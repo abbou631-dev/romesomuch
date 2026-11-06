@@ -4,7 +4,7 @@
 CREATE TABLE leads (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,           -- the venue
-  category TEXT,                -- a client category key (trattoria, ristorante, ...)
+  category TEXT,                -- ristorante, tour_operator, street_food, cafe, altro (LEAD_CATEGORY in app.ts)
   zone TEXT,                    -- the area of Rome
   contact TEXT,                 -- the person spoken to
   phone TEXT,

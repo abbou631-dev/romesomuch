@@ -174,11 +174,13 @@ const fresh = (table: string, clientId?: number): Row => {
 const LEAD = {
   contattato: "Contattato", interessato: "Interessato", trattativa: "In trattativa", cliente: "Diventato cliente", perso: "Non interessato",
 } as Record<string, string>;
+// A lead's kind of business: its own list, wider than the clients' categories.
+const LEAD_CATEGORY = { ristorante: "Ristorante", tour_operator: "Tour operator", street_food: "Street food", cafe: "Cafe bar", altro: "Altro" } as Record<string, string>;
 const CHANNEL = { instagram: "Instagram", whatsapp: "WhatsApp", telefono: "Telefono", email: "Email", di_persona: "Di persona" } as Record<string, string>;
 const leadFields = (): Field[] => [
   { name: "name", label: "Locale", required: true },
   { name: "status", label: "Stato", type: "select", options: Object.entries(LEAD) },
-  { name: "category", label: "Categoria", type: "select", options: [["", "—"], ...Object.entries(CATEGORY)] },
+  { name: "category", label: "Categoria", type: "select", options: [["", "—"], ...Object.entries(LEAD_CATEGORY)] },
   { name: "zone", label: "Zona", hint: "Es. Trastevere, Prati" },
   { name: "contacted_on", label: "Contattato il", type: "date" },
   { name: "channel", label: "Come", type: "select", options: [["", "—"], ...Object.entries(CHANNEL)] },
@@ -209,7 +211,7 @@ async function leadsView() {
     l.instagram ? `<a href="https://instagram.com/${esc(String(l.instagram).replace(/^@|.*instagram\.com\//g, "").replace(/\/.*$/, ""))}" target="_blank" rel="noopener noreferrer">@${esc(String(l.instagram).replace(/^@|.*instagram\.com\//g, "").replace(/\/.*$/, ""))}</a>` : "",
   ].filter(Boolean).join("<br>");
   const list = rows.filter(leadIn).map((l) => `<tr>
-    <td><strong>${esc(l.name)}</strong>${l.category || l.zone ? `<small class="block mute">${esc([CATEGORY[l.category], l.zone].filter(Boolean).join(" · "))}</small>` : ""}</td>
+    <td><strong>${esc(l.name)}</strong>${l.category || l.zone ? `<small class="block mute">${esc([LEAD_CATEGORY[l.category], l.zone].filter(Boolean).join(" · "))}</small>` : ""}</td>
     <td><select class="lead-state ls-${esc(l.status)}" data-lead-status="${l.id}" aria-label="Stato di ${esc(l.name)}">${Object.entries(LEAD).map(([k, t]) => `<option value="${k}"${k === l.status ? " selected" : ""}>${t}</option>`).join("")}</select></td>
     <td>${l.contacted_on ? day(l.contacted_on) : "—"}${l.channel ? `<small class="block mute">via ${esc(CHANNEL[l.channel] ?? l.channel)}</small>` : ""}
       ${l.contacted_by ? `<small class="block by">Contattato da <strong>${esc(l.contacted_by)}</strong></small>` : ""}</td>
