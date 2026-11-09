@@ -448,6 +448,9 @@ tr.on td { background: var(--wash); }
 .ls-cliente { background: #e3f3ea; color: var(--green); border-color: #bfe3cd; }
 .ls-perso { background: var(--wash); color: var(--mute); }
 small.by { color: var(--ink, inherit); margin-top: 2px; }
+/* each lead on one line like Clienti: cells don't wrap, the table scrolls sideways; notes get a fixed column */
+.leads table.rows td { white-space: nowrap; }
+.leads table.rows td:nth-child(6) { white-space: normal; min-width: 240px; }
 
 /* ---- phones: every CRM table becomes a stack of cards, one per row ---- */
 @media (max-width: 719px) {

@@ -223,7 +223,7 @@ async function leadsView() {
     <section class="kpis">${kpi("Aperti", String(count("aperti")), "contattati, interessati o in trattativa")}
       ${kpi("Da ricontattare", String(late.length), "data di richiamo oggi o passata", late.length ? "warn" : "")}
       ${kpi("Diventati clienti", String(count("cliente")), `su ${rows.length} contattati`)}</section>
-    <section class="panel">${tabs}
+    <section class="panel leads">${tabs}
       ${table(["Locale", "Stato", "Contattato", "Ricontattare", "Contatti", "Note", ""], list, rows.length ? "Nessun lead in questo stato." : "Nessun lead ancora: aggiungi il primo locale contattato.", "", true)}
     </section>`;
 }
