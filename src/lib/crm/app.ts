@@ -466,7 +466,7 @@ async function teamClientsView() {
   const rows = clients.filter(inCategory).map((c) => `<tr><td>${clientCell(c)}<div class="cats-row">${categoryTags(c)}</div></td>
     <td>${badge(c.status, STATUS[c.status])}</td><td>${quota(c.videos_month, c.videos_per_month)}</td><td>${day(c.end_date)}</td><td>${esc(c.contact ?? "")}</td></tr>`);
   view.innerHTML = `${head("Clienti")}${categoryFilter(clients)}
-    <section class="panel">${table(["Cliente", "Stato", `Video di ${month(thisMonth())}`, "Fine contratto", "Referente"], rows, "Nessun cliente.")}</section>`;
+    <section class="panel">${table(["Cliente", "Stato", `Video di ${month(thisMonth())}`, "Fine contratto", "Referente"], rows, "Nessun cliente.", "", true)}</section>`;
 }
 
 async function clientsView() {
@@ -476,7 +476,7 @@ async function clientsView() {
     <td>${badge(c.status, STATUS[c.status])}</td><td class="num">${eur(c.fee)}<small class="block mute">${esc((EVERY[c.billing_every] ?? "").toLowerCase())}</small></td><td>${quota(c.videos, c.videos_per_month)}</td><td>${day(c.end_date)}</td>
     <td class="num ${c.outstanding ? "warn" : ""}">${eur(c.outstanding)}</td><td>${c.people ? badge("yes", String(c.people)) : badge("no", "—")}${c.pending ? ` ${badge("da_pagare", `${c.pending} in attesa`)}` : ""}</td></tr>`);
   view.innerHTML = `${head("Clienti", add("clients", "+ Nuovo cliente"))}${categoryFilter(s.clients)}
-    <section class="panel">${table(["Cliente", "Stato", "Canone", `Video di ${month(thisMonth())}`, "Fine contratto", "Da incassare", "Area clienti"], rows, "Nessun cliente. Aggiungi il primo.")}</section>`;
+    <section class="panel">${table(["Cliente", "Stato", "Canone", `Video di ${month(thisMonth())}`, "Fine contratto", "Da incassare", "Area clienti"], rows, "Nessun cliente. Aggiungi il primo.", "", true)}</section>`;
 }
 
 // A client's videos, all of them or one month's (months with videos only).
@@ -491,7 +491,7 @@ function clientVideos(id: number, videos: Row[]) {
   return `<section class="panel"><div class="panel-head"><h2>Video ${picked ? `<small class="mute">${esc(month(picked))} · ${short(total)} views</small>` : ""}</h2>
       <div class="actions"><label class="inline">Mese <select data-client-month="${id}"><option value="">Tutti</option>${months.map((m) => `<option value="${m}"${m === picked ? " selected" : ""}>${esc(month(m))}</option>`).join("")}</select></label>
         <button class="btn" data-refresh-client="${id}">Aggiorna metriche</button>${add("videos", "+ Video", id)}</div></div>
-      ${table(videoHeads(false), videoRows(withFacebook(inMonth), false), picked ? `Nessun video in ${month(picked)}.` : "Nessun video ancora.")}
+      ${table(videoHeads(false), videoRows(withFacebook(inMonth), false), picked ? `Nessun video in ${month(picked)}.` : "Nessun video ancora.", "", true)}
       </section>`;
 }
 
@@ -587,7 +587,7 @@ async function videosView() {
   view.innerHTML = `${head("Video", `<button class="btn" data-refresh-all>Aggiorna metriche</button>${add("videos", "+ Video")}`)}
     <div class="filters">${monthPicker(selected)}
       <label>Cliente <select data-video-client><option value="">Tutti</option>${clientOptions().map(([k, l]) => `<option value="${k}"${k === videoClient ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label></div>
-    <section class="panel">${table(videoHeads(), videoRows(rows), `Nessun video in ${month(selected)}.`)}</section>`;
+    <section class="panel">${table(videoHeads(), videoRows(rows), `Nessun video in ${month(selected)}.`, "", true)}</section>`;
 }
 
 let payState = "tutti";

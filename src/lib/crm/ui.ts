@@ -97,14 +97,16 @@ export const head = (title: string, actions = "", sub = "") =>
   `<div class="head"><div><h1>${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div><div class="actions">${actions}</div></div>`;
 export const kpi = (label: string, value: string, note = "", tone = "") =>
   `<div class="kpi ${tone}"><span>${esc(label)}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ""}</div>`;
-export const table = (heads: string[], rows: string[], empty: string, foot = "") =>
+// `keepRows`: the table stays a table on phones too (one line per row, scrolls
+// sideways) instead of becoming cards; the user wants Clienti and Video so.
+export const table = (heads: string[], rows: string[], empty: string, foot = "", keepRows = false) =>
   rows.length
-    ? `<div class="scroll"><table><thead><tr>${heads.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>${foot}</table></div>`
+    ? `<div class="scroll"><table${keepRows ? ' class="rows"' : ""}><thead><tr>${heads.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>${foot}</table></div>`
     : `<p class="empty">${esc(empty)}</p>`;
 // On phones a table reads as one card per row: each cell carries its column
 // name (CSS shows it as a label, see .stack in crm.css).
 export function stackTables(root: HTMLElement) {
-  root.querySelectorAll<HTMLTableElement>(".scroll table").forEach((t) => {
+  root.querySelectorAll<HTMLTableElement>(".scroll table:not(.rows)").forEach((t) => {
     const heads = [...t.querySelectorAll("thead th")].map((th) => th.textContent?.trim() ?? "");
     t.querySelectorAll("tbody tr, tfoot tr").forEach((tr) =>
       [...tr.children].forEach((td, i) => {
