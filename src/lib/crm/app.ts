@@ -224,7 +224,7 @@ async function leadsView() {
       ${kpi("Da ricontattare", String(late.length), "data di richiamo oggi o passata", late.length ? "warn" : "")}
       ${kpi("Diventati clienti", String(count("cliente")), `su ${rows.length} contattati`)}</section>
     <section class="panel">${tabs}
-      ${table(["Locale", "Stato", "Contattato", "Ricontattare", "Contatti", "Note", ""], list, rows.length ? "Nessun lead in questo stato." : "Nessun lead ancora: aggiungi il primo locale contattato.")}
+      ${table(["Locale", "Stato", "Contattato", "Ricontattare", "Contatti", "Note", ""], list, rows.length ? "Nessun lead in questo stato." : "Nessun lead ancora: aggiungi il primo locale contattato.", "", true)}
     </section>`;
 }
 
