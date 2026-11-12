@@ -1,13 +1,15 @@
 ---
 import { bandsFor } from "../lib/site";
 
-interface Props { slug: string; prices: number[]; durations: number[] }
+// A golf cart tour has no price until its live price arrives, so it is left out
+// of the bands; once FromPrice fills the card's data-price it filters like the rest.
+interface Props { slug: string; prices: (number | null)[]; durations: number[] }
 const { slug, prices, durations } = Astro.props;
 
 // A group is only worth showing when it can actually split the page in two.
 const groups = (
   [
-    ["price", "Price", bandsFor(prices, "price")],
+    ["price", "Price", bandsFor(prices.filter((p): p is number => p !== null), "price")],
     ["length", "Length", bandsFor(durations, "length")],
   ] as const
 ).filter(([, , bands]) => bands.length > 1);
@@ -52,7 +54,10 @@ const groups = (
 
     const keep = (card: HTMLElement) =>
       (Object.keys(state) as Group[]).every((g) => {
-        const v = Number(card.dataset[field[g]]);
+        const raw = card.dataset[field[g]];
+        // No value yet (a live price still loading) only passes the "Any" chip.
+        if (!raw) return state[g][0] === 0 && state[g][1] === Infinity;
+        const v = Number(raw);
         return v >= state[g][0] && v <= state[g][1];
       });
 
@@ -64,7 +69,12 @@ const groups = (
         if (ok) visible.push(card);
       }
       visible.sort((a, b) => {
-        const pa = Number(a.dataset.price), pb = Number(b.dataset.price);
+        const px = (c: HTMLElement) => (c.dataset.price ? Number(c.dataset.price) : NaN);
+        const pa = px(a), pb = px(b);
+        // Cards without a price yet go last in either direction.
+        if (Number.isNaN(pa) || Number.isNaN(pb)) {
+          if (sort.by.startsWith("px")) return Number.isNaN(pa) ? (Number.isNaN(pb) ? 0 : 1) : -1;
+        }
         if (sort.by === "px-asc") return pa - pb;
         if (sort.by === "px-desc") return pb - pa;
         if (sort.by === "dur") return Number(a.dataset.duration) - Number(b.dataset.duration);
@@ -92,6 +102,7 @@ const groups = (
       sortVal.textContent = sortSel.options[sortSel.selectedIndex].text;
       apply();
     });
+    document.addEventListener("golfcart:prices", apply);
     apply();
   }
 </script>

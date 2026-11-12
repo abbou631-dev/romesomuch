@@ -69,6 +69,8 @@ collections:
         widget: number
         value_type: int
         min: 1
+        required: false
+        hint: Required on every experience except the golf cart tours, whose price is live.
 
       - name: unit
         label: Price unit
@@ -179,6 +181,16 @@ collections:
         widget: text
         required: false
         hint: Paste the whole snippet Bokun gives you (Widgets → Copy code). It wins over the product ID above.
+
+      - name: golfCart
+        label: Golf cart tour (partner booking box)
+        widget: select
+        required: false
+        options:
+          - { label: Private Golf Cart Tour, value: vip }
+          - { label: Rome by Night, value: night }
+          - { label: Rome in One Day, value: oneday }
+        hint: Set only on the golf cart tours. The page then shows the partner's booking box and a live price instead of Bokun; leave the price empty.
 
       - name: body
         label: What you do

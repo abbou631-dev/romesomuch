@@ -79,8 +79,7 @@ const related = all.filter((e) => e.data.category === d.category && e.id !== exp
       content_ids: [id],
       content_name: name,
       content_category: category,
-      value: price,
-      currency: "EUR",
+      ...(price === null ? {} : { value: price, currency: "EUR" }),
     });
   </script>
 

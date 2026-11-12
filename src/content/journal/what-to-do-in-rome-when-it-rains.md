@@ -35,7 +35,6 @@ The Borghese collection is still in the villa built for it, inside the park: Ber
 
 Booking is mandatory for every ticket, free ones included, with a booking fee of 2 euros. Visitors go in only at the start of each hour, and each visit lasts two hours. The gallery is open Tuesday to Sunday from 9.00 to 19.00, with last entry at 17.45, and is closed on Mondays, 25 December and 1 January.
 
-If you would rather have the tickets reserved for you and a guide to the Berninis and the Caravaggios, we run a [Borghese tour for six people at a time](/experience/borghese-gallery-tour).
 
 **Piazzale Scipione Borghese 5, 00197 Rome** · [Website](https://galleriaborghese.cultura.gov.it/)
 

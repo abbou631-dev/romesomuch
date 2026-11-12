@@ -1,0 +1,43 @@
+---
+/**
+ * Live "From €X / person" for the golf cart tours. Their price changes with the
+ * partner's list, so it is read at runtime from the partner catalogue and never
+ * written into the content.
+ *
+ * Renders the same spans as a card's price line (f / v / u), so it takes the
+ * styling of wherever it sits. Once the catalogue answers, the nearest
+ * [data-price] ancestor (a card) gets the number too, which keeps the price
+ * filters and the price sort working on listing pages.
+ *
+ * Usage:  <FromPrice tour="vip" />
+ */
+interface Props { tour: "vip" | "night" | "oneday"; fallback?: string }
+const { tour, fallback = "Check availability" } = Astro.props;
+---
+<span class="golfcart-from" data-golfcart-from={tour}><span class="f">{fallback}</span></span>
+
+<script is:inline>
+  (function () {
+    if (window.__golfcartFrom) return; window.__golfcartFrom = 1;
+    function run() {
+      var els = document.querySelectorAll("[data-golfcart-from]");
+      if (!els.length) return;
+      fetch("https://romebycart.com/api/shop/romesomuch/catalog", { cache: "no-store" })
+        .then(function (r) { return r.json(); })
+        .then(function (c) {
+          var by = {}; (c.tours || []).forEach(function (t) { by[t.id] = t; });
+          els.forEach(function (el) {
+            var t = by[el.getAttribute("data-golfcart-from")];
+            if (!t || !t.fromPerPerson) return;
+            var n = Number(t.fromPerPerson);
+            el.innerHTML = '<span class="f">From</span> <span class="v tnum">€' + n + '</span> <span class="u">/ person</span>';
+            var card = el.closest("[data-price]");
+            if (card) card.setAttribute("data-price", String(n));
+          });
+          document.dispatchEvent(new CustomEvent("golfcart:prices"));
+        })
+        .catch(function () { /* the fallback text stays */ });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
+  })();
+</script>

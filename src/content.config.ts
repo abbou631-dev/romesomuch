@@ -15,7 +15,8 @@ const experiences = defineCollection({
     title: z.string(),
     category: z.enum(["tours", "food", "activities", "day-trips"]),
     blurb: z.string(),
-    price: z.number().positive(),
+    // Null only on a partner tour (live price) or a request-only tour (price on request).
+    price: z.number().positive().nullable().default(null),
     unit: z.enum(["person", "group"]),
     duration: z.number().positive(),
     durationLabel: z.string(),
@@ -33,6 +34,15 @@ const experiences = defineCollection({
     cancellationPolicy: z.string().nullable().default(null),
     bokunProductId: z.string().nullable().default(null),
     bokunEmbed: z.string().nullable().default(null),
+    // Golf cart tours sold through the partner's booking box instead of Bokun:
+    // the id of the tour in the partner's catalogue.
+    golfCart: z.enum(["vip", "night", "oneday"]).nullable().default(null),
+    // Tours we arrange ourselves: no online payment, the page takes a request
+    // (date, guests, WhatsApp) and the price is given when we answer.
+    requestOnly: z.boolean().default(false),
+  }).refine((d) => d.golfCart !== null || d.requestOnly || d.price !== null, {
+    message: "price is required unless golfCart or requestOnly is set",
+    path: ["price"],
   }),
 });
 

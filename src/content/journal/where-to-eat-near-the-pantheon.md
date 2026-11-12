@@ -66,7 +66,7 @@ The website gives the address but no current opening hours, so check before you 
 
 **Via dei Coronari 65/66, 00186 Rome** · [Website](https://www.gelateriadelteatro.it/)
 
-If you would like to see the Pantheon from the inside as part of a longer walk, from the Spanish Steps and the Trevi Fountain to Piazza Navona, with a guide just for your group, we run a [two-hour private walk](/experience/heart-of-rome-walk) with the Pantheon entrance included. For more tables across the city, see our [best restaurants in Rome](/journal/best-restaurants-rome), and if you are heading on to the fountain, our list of [where to eat near the Trevi Fountain](/journal/where-to-eat-near-trevi-fountain).
+If you would like to see the Pantheon as part of a longer route without the walking, our [private golf cart tour](/experience/private-golf-cart-tour/) picks you up at your hotel and passes the Pantheon, the Trevi Fountain, the Spanish Steps and Piazza Navona. For more tables across the city, see our [best restaurants in Rome](/journal/best-restaurants-rome), and if you are heading on to the fountain, our list of [where to eat near the Trevi Fountain](/journal/where-to-eat-near-trevi-fountain).
 
 ## Good to know
 

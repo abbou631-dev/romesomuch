@@ -55,7 +55,6 @@ The gallery stands inside the park. The nearest gate is on Via Pinciana, which a
 
 You do not need a guide to visit. What a guide adds is the story of the collection, of Scipione Borghese and the works he gathered, and someone to choose what to see in your two hours. The gallery limits groups to between 7 and 15 people, plus the guide and children up to 15.
 
-If you would rather have a guide take care of the tickets and walk you through the Berninis and the Caravaggios, we run a [guided visit of the Borghese Gallery](/experience/borghese-gallery-tour).
 
 ## Good to know
 

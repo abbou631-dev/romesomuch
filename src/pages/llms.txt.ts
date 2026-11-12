@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
     "## Experiences",
     "",
     ...experiences.map(
-      (e) => `- [${e.data.title}](${SITE}/experience/${e.id}/): ${e.data.blurb.replace(/[.!?]?$/, ".")} From ${money(e.data.price)} per ${e.data.unit}, ${e.data.durationLabel}.`,
+      (e) => `- [${e.data.title}](${SITE}/experience/${e.id}/): ${e.data.blurb.replace(/[.!?]?$/, ".")}${e.data.price === null ? "" : ` From ${money(e.data.price)} per ${e.data.unit},`} ${e.data.durationLabel}.`,
     ),
     "",
     "## About",

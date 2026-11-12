@@ -13,6 +13,15 @@ const FORMS = {
     // which anyone can skip, so it is enforced here too.
     weekendOnly: "date",
   },
+  // Private tours we arrange ourselves: a request, answered on WhatsApp.
+  tour: {
+    subject: "Private tour request",
+    required: ["experience", "name", "date", "guests"],
+    fields: ["experience", "date", "time", "guests", "name", "whatsapp", "email", "message"],
+    // WhatsApp is preferred; an email alone is accepted too.
+    oneOf: ["whatsapp", "email"],
+    future: "date",
+  },
   contact: {
     subject: "Message from the site",
     required: ["name", "email", "topic", "message"],
@@ -63,6 +72,7 @@ const CONTEXT = ["page", "lastViewed"];
 const LABELS = {
   experience: "Experience",
   date: "Preferred date",
+  time: "Time of day",
   guests: "Guests",
   company: "Company",
   name: "Name",
@@ -164,13 +174,22 @@ export const onRequestPost = async ({ request, env }) => {
   if (missing.length) {
     return reply(request, 400, `Please fill in: ${missing.map((f) => LABELS[f]).join(", ")}.`);
   }
-  if (!looksLikeEmail(values.email)) {
+  if (form.oneOf && !form.oneOf.some((field) => values[field])) {
+    return reply(request, 400, "Please leave a WhatsApp number or an email so we can reply.");
+  }
+  if (values.email && !looksLikeEmail(values.email)) {
     return reply(request, 400, "That email address does not look right.");
   }
 
   // A phone number with its country code: digits, give or take spaces and signs.
   if (values.whatsapp && !/^\+?[\d\s().-]{7,20}$/.test(values.whatsapp)) {
     return reply(request, 400, "That WhatsApp number does not look right. Please include the country code.");
+  }
+
+  if (form.future) {
+    const when = Date.parse(`${values[form.future]}T00:00:00Z`);
+    if (Number.isNaN(when)) return reply(request, 400, "That date does not look right.");
+    if (when < Date.now() - 86400000) return reply(request, 400, "That date is in the past. Please pick another.");
   }
 
   const dated = form.weekendOnly && values[form.weekendOnly];
@@ -201,6 +220,10 @@ export const onRequestPost = async ({ request, env }) => {
   const lines = [...form.fields, ...CONTEXT]
     .filter((field) => values[field])
     .map((field) => `${LABELS[field]}: ${values[field]}`);
+  // A tap-to-chat link: digits only, without a leading 00.
+  if (values.whatsapp) {
+    lines.push(`Open the chat: https://wa.me/${values.whatsapp.replace(/\D/g, "").replace(/^00/, "")}`);
+  }
 
   // What this message is about, in order of how specific it is.
   const about =
@@ -226,9 +249,9 @@ export const onRequestPost = async ({ request, env }) => {
       body: JSON.stringify({
         from: env.ENQUIRY_FROM ?? "RomeSoMuch site <forms@romesomuch.com>",
         to: [env.ENQUIRY_TO ?? "romesomuch@gmail.com"],
-        reply_to: values.email,
+        ...(values.email ? { reply_to: values.email } : {}),
         subject: `${form.subject}: ${about}`,
-        text: `${lines.join("\n\n")}\n\nReply to this email and it goes straight back to ${values.name || "the sender"}.`,
+        text: `${lines.join("\n\n")}${values.email ? `\n\nReply to this email and it goes straight back to ${values.name || "the sender"}.` : ""}`,
       }),
     });
     if (!sent.ok) console.log("resend rejected the enquiry", sent.status, await sent.text());

@@ -1,6 +1,9 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import Bokun from "./Bokun.astro";
+import GolfCartBooking from "./GolfCartBooking.astro";
+import FromPrice from "./FromPrice.astro";
+import RequestBooking from "./RequestBooking.astro";
 import { cancellationDefault, hasLiveCalendar, money } from "../lib/site";
 
 interface Props { exp: CollectionEntry<"experiences"> }
@@ -8,27 +11,50 @@ const { exp } = Astro.props;
 const d = exp.data;
 // The bar has to make the same promise the panel does, or it sends people down
 // the page expecting a calendar that is not there.
-const live = hasLiveCalendar(d);
+const golf = d.golfCart;
+const request = !golf && d.requestOnly;
+const live = golf !== null || (!request && hasLiveCalendar(d));
 ---
 <aside>
+  {golf ? (
+    // The partner's box runs price, calendar, payment and the confirmation email.
+    // It is taller than the screen, so this panel does not stick (.book.tall).
+    <div class="book tall" id="bokunBox">
+      <span class="badge-live">Live availability</span>
+      <h3 style="margin-top:10px">Book instantly</h3>
+      <p class="fine" style="margin-top:4px"><FromPrice tour={golf} /> · {d.durationLabel} · confirmed straight away</p>
+      <GolfCartBooking tour={golf} />
+      <p class="fine">{d.cancellationPolicy ?? cancellationDefault}</p>
+    </div>
+  ) : request ? (
+    // Arranged by us: the box takes a request and we answer on WhatsApp.
+    <div class="book tall" id="bokunBox">
+      <span class="badge">On request</span>
+      <h3 style="margin-top:10px">Request a date</h3>
+      <p class="fine" style="margin-top:4px">Price on request · {d.durationLabel} · we reply on WhatsApp</p>
+      <RequestBooking experience={d.title} maxGuests={d.maxGuests} />
+      <p class="fine">{d.cancellationPolicy ?? cancellationDefault}</p>
+    </div>
+  ) : (
   <Bokun
     productId={d.bokunProductId}
     embed={d.bokunEmbed}
-    price={d.price}
+    price={d.price!}
     unit={d.unit}
     durationLabel={d.durationLabel}
     policy={d.cancellationPolicy ?? cancellationDefault}
     title={d.title}
   />
+  )}
 </aside>
 
 <div class="mbar" id="mbar">
   <div class="p">
     <span>{live ? "From · live availability" : "From · on request"}</span>
-    <b class="tnum">{money(d.price)}<em>/ {d.unit}</em></b>
-    <small>{d.durationLabel} · {live ? "confirmed straight away" : "answer within 48 hours"}</small>
+    {golf ? <b class="tnum"><FromPrice tour={golf} fallback="Live prices" /></b> : request ? <b>On request</b> : <b class="tnum">{money(d.price!)}<em>/ {d.unit}</em></b>}
+    <small>{d.durationLabel} · {live ? "confirmed straight away" : request ? "we reply on WhatsApp" : "answer within 48 hours"}</small>
   </div>
-  <button class="btn" type="button" id="mbarCta">{live ? "See calendar" : "Ask for a date"}</button>
+  <button class="btn" type="button" id="mbarCta">{live ? "See calendar" : request ? "Request a date" : "Ask for a date"}</button>
 </div>
 
 <script>

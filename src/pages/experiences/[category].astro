@@ -4,10 +4,13 @@ import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import Card from "../../components/Card.astro";
 import FilterBar from "../../components/FilterBar.astro";
-import { categories } from "../../lib/site";
+import { liveCategories } from "../../lib/site";
 
-export const getStaticPaths = (async () =>
-  categories.map((c) => ({ params: { category: c.slug }, props: { category: c } }))) satisfies GetStaticPaths;
+// A category with nothing in it gets no page; the header hides it too.
+export const getStaticPaths = (async () => {
+  const filled = (await getCollection("experiences")).map((e) => e.data.category);
+  return liveCategories(filled).map((c) => ({ params: { category: c.slug }, props: { category: c } }));
+}) satisfies GetStaticPaths;
 
 const { category } = Astro.props;
 const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);

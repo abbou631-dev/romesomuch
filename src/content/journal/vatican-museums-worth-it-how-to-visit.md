@@ -52,7 +52,6 @@ You do not need a guide: the museums publish an official map to download before 
 
 A guide adds the explanation, given before the chapel where talking is allowed, and someone to choose the route for you. Amplified microphones are not allowed, so groups of 11 or more have to hire radio headsets inside. On the free last Sunday, guided tours are possible on reservation.
 
-If you would rather go with a guide who sorts out the tickets and explains the Sistine Chapel before you go in, we run a [guided visit of the Vatican Museums and the Sistine Chapel](/experience/vatican-museums-basilica).
 
 ## Good to know
 

@@ -471,3 +471,6 @@ small.by { color: var(--ink, inherit); margin-top: 2px; }
   table.stack .row-actions { text-align: right; }
   table.stack td > .cell:has(select) { flex-shrink: 0; }
 }
+
+/* GOLFTOUR: the partner's back office, full height under the page head */
+.golftour iframe { display: block; width: 100%; height: calc(100vh - 190px); min-height: 560px; border: 1px solid var(--hair); border-radius: 8px; background: #fff; }

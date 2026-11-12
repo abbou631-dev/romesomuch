@@ -63,7 +63,7 @@ You do not need a guide. The park's free MyColosseum app has audio guides in Ita
 
 A guide tells you the history as you walk and chooses what to see in your 75 or 90 minutes. Groups are capped at 25 people, guide included.
 
-If you would rather have a guide sort out the tickets and take you through the Colosseum, we run a [guided visit of the Colosseum](/experience/colosseum-express).
+If you would rather have a guide just for your group take you through the Colosseum, tell us your date and we arrange a [private Colosseum tour](/experience/private-colosseum-tour/).
 
 ## Good to know
 

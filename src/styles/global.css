@@ -587,3 +587,11 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
  .sec{margin-left:4px;padding-left:6px}
  .sec a:not(.cta){padding:8px 3px}
 }
+
+/* golf cart tours: the partner's booking box is taller than the screen, so the
+   panel scrolls with the page instead of sticking (its bottom would be unreachable) */
+.book.tall{position:static}
+.book .golfcart-booking{margin-top:16px}
+.mbar .p b .golfcart-from{display:flex;align-items:baseline;gap:5px}
+.mbar .p b .golfcart-from .f,.mbar .p b .golfcart-from .u{font-family:var(--body);font-size:13px;font-weight:600;color:var(--sage)}
+.book .fine .golfcart-from .v{font-weight:700;color:var(--ink)}

@@ -75,7 +75,7 @@ Open Monday to Saturday from noon to midnight; the house says closing time can v
 
 **Via di San Marcello 19, 00187 Rome** · [Website](https://www.anticabirreriaperoni.it/)
 
-If you would like to see the fountain as part of a longer walk, from the Spanish Steps to the Pantheon and Piazza Navona, with a guide just for your group, we run a [two-hour private walk](/experience/heart-of-rome-walk) that comes this way. For more tables across the city, see our [best restaurants in Rome](/journal/best-restaurants-rome).
+If you would like to see the fountain as part of a longer route without the walking, our [private golf cart tour](/experience/private-golf-cart-tour/) picks you up at your hotel and passes the Trevi Fountain, the Pantheon, the Spanish Steps and Piazza Navona. For more tables across the city, see our [best restaurants in Rome](/journal/best-restaurants-rome).
 
 ## Good to know
 

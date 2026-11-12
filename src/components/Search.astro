@@ -18,7 +18,9 @@ const index = items.map((e) => ({
   category: categoryName(e.data.category),
   blurb: e.data.blurb,
   text: body(e.body ?? ""),
-  meta: `${e.data.durationLabel} · from ${money(e.data.price)} / ${e.data.unit}`,
+  meta: e.data.price === null
+    ? `${e.data.durationLabel} · ${e.data.golfCart ? "live prices" : "price on request"}`
+    : `${e.data.durationLabel} · from ${money(e.data.price)} / ${e.data.unit}`,
 }));
 ---
 <form class="hsearch" role="search" action="/experiences/all/" method="get" autocomplete="off">
