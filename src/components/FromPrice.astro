@@ -1,11 +1,13 @@
 ---
 /**
- * Live "From €X / person" for the golf cart tours. Their price changes with the
- * partner's list, so it is read at runtime from the partner catalogue and never
- * written into the content.
+ * Live "Starting from €X / person" for the golf cart tours: the lowest price
+ * one guest pays on any day of the coming year. Prices change with the
+ * partner's list and our commission rules, so the number is read at runtime
+ * from /api/golfcart-from (functions/api/golfcart-from.js) and never written
+ * into the content.
  *
  * Renders the same spans as a card's price line (f / v / u), so it takes the
- * styling of wherever it sits. Once the catalogue answers, the nearest
+ * styling of wherever it sits. Once the price arrives, the nearest
  * [data-price] ancestor (a card) gets the number too, which keeps the price
  * filters and the price sort working on listing pages.
  *
@@ -20,23 +22,26 @@ const { tour, fallback = "Check availability" } = Astro.props;
   (function () {
     if (window.__golfcartFrom) return; window.__golfcartFrom = 1;
     function run() {
-      var els = document.querySelectorAll("[data-golfcart-from]");
+      var els = Array.prototype.slice.call(document.querySelectorAll("[data-golfcart-from]"));
       if (!els.length) return;
-      fetch("https://romebycart.com/api/shop/romesomuch/catalog", { cache: "no-store" })
-        .then(function (r) { return r.json(); })
-        .then(function (c) {
-          var by = {}; (c.tours || []).forEach(function (t) { by[t.id] = t; });
-          els.forEach(function (el) {
-            var t = by[el.getAttribute("data-golfcart-from")];
-            if (!t || !t.fromPerPerson) return;
-            var n = Number(t.fromPerPerson);
-            el.innerHTML = '<span class="f">From</span> <span class="v tnum">€' + n + '</span> <span class="u">/ person</span>';
-            var card = el.closest("[data-price]");
-            if (card) card.setAttribute("data-price", String(n));
-          });
-          document.dispatchEvent(new CustomEvent("golfcart:prices"));
-        })
-        .catch(function () { /* the fallback text stays */ });
+      var tours = els.map(function (el) { return el.getAttribute("data-golfcart-from"); })
+        .filter(function (t, i, all) { return all.indexOf(t) === i; });
+      Promise.all(tours.map(function (t) {
+        return fetch("/api/golfcart-from?tour=" + encodeURIComponent(t))
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .catch(function () { return null; });
+      })).then(function (answers) {
+        var by = {};
+        answers.forEach(function (a) { if (a && a.from) by[a.tour] = Number(a.from); });
+        els.forEach(function (el) {
+          var n = by[el.getAttribute("data-golfcart-from")];
+          if (!n) return; // the fallback text stays
+          el.innerHTML = '<span class="f">Starting from</span> <span class="v tnum">€' + n + '</span> <span class="u">/ person</span>';
+          var card = el.closest("[data-price]");
+          if (card) card.setAttribute("data-price", String(n));
+        });
+        document.dispatchEvent(new CustomEvent("golfcart:prices"));
+      });
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
   })();
