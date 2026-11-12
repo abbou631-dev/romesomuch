@@ -1,9 +1,9 @@
 ---
 /**
- * Live "Starting from €X / person" for the golf cart tours: the lowest price
- * one guest pays on any day of the coming year. Prices change with the
- * partner's list and our commission rules, so the number is read at runtime
- * from /api/golfcart-from (functions/api/golfcart-from.js) and never written
+ * Live "Starting from €X / person" for the golf cart tours: the lowest
+ * per-person price on any day and for any group size, as the partner's
+ * catalogue reports it (fromPerPerson). Prices change with the partner's list
+ * and our commission rules, so the number is read at runtime and never written
  * into the content.
  *
  * Renders the same spans as a card's price line (f / v / u), so it takes the
@@ -24,24 +24,21 @@ const { tour, fallback = "Check availability" } = Astro.props;
     function run() {
       var els = Array.prototype.slice.call(document.querySelectorAll("[data-golfcart-from]"));
       if (!els.length) return;
-      var tours = els.map(function (el) { return el.getAttribute("data-golfcart-from"); })
-        .filter(function (t, i, all) { return all.indexOf(t) === i; });
-      Promise.all(tours.map(function (t) {
-        return fetch("/api/golfcart-from?tour=" + encodeURIComponent(t))
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .catch(function () { return null; });
-      })).then(function (answers) {
-        var by = {};
-        answers.forEach(function (a) { if (a && a.from) by[a.tour] = Number(a.from); });
-        els.forEach(function (el) {
-          var n = by[el.getAttribute("data-golfcart-from")];
-          if (!n) return; // the fallback text stays
-          el.innerHTML = '<span class="f">Starting from</span> <span class="v tnum">€' + n + '</span> <span class="u">/ person</span>';
-          var card = el.closest("[data-price]");
-          if (card) card.setAttribute("data-price", String(n));
-        });
-        document.dispatchEvent(new CustomEvent("golfcart:prices"));
-      });
+      fetch("https://romebycart.com/api/shop/romesomuch/catalog", { cache: "no-store" })
+        .then(function (r) { return r.json(); })
+        .then(function (c) {
+          var by = {};
+          (c.tours || []).forEach(function (t) { if (t.fromPerPerson) by[t.id] = Number(t.fromPerPerson); });
+          els.forEach(function (el) {
+            var n = by[el.getAttribute("data-golfcart-from")];
+            if (!n) return; // the fallback text stays
+            el.innerHTML = '<span class="f">Starting from</span> <span class="v tnum">\u20AC' + n + '</span> <span class="u">/ person</span>';
+            var card = el.closest("[data-price]");
+            if (card) card.setAttribute("data-price", String(n));
+          });
+          document.dispatchEvent(new CustomEvent("golfcart:prices"));
+        })
+        .catch(function () { /* the fallback text stays */ });
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
   })();
