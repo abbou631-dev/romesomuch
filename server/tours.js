@@ -382,14 +382,19 @@ async function summary(env) {
       (SELECT count(*) FROM tour_bookings WHERE status = 'confirmed' AND confirmed_at LIKE ?3) AS sold_month,
       (SELECT coalesce(sum(total_cents), 0) FROM tour_bookings WHERE status = 'confirmed' AND confirmed_at LIKE ?3) AS sold_month_value`)
     .bind(now, week, month, year).first();
-  const [{ results: sources }, { results: byTour }] = await Promise.all([
-    env.CRM_DB.prepare(`SELECT source, count(*) AS n FROM tour_bookings WHERE ${PAID} ? GROUP BY source ORDER BY n DESC`).bind(month).all(),
+  // Where guests heard of us: this month and since the start, paid bookings.
+  const sourcesFor = (period) => env.CRM_DB.prepare(`SELECT source, count(*) AS n FROM tour_bookings WHERE ${PAID} ? GROUP BY source ORDER BY n DESC`).bind(period).all();
+  const [{ results: sources }, { results: byTour }, { results: sourcesAll }] = await Promise.all([
+    sourcesFor(month),
     env.CRM_DB.prepare(`SELECT slug, sum(status = 'confirmed') AS n, sum(paid_cents - refunded_cents) AS deposits
       FROM tour_bookings WHERE ${PAID} ? GROUP BY slug`).bind(month).all(),
+    sourcesFor("%"),
   ]);
+  const sourceRows = (rows) => rows.map((r) => ({ key: SOURCES[r.source] ? r.source : "none", label: SOURCES[r.source] ?? "Non indicato", n: r.n }));
   return {
     ...row,
-    sources: sources.map((r) => ({ label: SOURCES[r.source] ?? "Non indicato", n: r.n })),
+    sources: sourceRows(sources),
+    sources_all: sourceRows(sourcesAll),
     by_tour: Object.fromEntries(byTour.map((r) => [r.slug, { n: r.n, deposits: r.deposits }])),
   };
 }

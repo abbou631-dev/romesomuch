@@ -33,6 +33,21 @@ const ICONS: Record<string, string> = {
   "micromosaic-jewelry-class": '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M12 21 8 9l4-6 4 6z"/>',
 };
 const PIN = '<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>';
+// "How did you hear about us?": one colour per platform, the same in the
+// rows and in the summary (.pf-* in crm.css).
+const sourceTag = (key?: string | null) => {
+  const k = key && (SOURCES as Record<string, string>)[key] ? key : "none";
+  return `<span class="pf pf-${k}">${esc((SOURCES as Record<string, string>)[k] ?? "Non indicato")}</span>`;
+};
+function sourcesPanel(title: string, rows: Row[]) {
+  const total = rows.reduce((a, r) => a + r.n, 0);
+  if (!total) return `<div><h3>${title}</h3><p class="empty">Ancora nessuna prenotazione.</p></div>`;
+  return `<div><h3>${title} <small class="mute">${total} prenotazioni</small></h3>${rows.map((r) => {
+    const pct = Math.round((r.n / total) * 100);
+    return `<div class="src-row">${sourceTag(r.key)}<span class="src-bar"><i class="pf-${r.key}" style="width:${pct}%"></i></span><span class="src-n">${r.n} · ${pct}%</span></div>`;
+  }).join("")}</div>`;
+}
+
 const icon = (slug: string, size = 20) =>
   `<svg class="tour-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[slug] ?? PIN}</svg>`;
 
@@ -57,7 +72,7 @@ function row(b: Row) {
   return `<tr>
     <td>${when(b)}</td>
     <td><span class="tour-name">${icon(b.slug)}${esc(b.title)}</span></td>
-    <td><strong>${esc(b.name)}</strong><br /><small class="mute">${contact}</small>${b.source ? `<br /><small>Ci ha conosciuti: ${esc((SOURCES as Record<string, string>)[b.source] ?? b.source)}</small>` : ""}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
+    <td><strong>${esc(b.name)}</strong><br /><small class="mute">${contact}</small><br />${sourceTag(b.source)}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
     <td class="num">${b.guests}</td>
     ${money}
     <td style="white-space:nowrap"><small class="mute">${esc(b.code)}</small></td>
@@ -80,7 +95,10 @@ async function bookingsView() {
       ${kpi("Oggi", String(sum.today_n), `${sum.today_guests} ospiti`)}
       ${kpi("Prossimi 7 giorni", String(sum.week_n), `${sum.week_guests} ospiti`)}
     </div>
-    <p class="sub sold">Tour venduti questo mese: <strong>${sum.sold_month}</strong> · valore dei tour ${eur(sum.sold_month_value)}${sum.sources.length ? ` · come ci hanno conosciuti: ${sum.sources.map((x: Row) => `${esc(x.label)} ${x.n}`).join(", ")}` : ""}</p>
+    <p class="sub sold">Tour venduti questo mese: <strong>${sum.sold_month}</strong> · valore dei tour ${eur(sum.sold_month_value)}</p>
+    <section class="panel sources"><h2>Come ci hanno conosciuti</h2>
+      <div class="grid2">${sourcesPanel("Questo mese", sum.sources)}${sourcesPanel("Da sempre", sum.sources_all)}</div>
+    </section>
     <nav class="months" aria-label="Elenco">${Object.entries(SCOPES).map(([k, l]) =>
       `<button type="button" data-scope="${k}" class="${k === scope ? "on" : ""}">${l}</button>`).join("")}</nav>
     <div class="filters">

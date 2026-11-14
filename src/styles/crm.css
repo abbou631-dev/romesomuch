@@ -509,3 +509,17 @@ body.crm-home { display: block; background: var(--wash); }
 .tour-tile strong { font-size: 16px; }
 .tour-tile small { font-size: 13px; }
 .tour-tile.off { opacity: .55; }
+
+/* ---- "how did you hear about us" (Tour side): same colours as .pf above ---- */
+.pf-online { background: #1f9d55; }
+.pf-other { background: #8a6d3b; }
+.pf-none { background: #b5b5b5; }
+td .pf { margin-top: 4px; }
+.sources h3 { margin: 0 0 10px; font-size: 14px; }
+.sources .grid2 > div { margin-bottom: 8px; }
+.src-row { display: grid; grid-template-columns: 190px 1fr 70px; align-items: center; gap: 10px; margin: 7px 0; }
+.src-row .pf { justify-self: start; white-space: nowrap; }
+.src-bar { height: 10px; border-radius: 999px; background: var(--wash); overflow: hidden; }
+.src-bar i { display: block; height: 100%; border-radius: 999px; }
+.src-n { font-size: 13px; color: var(--mute); text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) { .src-row { grid-template-columns: 1fr 64px; } .src-bar { grid-column: 1 / -1; grid-row: 2; } }
