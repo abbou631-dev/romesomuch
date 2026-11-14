@@ -474,3 +474,20 @@ small.by { color: var(--ink, inherit); margin-top: 2px; }
 
 /* GOLFTOUR: the partner's back office, full height under the page head */
 .golftour iframe { display: block; width: 100%; height: calc(100vh - 190px); min-height: 560px; border: 1px solid var(--hair); border-radius: 8px; background: #fff; }
+
+/* ---- CRM home (/crm/): two doors, Tour and Clienti B2B ---- */
+body.crm-home { display: block; background: var(--wash); }
+.choose { max-width: 760px; margin: 0 auto; min-height: 100vh; padding: 48px 16px; display: grid; align-content: center; justify-items: center; gap: 22px; text-align: center; }
+.choose .logo { width: 120px; height: auto; }
+.choose h1 { font-size: 40px; justify-content: center; }
+.doors { width: 100%; display: grid; gap: 14px; }
+.door { display: grid; gap: 8px; justify-items: center; padding: 32px 22px; background: var(--paper); border: 1px solid var(--hair); border-radius: 16px; color: var(--ink); text-decoration: none; transition: border-color 0.3s cubic-bezier(.4, 0, .2, 1), transform 0.3s cubic-bezier(.4, 0, .2, 1); }
+.door strong { font: 400 46px/0.95 var(--disp); text-transform: uppercase; }
+.door small { color: var(--mute); font-size: 14px; max-width: 30ch; }
+.door:hover, .door:focus-visible { border-color: var(--ink); transform: translateY(-2px); }
+@media (min-width: 700px) { .doors { grid-template-columns: 1fr 1fr; } .door { padding: 44px 26px; } }
+
+/* ---- Tour: experience settings ---- */
+.closures { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.closures .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border: 1px solid var(--hair); border-radius: 999px; font-weight: 600; }
+.closures .chip .link { padding: 0 4px; }

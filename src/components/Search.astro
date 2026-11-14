@@ -21,6 +21,8 @@ const index = items.map((e) => ({
   meta: e.data.price === null
     ? `${e.data.durationLabel} · ${e.data.golfCart ? "live prices" : "price on request"}`
     : `${e.data.durationLabel} · from ${money(e.data.price)} / ${e.data.unit}`,
+  // Sold on the site: the price shown is replaced by the CRM's live one.
+  live: e.data.liveBooking ? e.data.durationLabel : null,
 }));
 ---
 <form class="hsearch" role="search" action="/experiences/all/" method="get" autocomplete="off">
@@ -44,7 +46,7 @@ const index = items.map((e) => ({
 </form>
 
 <script>
-  type Item = { id: string; title: string; category: string; blurb: string; text: string; meta: string };
+  type Item = { id: string; title: string; category: string; blurb: string; text: string; meta: string; live: string | null };
 
   // The same field can appear twice on a page - in the hero and in the header panel
   // on a phone - so each form is wired up on its own, from the data it carries.
@@ -53,6 +55,15 @@ const index = items.map((e) => ({
     const panel = form.querySelector<HTMLUListElement>(".hsearch-res")!;
     const data = form.querySelector<HTMLScriptElement>("script.qdata")!;
     const items: Item[] = JSON.parse(data.textContent!);
+    // Experiences sold on the site take the price set in the CRM.
+    if (items.some((i) => i.live)) {
+      fetch("/api/tours/prices").then((r) => r.json()).then((all) => {
+        for (const i of items) {
+          const t = i.live && all[i.id];
+          if (t) i.meta = `${i.live} · from €${t.price % 100 ? (t.price / 100).toFixed(2) : t.price / 100} / ${t.unit}`;
+        }
+      }).catch(() => { /* the written prices stay */ });
+    }
 
     // Everything is compared in a flattened form, so "Vespa Tour" and "vespa-tour"
     // both reduce to the same words and accents never block a match.

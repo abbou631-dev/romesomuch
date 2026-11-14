@@ -3,7 +3,7 @@ order: 4
 title: Pasta Cooking Class
 category: food
 blurb: Fresh pasta and sauces from scratch, the traditional way
-price: 91
+price: 90
 unit: person
 duration: 2
 durationLabel: 2h
@@ -32,10 +32,7 @@ included:
   - Drinks, wine or soft
   - The meal you cooked, as lunch or dinner
 cancellationPolicy: Refund if cancelled at least 2 days before the event.
-bokunEmbed: |-
-  <script type="text/javascript" src="https://widgets.bokun.io/assets/javascripts/apps/build/BokunWidgetsLoader.js?bookingChannelUUID=4128ae68-652d-470e-9584-0d5493dd35c1" async></script>
-  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/4128ae68-652d-470e-9584-0d5493dd35c1/experience-calendar/1020096"></div>
-  <noscript>Please enable javascript in your browser to book</noscript>
+liveBooking: true
 ---
 
 Get your hands dirty in a pasta-making class in the middle of Rome. A local chef shows you how to make fresh pasta from scratch with techniques handed down through generations. No experience needed, only an appetite.

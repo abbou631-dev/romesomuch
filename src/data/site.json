@@ -51,11 +51,11 @@
         ],
         [
           "Prices and payment",
-          "Prices are shown per person or per group, as stated on each experience, and include VAT where applicable. Entry tickets, transfers and meals are included only where the experience says so."
+          "Prices are shown per person or per group, as stated on each experience, and include VAT where applicable. Entry tickets, transfers and meals are included only where the experience says so. For experiences booked online, you pay a deposit when you book: its amount is shown before you pay, as a share of the total, and the balance is paid on the day of the experience. Card payments are processed by Stripe."
         ],
         [
           "Cancellation",
-          "All sales are final unless otherwise noted. Where an experience states its own cancellation terms — on its page and in your confirmation — those terms apply to that booking. If we cancel, for weather, illness or the closure of a site, you choose between a new date and a full refund."
+          "All sales are final unless otherwise noted. Where an experience states its own cancellation terms — on its page and in your confirmation — those terms apply to that booking. If you cancel within the free-cancellation period shown for your booking, we refund the deposit to the card you paid with. If we cancel, for weather, illness or the closure of a site, you choose between a new date and a full refund."
         ],
         [
           "Golf cart tours",
@@ -129,7 +129,7 @@
         ],
         [
           "Third-party cookies",
-          "The booking calendar is provided by Bokun (Tripadvisor group) and sets its own cookies when it loads, so that availability and checkout work. Payment pages set cookies for fraud prevention. These services have their own policies."
+          "Card payments in the booking box are handled by Stripe, which sets its own cookies for fraud prevention when the payment form loads. Golf cart bookings run in our partner's booking box, with its own payment provider. These services have their own policies."
         ],
         [
           "Managing your choices",

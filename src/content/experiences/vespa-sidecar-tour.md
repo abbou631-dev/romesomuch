@@ -3,7 +3,7 @@ order: 2
 title: Vespa Sidecar Tour
 category: tours
 blurb: The most stylish way to fall in love with the Eternal City
-price: 142
+price: 140
 unit: person
 duration: 3
 durationLabel: 3h
@@ -29,10 +29,7 @@ included:
   - Pickup and drop-off at your location
   - Gelato at the Pantheon
 cancellationPolicy: Refund if cancelled at least 2 days before the event.
-bokunEmbed: |-
-  <script type="text/javascript" src="https://widgets.bokun.io/assets/javascripts/apps/build/BokunWidgetsLoader.js?bookingChannelUUID=4128ae68-652d-470e-9584-0d5493dd35c1" async></script>
-  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/4128ae68-652d-470e-9584-0d5493dd35c1/experience-calendar/1221931"></div>
-  <noscript>Please enable javascript in your browser to book</noscript>
+liveBooking: true
 ---
 
 Hop into a classic Vespa sidecar and explore the city in true Italian style. Your local guide is also your driver, so you cruise past Rome's landmarks while the stories arrive with them.

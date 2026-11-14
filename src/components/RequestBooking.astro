@@ -6,17 +6,13 @@
  * WhatsApp number (or an email), and the request goes to /api/enquiry
  * (kind "tour"), which emails it to us. We answer on WhatsApp.
  */
+import "../styles/booking-box.css";
+import { phoneCodes } from "../lib/site";
+
 interface Props { experience: string; maxGuests?: number | null }
 const { experience, maxGuests = null } = Astro.props;
 const cap = maxGuests ?? 20;
-// Country codes, most frequent visitors first.
-const codes: [string, string][] = [
-  ["+1", "US/CA"], ["+44", "UK"], ["+39", "IT"], ["+61", "AU"], ["+353", "IE"], ["+49", "DE"], ["+33", "FR"],
-  ["+34", "ES"], ["+31", "NL"], ["+41", "CH"], ["+43", "AT"], ["+32", "BE"], ["+351", "PT"], ["+46", "SE"],
-  ["+47", "NO"], ["+45", "DK"], ["+48", "PL"], ["+55", "BR"], ["+52", "MX"], ["+54", "AR"], ["+57", "CO"],
-  ["+64", "NZ"], ["+27", "ZA"], ["+971", "AE"], ["+972", "IL"], ["+91", "IN"], ["+65", "SG"], ["+81", "JP"],
-  ["+82", "KR"], ["+86", "CN"],
-];
+const codes = phoneCodes;
 ---
 <div class="rq" data-rq data-cap={cap}>
   <form class="rq-card" action="/api/enquiry" method="post" novalidate>
@@ -210,55 +206,3 @@ const codes: [string, string][] = [
     calendar(); sync();
   });
 </script>
-
-<style>
-  .rq{--rq-yellow:#f3e7c0;--rq-soft:#f8f4e7;--rq-gold:#b8912f;--rq-edge:#a7b2ba;--rq-hair:rgba(10,10,10,.10);--rq-muted:#5c6560;--rq-err:#b42318;text-align:center;margin-top:16px}
-  .rq-card{display:grid;gap:22px;justify-items:center}
-  .rq-trap{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-  .rq-sec{width:100%;display:grid;gap:12px;justify-items:center}
-  .rq h3{font-family:var(--disp);font-weight:400;line-height:.95;text-transform:uppercase;font-size:28px;margin:0}
-  .rq h3 small{display:block;font-family:var(--body);font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--rq-muted);margin-top:8px}
-  .rq-hint,.rq-fine{font-size:11.5px;color:var(--rq-muted);line-height:1.5;margin:0}
-  .rq-step{display:flex;align-items:center;justify-content:center;gap:18px;border:1px solid var(--rq-hair);border-radius:10px;padding:10px 18px}
-  .rq-step button{width:34px;height:34px;border-radius:50%;border:1px solid var(--rq-hair);background:#fff;font-size:18px;line-height:1;cursor:pointer;transition:background .3s cubic-bezier(.4,0,.2,1)}
-  .rq-step button:hover:not(:disabled){background:var(--rq-yellow)}
-  .rq-step button:disabled{opacity:.3;cursor:default}
-  .rq-step output{min-width:30px;font-family:var(--disp);font-size:22px;line-height:1}
-  .rq-cal{width:100%;border:1px solid var(--rq-hair);border-radius:16px;padding:14px 10px}
-  .rq-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-  .rq-hd b{font-family:var(--disp);font-weight:400;font-size:22px;text-transform:uppercase}
-  .rq-hd button{width:40px;height:40px;border-radius:999px;border:1px solid var(--rq-hair);background:#fff;font-size:16px;cursor:pointer}
-  .rq-hd button:disabled{opacity:.3;cursor:default}
-  .rq-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-  .rq-grid :global(.rq-dw){font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--rq-muted);padding:4px 0}
-  .rq-grid :global(button){aspect-ratio:1;max-height:52px;border:1px solid transparent;border-radius:10px;background:transparent;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;padding:0}
-  .rq-grid :global(button:hover:not(:disabled)){background:var(--rq-yellow)}
-  .rq-grid :global(button:disabled){color:#c4cbc8;font-weight:500;cursor:default;text-decoration:line-through}
-  .rq-grid :global(button.today){border-color:var(--rq-edge)}
-  .rq-grid :global(button.on),.rq-grid :global(button.on:hover){background:var(--ink);border-color:var(--ink);color:#fff}
-  .rq-slots{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
-  .rq-slots button{min-height:44px;border:1px solid var(--rq-edge);background:#fff;border-radius:999px;padding:8px 16px;font-size:15px;font-weight:600;cursor:pointer;transition:background .3s cubic-bezier(.4,0,.2,1)}
-  .rq-slots button:hover{background:var(--rq-yellow);border-color:var(--rq-yellow)}
-  .rq-slots button.on,.rq-slots button.on:hover{background:var(--ink);border-color:var(--ink);color:#fff}
-  .rq-f{gap:15px}
-  .rq-field{width:100%;display:grid;gap:7px}
-  .rq-field label{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--rq-muted)}
-  .rq-field label em{font-style:normal;letter-spacing:.08em;text-transform:none;font-weight:600;color:var(--rq-gold)}
-  .rq-field input,.rq-field textarea,.rq-field select{width:100%;font-family:var(--body);font-size:16px;font-weight:500;color:var(--ink);background:#fff;border:1px solid var(--rq-hair);border-radius:10px;padding:13px 14px;text-align:center;text-align-last:center;outline:none;transition:border-color .3s cubic-bezier(.4,0,.2,1)}
-  .rq-field input:focus,.rq-field textarea:focus,.rq-field select:focus{border-color:var(--ink)}
-  .rq-tel{display:grid;grid-template-columns:118px minmax(0,1fr);gap:8px}
-  .rq-sum{width:100%;background:var(--rq-soft);border:1px solid var(--rq-hair);border-radius:16px;padding:20px 16px;display:grid;gap:6px}
-  .rq-lbl{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--rq-muted);margin:0}
-  .rq-item{font-size:15px;font-weight:600;margin:0}
-  .rq-meta{font-size:14px;color:var(--rq-muted);margin:0}
-  .rq-btn{display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:48px;font-family:var(--disp);font-size:17px;letter-spacing:.02em;text-transform:uppercase;background:var(--ink);color:#fff;border:1px solid var(--ink);border-radius:10px;padding:15px 30px;cursor:pointer;transition:all .3s cubic-bezier(.4,0,.2,1)}
-  .rq-btn:hover:not(:disabled){background:var(--rq-yellow);border-color:var(--rq-yellow);color:#0a0a0a;transform:translateY(-2px);box-shadow:0 30px 60px -28px rgba(10,10,10,.45)}
-  .rq-btn:disabled{opacity:.4;cursor:not-allowed}
-  .rq-err{color:var(--rq-err);font-size:13px;margin:0}
-  .rq-done{display:grid;gap:14px;justify-items:center;padding:12px 0 6px}
-  .rq-kick{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--rq-muted);margin:0}
-  .rq-kick::before{content:"";width:8px;height:8px;border-radius:99px;background:var(--rq-gold);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
-  .rq-done h3{font-size:clamp(36px,8vw,48px);line-height:.9}
-  .rq-sub{font-size:15px;color:var(--rq-muted);max-width:36ch;margin:0}
-  @media (prefers-reduced-motion:reduce){.rq *{transition:none!important}.rq-btn:hover{transform:none}}
-</style>

@@ -17,7 +17,9 @@ export const sha256 = async (text) =>
 export const sessionCookie = async (env, user) =>
   setCookie(CLIENT_COOKIE, await sign(env, "client", [user.id, user.session_version], SESSION_DAYS), SESSION_DAYS);
 
-export async function mail(env, { to, subject, text }) {
+// `replyTo`: where the recipient's answer lands (customers' emails go back to
+// the agency's mailbox, not to the sending address).
+export async function mail(env, { to, subject, text, replyTo }) {
   if (!env.RESEND_API_KEY) {
     console.log("RESEND_API_KEY is not set: email not sent", subject);
     return false;
@@ -25,7 +27,10 @@ export async function mail(env, { to, subject, text }) {
   const sent = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: env.ENQUIRY_FROM ?? "RomeSoMuch <forms@romesomuch.com>", to: [to], subject, text }),
+    body: JSON.stringify({
+      from: env.ENQUIRY_FROM ?? "RomeSoMuch <forms@romesomuch.com>", to: [to], subject, text,
+      ...(replyTo ? { reply_to: replyTo } : {}),
+    }),
   });
   if (!sent.ok) console.log("resend rejected", subject, sent.status, await sent.text());
   return sent.ok;

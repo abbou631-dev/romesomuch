@@ -36,7 +36,7 @@ const { tour, fallback = "Check availability" } = Astro.props;
             var card = el.closest("[data-price]");
             if (card) card.setAttribute("data-price", String(n));
           });
-          document.dispatchEvent(new CustomEvent("golfcart:prices"));
+          document.dispatchEvent(new CustomEvent("prices:live"));
         })
         .catch(function () { /* the fallback text stays */ });
     }

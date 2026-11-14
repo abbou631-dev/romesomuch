@@ -10,9 +10,10 @@
   "main": "index.js",
   "compatibility_date": "2026-09-01",
   "workers_dev": false,
-  // 3:00 UTC daily (4:00/5:00 in Rome): metrics; the 1st: report reminder.
-  "triggers": { "crons": ["0 3 * * *", "0 7 1 * *"] },
-  "vars": { "SITE": "https://romesomuch.com", "NOTIFY": "romesomuch@gmail.com", "CRM_URL": "https://romesomuch.com/crm/#/report" },
+  // 3:00 UTC daily (4:00/5:00 in Rome): metrics; 8:00 UTC daily (9:00/10:00
+  // in Rome): day-before emails to tomorrow's tour bookings; the 1st: report reminder.
+  "triggers": { "crons": ["0 3 * * *", "0 8 * * *", "0 7 1 * *"] },
+  "vars": { "SITE": "https://romesomuch.com", "NOTIFY": "romesomuch@gmail.com", "CRM_URL": "https://romesomuch.com/crm/b2b/#/report" },
   "d1_databases": [
     { "binding": "CRM_DB", "database_name": "romesomuch-crm", "database_id": "cb5274a6-5068-4389-81a0-1a5ef8edfa89" }
   ],

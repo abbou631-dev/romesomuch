@@ -170,17 +170,12 @@ collections:
         required: false
         hint: Leave empty and the site says "All sales are final unless otherwise noted." Fill it in only where this experience differs.
 
-      - name: bokunProductId
-        label: Bokun product ID
-        widget: string
+      - name: liveBooking
+        label: Sold on the site (deposit online)
+        widget: boolean
         required: false
-        hint: Product id alone. Works together with PUBLIC_BOKUN_CHANNEL set in Cloudflare.
-
-      - name: bokunEmbed
-        label: Bokun embed code
-        widget: text
-        required: false
-        hint: Paste the whole snippet Bokun gives you (Widgets → Copy code). It wins over the product ID above.
+        default: false
+        hint: Turn on only for experiences set up in the CRM's Tour section (/crm/tour/, same name as this entry's file). The page then shows the booking calendar with the deposit payment.
 
       - name: golfCart
         label: Golf cart tour (partner booking box)
@@ -190,7 +185,7 @@ collections:
           - { label: Private Golf Cart Tour, value: vip }
           - { label: Rome by Night, value: night }
           - { label: Rome in One Day, value: oneday }
-        hint: Set only on the golf cart tours. The page then shows the partner's booking box and a live price instead of Bokun; leave the price empty.
+        hint: Set only on the golf cart tours. The page then shows the partner's booking box and a live price; leave the price empty.
 
       - name: body
         label: What you do

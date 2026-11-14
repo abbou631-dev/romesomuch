@@ -415,7 +415,6 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 
 .badge-live{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .badge-live::before{content:"";width:8px;height:8px;border-radius:99px;background:var(--yellow-deep);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
-.bokunWidget{margin-top:14px;min-height:0}
 .legal{max-width:70ch;padding:clamp(22px,3vw,42px) 0}
 .lsec{border-top:1px solid var(--hair);padding:20px 0}
 .lsec h2{font-size:clamp(19px,2.4vw,26px);display:flex;gap:14px;align-items:baseline}
@@ -474,7 +473,7 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 .mbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:none;align-items:center;justify-content:space-between;gap:16px;background:var(--ink);color:#fff;padding:16px var(--pad);padding-bottom:calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px -12px rgba(10,10,10,.6)}
 .mbar .p{display:flex;flex-direction:column;gap:3px;line-height:1.1;min-width:0}
 .mbar .p b{font-family:var(--disp);font-size:30px;font-weight:400;display:flex;align-items:baseline;gap:5px}
-.mbar .p b em{font-family:var(--body);font-style:normal;font-size:13px;font-weight:600;color:var(--sage)}
+.mbar .p b em,.mbar .p b .u{font-family:var(--body);font-style:normal;font-size:13px;font-weight:600;color:var(--sage)}
 .mbar .p span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--sage)}
 .mbar .p small{font-size:11.5px;font-weight:500;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mbar .btn{flex:none;padding:17px 26px;font-size:16px;background:var(--yellow);border-color:var(--yellow);color:#0a0a0a}
@@ -550,14 +549,6 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
     full width instead of sitting inside two paddings. */
  .book{margin-inline:calc(var(--pad) * -1);padding:16px 12px;border-radius:0;border-inline:0}
  .book h3{font-size:22px}
- /* The Bokun calendar lives in a cross-origin iframe, so its own typography and
-    spacing are out of reach: only the container is ours. CSS zoom shrinks the
-    rendered widget and its layout box together, so the height the Bokun script
-    keeps writing on the iframe stays correct, and the widget still lays out
-    against a wider internal viewport - which is what makes it show the per-day
-    prices it hides in a narrow one. */
- .book .bokunEmbed{zoom:.95;margin-inline:auto}
- .book .bokunEmbed .bokunWidget{margin-top:8px}
  .legal{padding:18px 0}
  .lsec{padding:16px 0}
  .lsec h2{font-size:17px;gap:10px}

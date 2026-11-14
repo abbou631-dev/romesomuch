@@ -1,4 +1,5 @@
-// Two schedules: every night, fresh metrics for every video; on the 1st, the
+// Three schedules: every night, fresh metrics for every video; every morning,
+// the day-before emails of tour bookings; on the 1st, the
 // reminder "last month's reports are ready, check them and press Manda" (it
 // only reminds; the recaps themselves leave from the CRM).
 
@@ -23,11 +24,23 @@ async function refreshMetrics(env) {
   console.log("metrics refreshed", total);
 }
 
+// Every morning: the day-before email to everyone booked on a tour tomorrow
+// (server/tours.js does the work; this only rings the bell).
+async function tourReminders(env) {
+  const response = await fetch(`${env.SITE}/api/tours/reminders`, {
+    method: "POST",
+    headers: { "X-Cron-Key": env.CRON_KEY, Origin: env.SITE },
+  });
+  console.log("tour reminders", response.status, await response.text());
+}
+
 const DAILY = "0 3 * * *";
+const MORNING = "0 8 * * *";
 
 export default {
   async scheduled(event, env) {
     if (event.cron === DAILY) return refreshMetrics(env);
+    if (event.cron === MORNING) return tourReminders(env);
     const now = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(event.scheduledTime).slice(0, 7);
     const [y, m] = now.split("-").map(Number);
     const period = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7);

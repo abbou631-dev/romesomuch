@@ -3,7 +3,7 @@ order: 5
 title: Roman Mosaic Workshop
 category: activities
 blurb: Make your own Roman mosaic in an artisan's studio
-price: 96
+price: 95
 unit: person
 duration: 2.5
 durationLabel: 2h30
@@ -29,10 +29,7 @@ included:
   - A personalised 7 x 5 inch mosaic to take home
   - Coffee or bottled water
 cancellationPolicy: Refund if cancelled at least 2 days before the event.
-bokunEmbed: |-
-  <script type="text/javascript" src="https://widgets.bokun.io/assets/javascripts/apps/build/BokunWidgetsLoader.js?bookingChannelUUID=4128ae68-652d-470e-9584-0d5493dd35c1" async></script>
-  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/4128ae68-652d-470e-9584-0d5493dd35c1/experience-calendar/1175735"></div>
-  <noscript>Please enable javascript in your browser to book</noscript>
+liveBooking: true
 ---
 
 Step into a working mosaic studio in Rome and learn the ancient craft by doing it. The techniques are the ones used here for centuries, the material is natural marble, and the piece you cut and set is yours to take home.

@@ -1,5 +1,7 @@
 # Catalogo live: dati pronti per il CMS
 
+> **Dal 14 novembre 2026 queste esperienze non usano più Bokun:** si prenotano sul sito con deposito online (`liveBooking: true`, gestionale in /crm/tour/). Le parti su embed e widget Bokun qui sotto sono storiche.
+
 Questo documento raccoglie i dati delle esperienze effettivamente in vendita su Bokun e pubblicate
 su `romesomuch.com` al 7 settembre 2026, nella forma dei campi del CMS (`/admin/`, collection
 **Experiences**).

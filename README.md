@@ -1,7 +1,7 @@
 # RomeSoMuch
 
 Astro site for RomeSoMuch: experiences, tours and day trips in Rome, with per-experience
-booking — a Bokun calendar where live availability exists, a booking request everywhere else.
+booking — our own calendar with a deposit paid online where the site sells the experience, a booking request everywhere else.
 
 ## Commands
 
@@ -44,7 +44,7 @@ page from `public/admin/`. It is git-based: every save is a commit on `main`, an
 
 | Collection | Files | Fields |
 | --- | --- | --- |
-| Experiences | `src/content/experiences/*.md` | order, title, category, blurb, price, unit, duration, durationLabel, maxGuests, languages, meetingPoint, photos, what's included, cancellation policy, Bokun product id, Bokun embed code, body |
+| Experiences | `src/content/experiences/*.md` | order, title, category, blurb, price, unit, duration, durationLabel, maxGuests, languages, meetingPoint, photos, what's included, cancellation policy, liveBooking (sold on the site), golfCart, requestOnly, body |
 | Journal | `src/content/journal/*.md` | title, date, excerpt, cover, body |
 
 Cancellation is opt-out: leave `cancellationPolicy` empty and the experience shows the house rule
@@ -82,33 +82,25 @@ Two ways to edit without any of that:
 - **Sign In Using Access Token** — a GitHub personal access token with read/write access to the
   contents of this repository.
 
-## Bokun
+## Bookings (our own experiences)
 
-Set the booking channel UUID once, in `.env`:
+The experiences RomeSoMuch runs itself are booked on the site, not through Bokun (since 14 Nov 2026).
+An experience with `liveBooking: true` in frontmatter shows `src/components/TourBooking.astro`:
+guests, a calendar of open start times, the customer's details, then a **deposit** paid with
+Stripe's Payment Element. The balance is paid on the day.
 
-```
-PUBLIC_BOKUN_CHANNEL=your-booking-channel-uuid
-```
-
-Then give an experience its product id in frontmatter:
-
-```yaml
-bokunProductId: "12345"
-```
-
-That experience renders the Bokun widget (calendar, availability, payment).
-
-Or skip both and paste the whole snippet Bokun gives you into the **Bokun embed code** field in the
-CMS (`bokunEmbed` in frontmatter). The channel UUID is read out of the snippet, so that field alone
-is enough and it takes precedence over the product id. With neither set, the widget slot renders a
-labelled note instead — nothing breaks.
-
-Step-by-step guide for wiring a new tour to the calendar, in Italian, including the mobile `zoom`
-rule and the usual failure modes: [`docs/bokun-embed.md`](docs/bokun-embed.md).
-
-All six experiences in the catalogue now carry a real `bokunEmbed`, so the calendars work whether or
-not `PUBLIC_BOKUN_CHANNEL` is set. The `PRODUCT_ID` placeholder that used to sit in five demo
-experiences went away with those files.
+- Prices, deposit %, start times, days, seats per time, sales cut-off and closed days live in D1
+  (tables `tours`, `tour_closures`, `tour_bookings`, migration `0018_tours.sql`) and are edited in
+  the CRM at **/crm/tour/** (Esperienze). The row's `slug` is the experience's file name. The card
+  price comes from frontmatter, so change it in both places.
+- Bookings are managed at /crm/tour/ (edit, cancel with a Stripe refund, resend the confirmation).
+- Server: `server/tours.js`; public API `functions/api/tours/` (availability, hold, confirm, the
+  Stripe webhook at `/api/tours/stripe`, and `/api/tours/reminders` called daily by
+  `workers/report-reminder`).
+- Emails (confirmation, update, cancellation, day-before reminder) go through Resend.
+- Secrets on the Pages project: `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`,
+  `STRIPE_WEBHOOK_SECRET` (webhook event `payment_intent.succeeded`).
+- Golf cart tours are not part of this: the partner's own box and Stripe handle them.
 
 ## Routes
 
@@ -131,23 +123,17 @@ Cloudflare Pages project `romesomuch`, connected to this repository:
 
 Every push to `main` then builds and deploys on its own. Pull requests get a preview URL.
 
-Environment variables set in the Cloudflare project (Settings → Variables), not in the repo:
-
-```
-PUBLIC_BOKUN_CHANNEL = <booking channel UUID>
-```
-
-It is read at build time, so changing it needs a redeploy (Deployments → Retry deployment).
+Secrets set on the Cloudflare project (Settings → Variables), never in the repo: see the
+Bookings section above and the CRM notes.
 
 ## Still to do before launch
 
 - Catalogue gaps: group sizes and languages are missing for most experiences, and the micromosaic
   workshop has no meeting point. See [`docs/catalogo-live-cms.md`](docs/catalogo-live-cms.md).
-- Fiat 500 Tour: product 930927 renders an empty Bokun widget, so it is not on the site.
+- Fiat 500 Tour: not on the site.
 - Photography: the six experiences use photos taken from romesomuch.com — five each, three for the
   micromosaic workshop — plus the five vertical clips in `public/media/` (1080x1920, H.264/AAC).
   The page opens on a full-width band of 9:16 tiles — four on desktop, one on a phone — with a
   lightbox that shows each frame whole. A lead video autoplays muted and loops, with a sound toggle.
 - Legal documents: fill the bracketed company details and have them reviewed.
-- Decide where booking requests land (mailbox, CRM, or Bokun checkout everywhere).
 - Reviews: none are invented anywhere in this codebase; add real ones when they exist.

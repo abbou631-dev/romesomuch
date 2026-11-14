@@ -32,18 +32,19 @@ export const postTime = (date: string) => {
 export const newestFirst = <T extends { data: { date: string } }>(posts: T[]) =>
   [...posts].sort((a, b) => postTime(b.data.date) - postTime(a.data.date));
 
-// An experience books itself only when Bokun is actually wired to it: either the
-// pasted snippet carries its own channel, or a product id meets the channel from
-// the environment. Everything else takes a request instead, and the page has to
-// say so rather than promising instant confirmation.
-export const bokunChannel = (embed?: string | null) =>
-  embed?.match(/bookingChannelUUID=([\w-]+)/)?.[1] ?? import.meta.env.PUBLIC_BOKUN_CHANNEL ?? "";
+// An experience books itself only when the site sells it (liveBooking, set up
+// in the CRM's Tour section). Everything else takes a request instead, and the
+// page has to say so rather than promising instant confirmation.
+export const hasLiveCalendar = (d: { liveBooking?: boolean }) => Boolean(d.liveBooking);
 
-export const hasLiveCalendar = (d: { bokunEmbed?: string | null; bokunProductId?: string | null }) => {
-  const channel = bokunChannel(d.bokunEmbed);
-  if (!channel) return false;
-  return Boolean(d.bokunEmbed?.trim()) || Boolean(d.bokunProductId);
-};
+// Country codes for the phone fields on the booking boxes, most frequent visitors first.
+export const phoneCodes: [string, string][] = [
+  ["+1", "US/CA"], ["+44", "UK"], ["+39", "IT"], ["+61", "AU"], ["+353", "IE"], ["+49", "DE"], ["+33", "FR"],
+  ["+34", "ES"], ["+31", "NL"], ["+41", "CH"], ["+43", "AT"], ["+32", "BE"], ["+351", "PT"], ["+46", "SE"],
+  ["+47", "NO"], ["+45", "DK"], ["+48", "PL"], ["+55", "BR"], ["+52", "MX"], ["+54", "AR"], ["+57", "CO"],
+  ["+64", "NZ"], ["+27", "ZA"], ["+971", "AE"], ["+972", "IL"], ["+91", "IN"], ["+65", "SG"], ["+81", "JP"],
+  ["+82", "KR"], ["+86", "CN"],
+];
 
 export const categoryName = (slug: string) =>
   categories.find((c) => c.slug === slug)?.name ?? slug;

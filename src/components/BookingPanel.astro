@@ -1,8 +1,10 @@
 ---
 import type { CollectionEntry } from "astro:content";
-import Bokun from "./Bokun.astro";
+import EnquiryForm from "./EnquiryForm.astro";
+import TourBooking from "./TourBooking.astro";
 import GolfCartBooking from "./GolfCartBooking.astro";
 import FromPrice from "./FromPrice.astro";
+import TourPrice from "./TourPrice.astro";
 import RequestBooking from "./RequestBooking.astro";
 import { cancellationDefault, hasLiveCalendar, money } from "../lib/site";
 
@@ -14,12 +16,14 @@ const d = exp.data;
 const golf = d.golfCart;
 const request = !golf && d.requestOnly;
 const live = golf !== null || (!request && hasLiveCalendar(d));
+// Asking for today is pointless on a request that takes up to 48 hours to answer.
+const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 ---
 <aside>
   {golf ? (
     // The partner's box runs price, calendar, payment and the confirmation email.
     // It is taller than the screen, so this panel does not stick (.book.tall).
-    <div class="book tall" id="bokunBox">
+    <div class="book tall" id="bookingBox">
       <span class="badge-live">Live availability</span>
       <h3 style="margin-top:10px">Book instantly</h3>
       <p class="fine" style="margin-top:4px"><FromPrice tour={golf} /> · {d.durationLabel} · confirmed straight away</p>
@@ -28,30 +32,49 @@ const live = golf !== null || (!request && hasLiveCalendar(d));
     </div>
   ) : request ? (
     // Arranged by us: the box takes a request and we answer on WhatsApp.
-    <div class="book tall" id="bokunBox">
+    <div class="book tall" id="bookingBox">
       <span class="badge">On request</span>
       <h3 style="margin-top:10px">Request a date</h3>
       <p class="fine" style="margin-top:4px">Price on request · {d.durationLabel} · we reply on WhatsApp</p>
       <RequestBooking experience={d.title} maxGuests={d.maxGuests} />
       <p class="fine">{d.cancellationPolicy ?? cancellationDefault}</p>
     </div>
+  ) : live ? (
+    // Ours, sold on the site: live times, deposit online, balance on the day.
+    <div class="book tall" id="bookingBox">
+      <span class="badge-live">Live availability</span>
+      <h3 style="margin-top:10px">Book instantly</h3>
+      <p class="fine" style="margin-top:4px"><TourPrice slug={exp.id} price={d.price!} unit={d.unit} perWord /> · {d.durationLabel} · deposit online, the rest on the day</p>
+      <TourBooking slug={exp.id} title={d.title} maxGuests={d.maxGuests} />
+      <p class="fine">{d.cancellationPolicy ?? cancellationDefault}</p>
+    </div>
   ) : (
-  <Bokun
-    productId={d.bokunProductId}
-    embed={d.bokunEmbed}
-    price={d.price!}
-    unit={d.unit}
-    durationLabel={d.durationLabel}
-    policy={d.cancellationPolicy ?? cancellationDefault}
-    title={d.title}
-  />
+    // Not sold online yet: the page takes a request, answered within 48 hours.
+    <div class="book" id="bookingBox">
+      <span class="badge">On request</span>
+      <h3 style="margin-top:10px">Ask for a date</h3>
+      <p class="fine" style="margin-top:4px">€{d.price} per {d.unit} · {d.durationLabel} · we answer within 48 hours</p>
+      <EnquiryForm
+        kind="booking"
+        submit="Send request"
+        hidden={{ experience: d.title }}
+        fields={[
+          { name: "name", label: "Name", required: true },
+          { name: "email", label: "Email", type: "email", required: true },
+          { name: "date", label: "Preferred date", type: "date", min: tomorrow, weekendsOnly: true, help: "Saturdays and Sundays only." },
+          { name: "guests", label: "How many of you" },
+          { name: "message", label: "Anything we should know", type: "textarea" },
+        ]}
+      />
+      <p class="fine">{d.cancellationPolicy ?? cancellationDefault}</p>
+    </div>
   )}
 </aside>
 
 <div class="mbar" id="mbar">
   <div class="p">
     <span>{live ? "From · live availability" : "From · on request"}</span>
-    {golf ? <b class="tnum"><FromPrice tour={golf} fallback="Live prices" /></b> : request ? <b>On request</b> : <b class="tnum">{money(d.price!)}<em>/ {d.unit}</em></b>}
+    {golf ? <b class="tnum"><FromPrice tour={golf} fallback="Live prices" /></b> : request ? <b>On request</b> : d.liveBooking ? <b><TourPrice slug={exp.id} price={d.price!} unit={d.unit} /></b> : <b class="tnum">{money(d.price!)}<em>/ {d.unit}</em></b>}
     <small>{d.durationLabel} · {live ? "confirmed straight away" : request ? "we reply on WhatsApp" : "answer within 48 hours"}</small>
   </div>
   <button class="btn" type="button" id="mbarCta">{live ? "See calendar" : request ? "Request a date" : "Ask for a date"}</button>
@@ -60,6 +83,6 @@ const live = golf !== null || (!request && hasLiveCalendar(d));
 <script>
   document.body.classList.add("has-bar");
   document.getElementById("mbarCta")?.addEventListener("click", () => {
-    document.getElementById("bokunBox")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("bookingBox")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 </script>

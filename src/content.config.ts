@@ -32,9 +32,10 @@ const experiences = defineCollection({
     images: z.array(picture).min(1),
     included: z.array(z.string()).min(1),
     cancellationPolicy: z.string().nullable().default(null),
-    bokunProductId: z.string().nullable().default(null),
-    bokunEmbed: z.string().nullable().default(null),
-    // Golf cart tours sold through the partner's booking box instead of Bokun:
+    // Booked and paid (deposit) on the site: the box reads availability and
+    // prices from the CRM's Tour section, keyed by this file's name.
+    liveBooking: z.boolean().default(false),
+    // Golf cart tours sold through the partner's booking box:
     // the id of the tour in the partner's catalogue.
     golfCart: z.enum(["vip", "night", "oneday"]).nullable().default(null),
     // Tours we arrange ourselves: no online payment, the page takes a request

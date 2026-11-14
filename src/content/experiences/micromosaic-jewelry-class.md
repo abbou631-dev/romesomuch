@@ -3,7 +3,7 @@ order: 6
 title: Micromosaic Jewelry Workshop
 category: activities
 blurb: Set a silver pendant with Roman micromosaic glass
-price: 132
+price: 130
 unit: person
 duration: 2.5
 durationLabel: 2h30
@@ -25,10 +25,7 @@ included:
   - A jewelry box to keep it in
   - Bottled water, coffee or tea
 cancellationPolicy: Refund if cancelled at least 2 days before the event.
-bokunEmbed: |-
-  <script type="text/javascript" src="https://widgets.bokun.io/assets/javascripts/apps/build/BokunWidgetsLoader.js?bookingChannelUUID=4128ae68-652d-470e-9584-0d5493dd35c1" async></script>
-  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/4128ae68-652d-470e-9584-0d5493dd35c1/experience-calendar/1196662"></div>
-  <noscript>Please enable javascript in your browser to book</noscript>
+liveBooking: true
 ---
 
 Make a one-of-a-kind pendant by learning the Roman micromosaic technique, worked in glass, in a professional mosaic studio in Rome.

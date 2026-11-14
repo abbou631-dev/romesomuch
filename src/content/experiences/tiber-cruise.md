@@ -3,7 +3,7 @@ order: 3
 title: Exclusive Private Cruise on the Tiber
 category: tours
 blurb: Rome's only private cruise of its kind
-price: 604
+price: 595
 unit: group
 duration: 1
 durationLabel: 1h
@@ -27,10 +27,7 @@ included:
   - Direct vehicle access to the dock, by taxi or private car
   - Onboard assistance on request
 cancellationPolicy: Refund if cancelled at least 2 days before the event.
-bokunEmbed: |-
-  <script type="text/javascript" src="https://widgets.bokun.io/assets/javascripts/apps/build/BokunWidgetsLoader.js?bookingChannelUUID=4128ae68-652d-470e-9584-0d5493dd35c1" async></script>
-  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/4128ae68-652d-470e-9584-0d5493dd35c1/experience-calendar/1266918"></div>
-  <noscript>Please enable javascript in your browser to book</noscript>
+liveBooking: true
 ---
 
 Glide down the Tiber aboard Stradivaria, the only hand-carved private cruise boat of its kind in Rome, with a skipper who knows every bend of the river. An hour past the city's landmarks, with 2,779 years of history on both banks and the light doing the rest.
