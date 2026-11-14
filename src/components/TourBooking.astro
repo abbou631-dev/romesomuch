@@ -71,6 +71,14 @@ const { slug, title, maxGuests = null } = Astro.props;
         </select>
       </div>
       <div class="rq-field"><label for={`tbNote-${slug}`}>Notes (optional)</label><textarea id={`tbNote-${slug}`} data-note rows="2" placeholder="Allergies, children, occasions"></textarea></div>
+      <div class="rq-field">
+        <label for={`tbPromo-${slug}`}>Promo code <em>· optional</em></label>
+        <div class="rq-promo">
+          <input id={`tbPromo-${slug}`} data-promo autocomplete="off" autocapitalize="characters" spellcheck="false" />
+          <button type="button" data-apply>Apply</button>
+        </div>
+        <p class="rq-hint" data-promonote aria-live="polite"></p>
+      </div>
       <label class="rq-chk"><input type="checkbox" data-terms /><span data-termstext>I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.</span></label>
     </section>
 
@@ -78,6 +86,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       <p class="rq-lbl">Your booking</p>
       <p class="rq-item">{title}</p>
       <p class="rq-meta" data-meta></p>
+      <p class="rq-disc" data-disc hidden></p>
       <p class="rq-total" data-total></p>
       <p class="rq-split"><span>Pay now · deposit <b data-deposit></b></span><span>On the day · balance <b data-balance></b></span></p>
     </div>
@@ -108,6 +117,7 @@ const { slug, title, maxGuests = null } = Astro.props;
 
 <script>
   type Slot = { time: string; left: number };
+  type Promo = { code: string; percent: number | null; amount: number | null };
   type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number };
   const ERRORS: Record<string, string> = {
     slot_full: "Those places have just been taken. Please choose another time.",
@@ -116,6 +126,8 @@ const { slug, title, maxGuests = null } = Astro.props;
     missing_fields: "Please check your details.",
     tour_closed: "This experience is not taking bookings right now.",
     payments_off: "Online booking is temporarily unavailable. Please write to us.",
+    promo_invalid: "This promo code is not valid for this experience.",
+    promo_too_big: "This code cannot be used for an online booking. Please write to us.",
   };
 
   document.querySelectorAll<HTMLElement>("[data-tb]").forEach((root) => {
@@ -125,7 +137,7 @@ const { slug, title, maxGuests = null } = Astro.props;
     const err = $(".rq-err");
     const go = $<HTMLButtonElement>("[data-go]");
     const field = (s: string) => $<HTMLInputElement>(s);
-    const [name, mail, tel, cc, note, terms, src] = ["[data-name]", "[data-mail]", "[data-tel]", "[data-cc]", "[data-note]", "[data-terms]", "[data-src]"].map(field);
+    const [name, mail, tel, cc, note, terms, src, promoIn] = ["[data-name]", "[data-mail]", "[data-tel]", "[data-cc]", "[data-note]", "[data-terms]", "[data-src]", "[data-promo]"].map(field);
 
     const pad = (n: number) => String(n).padStart(2, "0");
     const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -136,11 +148,17 @@ const { slug, title, maxGuests = null } = Astro.props;
 
     const state = {
       tour: null as Tour | null, guests: 2, month: new Date(today.getFullYear(), today.getMonth(), 1), last: "",
-      days: {} as Record<string, Slot[]>, date: "", time: "", wa: "", code: "", stripe: null as any, elements: null as any, pe: null as any,
+      days: {} as Record<string, Slot[]>, date: "", time: "", wa: "", code: "", promo: null as Promo | null, stripe: null as any, elements: null as any, pe: null as any,
     };
     const cap = () => Math.min(state.tour?.maxGuests ?? Number(root.dataset.cap), 50);
     const need = () => (state.tour?.unit === "group" ? 1 : state.guests);
-    const total = () => (state.tour ? (state.tour.unit === "group" ? state.tour.price : state.tour.price * state.guests) : 0);
+    const full = () => (state.tour ? (state.tour.unit === "group" ? state.tour.price : state.tour.price * state.guests) : 0);
+    // Same arithmetic as the server (server/tours.js discountFor, depositFor).
+    const discount = () => {
+      const p = state.promo;
+      return p ? Math.min(full(), p.percent ? Math.round((full() * p.percent) / 100) : p.amount ?? 0) : 0;
+    };
+    const total = () => full() - discount();
     const deposit = () => Math.round((total() * (state.tour?.depositPct ?? 0)) / 100);
 
     try {
@@ -176,6 +194,9 @@ const { slug, title, maxGuests = null } = Astro.props;
       sum.hidden = !state.date || !t;
       if (t && state.date) {
         $("[data-meta]").textContent = `${nice(state.date)}${state.time ? ` · ${state.time}` : ""} · ${state.guests} guest${state.guests === 1 ? "" : "s"}`;
+        const disc = $("[data-disc]");
+        disc.hidden = !discount();
+        disc.textContent = discount() ? `${eur(full())} · code ${state.promo!.code} −${eur(discount())}` : "";
         $("[data-total]").textContent = eur(total());
         $("[data-deposit]").textContent = eur(deposit());
         $("[data-balance]").textContent = eur(total() - deposit());
@@ -246,6 +267,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       else if (d.m) { state.month = new Date(state.month.getFullYear(), state.month.getMonth() + Number(d.m), 1); load(); return; }
       else if (d.d) { state.date = d.d; state.time = ""; hidePay(); calendar(); times(); }
       else if (d.t) { state.time = d.t; hidePay(); times(); }
+      else if ("apply" in d) { applyPromo(); return; }
       else if (d.wa) {
         state.wa = d.wa;
         root.querySelectorAll<HTMLButtonElement>("[data-wa]").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", String(x === b)); });
@@ -254,6 +276,26 @@ const { slug, title, maxGuests = null } = Astro.props;
       showErr(); sync();
     });
     [name, mail, tel, cc, terms, src].forEach((el) => { el.addEventListener("input", sync); el.addEventListener("change", sync); });
+
+    const promoNote = (m = "", ok = false) => { const n = $("[data-promonote]"); n.textContent = m; n.classList.toggle("ok", ok); };
+    async function applyPromo() {
+      const code = promoIn.value.trim().toUpperCase();
+      hidePay();
+      if (!code) { state.promo = null; promoNote(); sync(); return; }
+      try {
+        state.promo = await api(`promo?tour=${encodeURIComponent(slug)}&code=${encodeURIComponent(code)}`);
+        promoNote(`Code ${state.promo!.code} applied: ${state.promo!.percent ? `${state.promo!.percent}%` : eur(state.promo!.amount ?? 0)} off`, true);
+      } catch (e) {
+        state.promo = null;
+        promoNote(ERRORS[(e as any).code] ?? "Could not check the code. Please try again.");
+      }
+      sync();
+    }
+    // Typing a different code drops the one applied until Apply is pressed again.
+    promoIn.addEventListener("input", () => {
+      if (state.promo && promoIn.value.trim().toUpperCase() !== state.promo.code) { state.promo = null; promoNote(); hidePay(); sync(); }
+    });
+    promoIn.addEventListener("keydown", (e) => { if ((e as KeyboardEvent).key === "Enter") { e.preventDefault(); applyPromo(); } });
 
     function loadStripe() {
       const w = window as any;
@@ -270,7 +312,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       try {
         const r = await api("hold", {
           tour: slug, date: state.date, time: state.time, guests: state.guests,
-          name: name.value.trim(), email: mail.value.trim(), phone: `${cc.value} ${tel.value.trim()}`, whatsapp: state.wa, notes: note.value.trim(), source: src.value,
+          name: name.value.trim(), email: mail.value.trim(), phone: `${cc.value} ${tel.value.trim()}`, whatsapp: state.wa, notes: note.value.trim(), source: src.value, promo: state.promo?.code ?? "",
         });
         state.code = r.code;
         await loadStripe();

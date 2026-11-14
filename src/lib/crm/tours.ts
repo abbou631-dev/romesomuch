@@ -72,7 +72,7 @@ function row(b: Row) {
   return `<tr>
     <td>${when(b)}</td>
     <td><span class="tour-name">${icon(b.slug)}${esc(b.title)}</span></td>
-    <td><strong>${esc(b.name)}</strong><br /><small class="mute">${contact}</small><br />${sourceTag(b.source)}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
+    <td><strong>${esc(b.name)}</strong><br /><small class="mute">${contact}</small><br />${sourceTag(b.source)}${b.promo_code ? ` <span class="promo-tag">${esc(b.promo_code)} −${eur(b.discount_cents)}</span>` : ""}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
     <td class="num">${b.guests}</td>
     ${money}
     <td style="white-space:nowrap"><small class="mute">${esc(b.code)}</small></td>
@@ -200,6 +200,52 @@ function tourView(t: Row) {
     </section>`;
 }
 
+// ---- Codici sconto ------------------------------------------------------------------
+
+let promos: Row[] = [];
+const promoValue = (p: Row) => (p.percent ? `${p.percent}%` : eur(p.amount_cents));
+
+function promoRow(p: Row) {
+  const tour = tours.find((t) => t.slug === p.slug);
+  const expired = p.expires_on && p.expires_on < today();
+  const full = p.max_uses != null && p.used >= p.max_uses;
+  const state = !p.active ? badge("concluso", "Spento") : expired ? badge("concluso", "Scaduto") : full ? badge("concluso", "Esaurito") : badge("attivo", "Attivo");
+  return `<tr>
+    <td><strong class="promo-code">${esc(p.code)}</strong>${p.note ? `<br /><small class="mute">${esc(p.note)}</small>` : ""}</td>
+    <td class="num">−${promoValue(p)}</td>
+    <td>${tour ? `<span class="tour-name">${icon(tour.slug)}${esc(tour.title)}</span>` : "Tutte le esperienze"}</td>
+    <td class="num">${p.used}${p.max_uses != null ? ` / ${p.max_uses}` : ""}${p.discounted ? `<br /><small class="mute">−${eur(p.discounted)} di sconti</small>` : ""}</td>
+    <td>${p.expires_on ? day(p.expires_on) : "Mai"}</td>
+    <td>${state}</td>
+    <td class="row-actions"><button class="link" data-promo-toggle="${esc(p.code)}">${p.active ? "Spegni" : "Riaccendi"}</button>${p.used ? "" : `<button class="link danger" data-promo-delete="${esc(p.code)}">Elimina</button>`}</td>
+  </tr>`;
+}
+
+async function promosView() {
+  promos = await api<Row[]>("tours/promos");
+  view.innerHTML = `${head("Codici sconto", '<button class="btn primary" data-promo-new>Nuovo codice</button>',
+    "Il cliente lo scrive nel box di prenotazione: lo sconto vale sul totale, e il deposito si calcola sul totale scontato.")}
+    <section class="panel">${table(["Codice", "Sconto", "Vale per", "Usato", "Scade", "Stato", ""], promos.map(promoRow), "Nessun codice ancora. Crea il primo con «Nuovo codice».", "", true)}</section>`;
+}
+
+function newPromo() {
+  const fields: Field[] = [
+    { name: "code", label: "Codice", required: true, hint: "Lettere, numeri e trattini, come ROME10. Il cliente può scriverlo minuscolo." },
+    { name: "kind", label: "Tipo di sconto", type: "select", options: [["percent", "Percentuale sul totale"], ["amount", "Importo fisso in euro"]] },
+    { name: "percent", label: "Percentuale (%)", type: "number", min: 1, max: 100, hint: "Se hai scelto la percentuale" },
+    { name: "amount", label: "Importo (€)", type: "money", hint: "Se hai scelto l'importo fisso" },
+    { name: "slug", label: "Vale per", type: "select", options: [["", "Tutte le esperienze"], ...tours.map((t): [string, string] => [t.slug, t.title])] },
+    { name: "max_uses", label: "Quante prenotazioni al massimo", type: "number", min: 1, hint: "Vuoto: senza limite" },
+    { name: "expires_on", label: "Valido fino al", type: "date", hint: "Vuoto: non scade" },
+    { name: "note", label: "Nota (solo per te)", hint: "Per esempio: campagna Instagram di dicembre" },
+  ];
+  form("Nuovo codice sconto", fields, { kind: "percent" }, (data) => {
+    const value = data.kind === "percent" ? Number(data.percent) : data.amount;
+    if (!value) throw new Error(data.kind === "percent" ? "Scrivi la percentuale." : "Scrivi l'importo.");
+    return api("tours/promos", { method: "POST", data: { ...data, value } });
+  }, render);
+}
+
 // The golf cart partner's back office (commissions, bookings, monthly report).
 // It keeps its own password.
 const GOLFCART = "https://romebycart.com/partners/romesomuch/admin.html";
@@ -240,6 +286,7 @@ async function render() {
   try {
     if (route === "golfcart") { golfcartView(); return; }
     [tours, sum] = await Promise.all([api<Row[]>("tours/catalog"), api<Row>("tours/summary")]);
+    if (route === "sconti") { await promosView(); stackTables(view); return; }
     const tour = tours.find((t) => t.slug === arg);
     if (route === "esperienze" && tour) {
       tourView(tour);
@@ -279,6 +326,12 @@ view.addEventListener("click", (event) => {
     if (b && confirm(`Rimandare l'email di conferma a ${b.email}?`)) {
       act(async () => { if (!(await api<Row>(`tours/bookings/${b.id}/resend`, { method: "POST", data: {} })).emailed) throw new Error("L'email non è partita"); }, "Email rimandata");
     }
+  } else if ("promoNew" in d) newPromo();
+  else if (d.promoToggle) {
+    const p = promos.find((x) => x.code === d.promoToggle);
+    if (p) act(() => api(`tours/promos/${encodeURIComponent(p.code)}`, { method: "PATCH", data: { active: !p.active } }), p.active ? "Codice spento" : "Codice riacceso");
+  } else if (d.promoDelete) {
+    if (confirm(`Eliminare il codice ${d.promoDelete}?`)) act(() => api(`tours/promos/${encodeURIComponent(d.promoDelete!)}`, { method: "DELETE" }), "Codice eliminato");
   } else if (d.sample) {
     act(async () => {
       const r = await api<Row>(`tours/catalog/${d.sample}/sample-email`, { method: "POST", data: {} });

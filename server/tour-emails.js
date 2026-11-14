@@ -80,6 +80,7 @@ const facts = (b) => [
   ...(b.meeting_point ? [["Meeting point", b.meeting_point]] : []),
 ];
 const money = (b) => [
+  ...(b.discount_cents > 0 ? [[`Discount${b.promo_code ? ` (${b.promo_code})` : ""}`, `−${euro(b.discount_cents)}`]] : []),
   ["Total", euro(b.total_cents)],
   ["Paid online (deposit)", euro(b.paid_cents)],
   ["To pay on the day", euro(Math.max(0, b.total_cents - b.paid_cents))],
@@ -136,7 +137,7 @@ function html(b, e) {
     <tr><td style="padding:14px 32px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};border-radius:12px">
         <tr><td style="padding:14px 20px">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${money(b).map((m, i) => row(m, i === 2)).join("")}</table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${money(b).map((m, i, all) => row(m, i === all.length - 1)).join("")}</table>
         </td></tr>
       </table>
     </td></tr>
