@@ -523,3 +523,7 @@ td .pf { margin-top: 4px; }
 .src-bar i { display: block; height: 100%; border-radius: 999px; }
 .src-n { font-size: 13px; color: var(--mute); text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 520px) { .src-row { grid-template-columns: 1fr 64px; } .src-bar { grid-column: 1 / -1; grid-row: 2; } }
+
+/* ---- promo codes (Tour side) ---- */
+.promo-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
+.promo-tag { display: inline-block; margin-top: 4px; padding: 2px 7px; border-radius: 4px; border: 1px dashed var(--ink); font-size: 10px; font-weight: 800; letter-spacing: .06em; }

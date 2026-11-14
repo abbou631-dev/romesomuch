@@ -161,6 +161,7 @@ const notifyOwner = (env, b, origin) => mail(env, {
     ...(b.notes ? [`Note: ${b.notes}`] : []),
     `Ci ha conosciuti: ${SOURCES[b.source] ?? "—"}`,
     "",
+    ...(b.promo_code ? [`Codice sconto: ${b.promo_code} (−${euro(b.discount_cents)})`] : []),
     `Totale ${euro(b.total_cents)} · deposito incassato ${euro(b.paid_cents)} · saldo sul posto ${euro(b.total_cents - b.paid_cents)}`,
     `Codice ${b.code}`,
     "",
@@ -202,6 +203,26 @@ async function confirmPayment(env, origin, intentId) {
   return publicOrder(done);
 }
 
+// ---- promo codes --------------------------------------------------------------------
+
+const PROMO = /^[A-Z0-9-]{3,30}$/;
+const promoCode = (raw) => String(raw ?? "").trim().toUpperCase();
+// Bookings that count as a use: paid ones, and ones waiting for their payment.
+const promoUses = `(SELECT count(*) FROM tour_bookings u WHERE u.promo_code = p.code
+  AND (u.status = 'confirmed' OR (u.status = 'pending' AND u.created_at > datetime('now', '-20 minutes'))))`;
+
+// The code if it works for this experience today, null when none was typed.
+async function promoFor(env, raw, tour) {
+  const code = promoCode(raw);
+  if (!code) return null;
+  const p = await env.CRM_DB.prepare(`SELECT p.*, ${promoUses} AS used FROM tour_promos p WHERE p.code = ?`).bind(code).first();
+  if (!p || !p.active || (p.slug && p.slug !== tour.slug) || (p.expires_on && p.expires_on < today())
+    || (p.max_uses != null && p.used >= p.max_uses)) throw new Invalid("promo_invalid");
+  return p;
+}
+const discountFor = (p, total) => (p ? Math.min(total, p.percent ? Math.round((total * p.percent) / 100) : p.amount_cents) : 0);
+const publicPromo = (p) => ({ code: p.code, percent: p.percent, amount: p.amount_cents });
+
 async function hold(env, body) {
   const tour = await getTour(env, body.tour);
   if (!tour || !tour.active) throw new Invalid("tour_closed");
@@ -224,17 +245,23 @@ async function hold(env, body) {
   if (slot.left < need(tour, guests)) throw new Invalid("slot_full");
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PUBLISHABLE_KEY) throw new Invalid("payments_off");
 
-  const total = totalFor(tour, guests);
+  const promo = await promoFor(env, body.promo, tour);
+  const full = totalFor(tour, guests);
+  const discount = discountFor(promo, full);
+  const total = full - discount;
   const deposit = depositFor(tour, total);
+  // Stripe's smallest card payment.
+  if (deposit < 50) throw new Invalid("promo_too_big");
   const code = newCode();
   // The seat check and the insert are one statement, so two people cannot
   // both take the last seats.
   const { meta } = await env.CRM_DB.prepare(
-    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, source, total_cents, deposit_cents)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-     WHERE (SELECT ${usedSql(tour)} FROM tour_bookings WHERE slug = ? AND date = ? AND time = ? AND ${HOLD}) + ? <= ?`,
-  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, source, total, deposit,
-    tour.slug, date, time, need(tour, guests), tour.capacity).run();
+    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, source, total_cents, deposit_cents, promo_code, discount_cents)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+     WHERE (SELECT ${usedSql(tour)} FROM tour_bookings WHERE slug = ? AND date = ? AND time = ? AND ${HOLD}) + ? <= ?
+       AND (SELECT count(*) FROM tour_bookings WHERE promo_code = ? AND ${HOLD}) < ?`,
+  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, source, total, deposit, promo?.code ?? null, discount,
+    tour.slug, date, time, need(tour, guests), tour.capacity, promo?.code ?? null, promo?.max_uses ?? 1e9).run();
   if (!meta.changes) throw new Invalid("slot_full");
 
   try {
@@ -243,8 +270,8 @@ async function hold(env, body) {
       currency: "eur",
       automatic_payment_methods: { enabled: true },
       receipt_email: email,
-      description: `Deposit ${code} · ${tour.title} · ${date} ${time} · ${guestsText(guests)}`,
-      metadata: { code, tour: tour.slug, date, time, guests },
+      description: `Deposit ${code} · ${tour.title} · ${date} ${time} · ${guestsText(guests)}${promo ? ` · code ${promo.code}` : ""}`,
+      metadata: { code, tour: tour.slug, date, time, guests, ...(promo ? { promo: promo.code } : {}) },
     }, `hold-${code}`);
     await env.CRM_DB.prepare("UPDATE tour_bookings SET payment_intent = ? WHERE code = ?").bind(intent.id, code).run();
     return { code, clientSecret: intent.client_secret, pk: env.STRIPE_PUBLISHABLE_KEY, total, deposit, balance: total - deposit };
@@ -289,6 +316,14 @@ export async function siteApi(request, env, path) {
     return Response.json(Object.fromEntries(results.map((t) => [t.slug, { price: t.price_cents, unit: t.unit }])), {
       headers: { "Cache-Control": "public, max-age=60" },
     });
+  }
+  // A promo code typed in the booking box, checked before the guest pays.
+  if (what === "promo" && request.method === "GET") {
+    const tour = await getTour(env, url.searchParams.get("tour"));
+    if (!tour || !tour.active) return json({ error: "tour_closed" }, 404);
+    const promo = await promoFor(env, url.searchParams.get("code"), tour);
+    if (!promo) return json({ error: "promo_invalid" }, 404);
+    return json(publicPromo(promo));
   }
   if (what === "hold" && request.method === "POST") return json(await hold(env, await request.json()));
   if (what === "confirm" && request.method === "POST") {
@@ -454,6 +489,53 @@ async function cancelBooking(env, origin, id, body) {
   return { refunded: refund, emailed };
 }
 
+// CRM → Tour → Codici sconto. A used code can be switched off, not deleted,
+// so the bookings that used it keep their history.
+async function promosApi(request, env, key) {
+  const db = env.CRM_DB;
+  const method = request.method;
+  const usedPaid = "(SELECT count(*) FROM tour_bookings u WHERE u.promo_code = p.code AND u.status != 'pending')";
+  if (!key && method === "GET") {
+    const { results } = await db.prepare(`SELECT p.*, ${usedPaid} AS used,
+        (SELECT coalesce(sum(discount_cents), 0) FROM tour_bookings u WHERE u.promo_code = p.code AND u.status = 'confirmed') AS discounted
+      FROM tour_promos p ORDER BY p.active DESC, p.created_at DESC`).all();
+    return json(results);
+  }
+  if (!key && method === "POST") {
+    const body = await request.json();
+    const code = promoCode(body.code);
+    if (!PROMO.test(code)) throw new Invalid("Il codice va da 3 a 30 caratteri: lettere, numeri e trattini.");
+    const value = Number(body.value);
+    const percent = body.kind === "percent" ? value : null;
+    const amount = body.kind === "amount" ? Math.round(value) : null;
+    if (percent !== null && !(Number.isInteger(percent) && percent >= 1 && percent <= 100)) throw new Invalid("La percentuale va da 1 a 100.");
+    if (amount !== null && !(amount >= 1)) throw new Invalid("Lo sconto in euro deve essere maggiore di zero.");
+    if (percent === null && amount === null) throw new Invalid("Scegli percentuale o importo.");
+    const slug = body.slug ? String(body.slug) : null;
+    if (slug && !(await getTour(env, slug))) throw new Invalid("Esperienza non trovata.");
+    const maxUses = body.max_uses === "" || body.max_uses == null ? null : Number(body.max_uses);
+    if (maxUses !== null && !(Number.isInteger(maxUses) && maxUses >= 1)) throw new Invalid("Gli usi massimi sono un numero da 1 in su.");
+    const expires = body.expires_on ? String(body.expires_on) : null;
+    if (expires && !isDate(expires)) throw new Invalid("Data di scadenza non valida.");
+    const { meta } = await db.prepare(`INSERT OR IGNORE INTO tour_promos (code, percent, amount_cents, slug, max_uses, expires_on, note)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(code, percent, amount, slug, maxUses, expires, String(body.note ?? "").trim() || null).run();
+    if (!meta.changes) throw new Invalid(`Il codice ${code} esiste già.`);
+    return json({ code });
+  }
+  if (key && method === "PATCH") {
+    const { active } = await request.json();
+    await db.prepare("UPDATE tour_promos SET active = ? WHERE code = ?").bind(active ? 1 : 0, promoCode(key)).run();
+    return json({ ok: true });
+  }
+  if (key && method === "DELETE") {
+    const code = promoCode(key);
+    const { meta } = await db.prepare("DELETE FROM tour_promos WHERE code = ? AND NOT EXISTS (SELECT 1 FROM tour_bookings WHERE promo_code = ?)").bind(code, code).run();
+    if (!meta.changes) throw new Invalid("Questo codice è già stato usato: disattivalo invece di eliminarlo.");
+    return json({ ok: true });
+  }
+  return json({ error: "Non trovato." }, 404);
+}
+
 export async function crmApi(request, env, path) {
   const url = new URL(request.url);
   const method = request.method;
@@ -473,6 +555,7 @@ export async function crmApi(request, env, path) {
       return json({ emailed: await sendEmail(env, "confirmed", b, url.origin) });
     }
   }
+  if (what === "promos") return promosApi(request, env, key);
   if (what === "catalog" && !key && method === "GET") {
     const [{ results: tours }, { results: closures }] = await db.batch([
       db.prepare("SELECT * FROM tours ORDER BY title"),

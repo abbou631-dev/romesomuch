@@ -71,3 +71,9 @@
 .rq-code{font-weight:800;font-size:18px;letter-spacing:.16em;margin:0}
 .rq [hidden]{display:none!important}
 .rq{scroll-margin-top:100px}
+.rq-promo{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.rq-promo input{text-transform:uppercase;letter-spacing:.08em}
+.rq-promo button{font:700 14px var(--body);padding:0 18px;border-radius:10px;border:1px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.rq-promo button:hover{background:var(--ink);color:#fff}
+.rq-hint.ok{color:#1f7a3f;font-weight:600}
+.rq-disc{font-size:13px;color:var(--rq-muted);margin:10px 0 -6px}
