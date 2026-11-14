@@ -491,3 +491,21 @@ body.crm-home { display: block; background: var(--wash); }
 .closures { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .closures .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border: 1px solid var(--hair); border-radius: 999px; font-weight: 600; }
 .closures .chip .link { padding: 0 4px; }
+
+/* ---- switch between the CRM's sides (CrmSwitch.astro) ---- */
+.switch { grid-column: 1 / -1; display: flex; gap: 4px; margin-top: 10px; padding: 3px; background: var(--wash); border-radius: 999px; }
+.switch a { flex: 1; text-align: center; padding: 7px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--mute); text-decoration: none; white-space: nowrap; }
+.switch a[aria-current="page"] { background: var(--ink); color: var(--paper); }
+@media (min-width: 900px) { .switch { margin-top: 18px; } .switch a { padding: 6px 8px; font-size: 12px; } }
+
+/* ---- Tour side: icons, tiles, the small sales line ---- */
+.tour-name { display: inline-flex; align-items: center; gap: 8px; }
+.tour-icon { flex: none; color: var(--ink); }
+.sold { margin: -4px 0 16px; font-size: 13px; color: var(--mute); }
+.tour-tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.tour-tile { display: grid; gap: 4px; align-content: start; padding: 18px; border: 1px solid var(--hair); border-radius: 14px; background: var(--paper); color: var(--ink); text-decoration: none; transition: border-color .2s, transform .2s; }
+.tour-tile:hover, .tour-tile:focus-visible { border-color: var(--ink); transform: translateY(-2px); }
+.tour-tile .ico { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 12px; background: var(--wash); margin-bottom: 8px; }
+.tour-tile strong { font-size: 16px; }
+.tour-tile small { font-size: 13px; }
+.tour-tile.off { opacity: .55; }

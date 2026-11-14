@@ -824,18 +824,6 @@ function notificationsView() {
     <section class="panel requests"><h2>Richieste d'accesso all'area clienti</h2>${requests.length ? requestList(requests) : '<p class="empty">Nessuna richiesta in attesa.</p>'}</section>`;
 }
 
-// The golf cart partner's back office (commissions, bookings, monthly report),
-// shown inside the CRM. It keeps its own password; owner only, like Promo.
-const GOLFTOUR = "https://romebycart.com/partners/romesomuch/admin.html";
-function golftourView() {
-  view.innerHTML = `${head("GOLFTOUR")}
-    <section class="panel golftour">
-      <div class="panel-head"><h2>Back office golf cart <small class="mute">commissioni, prenotazioni e resoconto</small></h2>
-        <a class="btn small" href="${GOLFTOUR}" target="_blank" rel="noopener">Apri in una nuova scheda</a></div>
-      <iframe src="${GOLFTOUR}" title="Back office golf cart"></iframe>
-    </section>`;
-}
-
 // ---- routing and events ------------------------------------------------------------
 
 async function render() {
@@ -861,7 +849,6 @@ async function render() {
     else if (route === "video") await videosView();
     else if (route === "pagamenti") await paymentsView();
     else if (route === "promo") await promosView();
-    else if (route === "golftour") golftourView();
     else if (route === "ugc") await ugcView();
     else if (route === "leads") await leadsView();
     else if (route === "titoli") await titlesView();

@@ -6,6 +6,7 @@
 import { Invalid, json, today, hmac, same } from "./common.js";
 import { mail } from "./access.js";
 import { SOURCES } from "./tour-sources.js";
+import { guestEmail } from "./tour-emails.js";
 import site from "../src/data/site.json";
 
 const ROME = "Europe/Rome";
@@ -46,13 +47,9 @@ const isDate = (s) => DATE.test(s ?? "") && !Number.isNaN(Date.parse(`${s}T12:00
 // ---- formatting -----------------------------------------------------------------
 
 const euro = (cents) => `€${(cents / 100).toFixed(2)}`;
-const longDate = (date) =>
-  new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
-    .format(new Date(`${date}T12:00:00Z`));
 const itDate = (date) =>
   new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
     .format(new Date(`${date}T12:00:00Z`));
-const firstName = (name) => String(name).trim().split(/\s+/)[0];
 const guestsText = (n) => `${n} ${n === 1 ? "guest" : "guests"}`;
 
 // ---- tours ------------------------------------------------------------------------
@@ -144,65 +141,11 @@ async function signedEvent(env, request) {
 
 // ---- emails ---------------------------------------------------------------------------
 
-function details(b, origin) {
-  const balance = b.total_cents - b.paid_cents;
-  return [
-    `Booking code: ${b.code}`,
-    `Experience: ${b.title}`,
-    `When: ${longDate(b.date)}, ${b.time}`,
-    `Guests: ${b.guests}`,
-    ...(b.meeting_point ? [`Meeting point: ${b.meeting_point}`] : []),
-    "",
-    `Total: ${euro(b.total_cents)}`,
-    `Deposit paid online: ${euro(b.paid_cents)}`,
-    `Balance to pay on the day: ${euro(Math.max(0, balance))}`,
-    "",
-    `Details and map: ${origin}/experience/${b.slug}/`,
-  ].join("\n");
-}
-const signOff = (b) => [
-  "",
-  `Free cancellation up to ${b.cancel_hours} hours before the start. To change or cancel, reply to this email or write to us on WhatsApp (${site.whatsapp}).`,
-  "",
-  "RomeSoMuch",
-].join("\n");
-
-const send = (env, b, subject, text) => mail(env, { to: b.email, subject, text, replyTo });
-
-const EMAILS = {
-  confirmed: (b, origin) => [
-    `Booking confirmed: ${b.title}, ${longDate(b.date)}`,
-    `Hi ${firstName(b.name)},\n\nyour booking is confirmed. See you in Rome!\n\n${details(b, origin)}\n${signOff(b)}`,
-  ],
-  updated: (b, origin) => [
-    `Booking updated: ${b.title}, ${longDate(b.date)}`,
-    `Hi ${firstName(b.name)},\n\nwe have updated your booking. Here are the new details.\n\n${details(b, origin)}\n${signOff(b)}`,
-  ],
-  reminder: (b, origin) => [
-    `See you tomorrow: ${b.title} at ${b.time}`,
-    `Hi ${firstName(b.name)},\n\na quick reminder: your experience is tomorrow.\n\n${details(b, origin)}\n\nQuestions? Reply to this email or write to us on WhatsApp (${site.whatsapp}).\n\nRomeSoMuch`,
-  ],
-  cancelled: (b, origin, refund) => [
-    `Booking cancelled: ${b.title}, ${longDate(b.date)}`,
-    [
-      `Hi ${firstName(b.name)},`,
-      "",
-      `your booking ${b.code} (${b.title}, ${longDate(b.date)} at ${b.time}, ${guestsText(b.guests)}) has been cancelled.`,
-      "",
-      refund > 0
-        ? `We have refunded ${euro(refund)} to the card you paid with. Banks usually show it within 5 to 10 working days.`
-        : "No refund has been issued for this booking.",
-      "",
-      `Questions? Reply to this email or write to us on WhatsApp (${site.whatsapp}).`,
-      "",
-      "RomeSoMuch",
-    ].join("\n"),
-  ],
-};
-export const sendEmail = (env, kind, b, origin, ...extra) => {
-  const [subject, text] = EMAILS[kind](b, origin, ...extra);
-  return send(env, b, subject, text);
-};
+// Guests get HTML with a text twin, from a bookings address so they can
+// tell these from the site's other messages; replies reach the owner.
+const FROM = "RomeSoMuch Bookings <bookings@romesomuch.com>";
+export const sendEmail = (env, kind, b, origin, ...extra) =>
+  mail(env, { to: b.email, from: FROM, replyTo, ...guestEmail(kind, b, ...extra) });
 
 const notifyOwner = (env, b, origin) => mail(env, {
   to: notifyTo(env),
@@ -419,22 +362,35 @@ async function listBookings(env, url) {
   return results;
 }
 
+// The owner earns the deposits (the balance goes to the operator on the day),
+// so money here is deposits that reached Stripe, net of refunds, counted when
+// the booking was paid. Sales (count and full value) are the small print.
 async function summary(env) {
   const now = today();
   const week = addDays(now, 7);
   const month = `${now.slice(0, 7)}-%`;
+  const year = `${now.slice(0, 4)}-%`;
+  const PAID = "status != 'pending' AND confirmed_at LIKE";
   const row = await env.CRM_DB.prepare(`SELECT
       (SELECT count(*) FROM tour_bookings WHERE status = 'confirmed' AND date = ?1) AS today_n,
       (SELECT coalesce(sum(guests), 0) FROM tour_bookings WHERE status = 'confirmed' AND date = ?1) AS today_guests,
       (SELECT count(*) FROM tour_bookings WHERE status = 'confirmed' AND date > ?1 AND date <= ?2) AS week_n,
       (SELECT coalesce(sum(guests), 0) FROM tour_bookings WHERE status = 'confirmed' AND date > ?1 AND date <= ?2) AS week_guests,
-      (SELECT coalesce(sum(paid_cents - refunded_cents), 0) FROM tour_bookings WHERE confirmed_at LIKE ?3) AS deposits_month,
-      (SELECT coalesce(sum(total_cents - paid_cents), 0) FROM tour_bookings WHERE status = 'confirmed' AND date >= ?1) AS balance_due`)
-    .bind(now, week, month).first();
-  const { results: sources } = await env.CRM_DB.prepare(
-    "SELECT source, count(*) AS n FROM tour_bookings WHERE status != 'pending' AND confirmed_at LIKE ? GROUP BY source ORDER BY n DESC",
-  ).bind(month).all();
-  return { ...row, sources: sources.map((r) => ({ label: SOURCES[r.source] ?? "Non indicato", n: r.n })) };
+      (SELECT coalesce(sum(paid_cents - refunded_cents), 0) FROM tour_bookings WHERE ${PAID} ?3) AS deposits_month,
+      (SELECT coalesce(sum(paid_cents - refunded_cents), 0) FROM tour_bookings WHERE ${PAID} ?4) AS deposits_year,
+      (SELECT count(*) FROM tour_bookings WHERE status = 'confirmed' AND confirmed_at LIKE ?3) AS sold_month,
+      (SELECT coalesce(sum(total_cents), 0) FROM tour_bookings WHERE status = 'confirmed' AND confirmed_at LIKE ?3) AS sold_month_value`)
+    .bind(now, week, month, year).first();
+  const [{ results: sources }, { results: byTour }] = await Promise.all([
+    env.CRM_DB.prepare(`SELECT source, count(*) AS n FROM tour_bookings WHERE ${PAID} ? GROUP BY source ORDER BY n DESC`).bind(month).all(),
+    env.CRM_DB.prepare(`SELECT slug, sum(status = 'confirmed') AS n, sum(paid_cents - refunded_cents) AS deposits
+      FROM tour_bookings WHERE ${PAID} ? GROUP BY slug`).bind(month).all(),
+  ]);
+  return {
+    ...row,
+    sources: sources.map((r) => ({ label: SOURCES[r.source] ?? "Non indicato", n: r.n })),
+    by_tour: Object.fromEntries(byTour.map((r) => [r.slug, { n: r.n, deposits: r.deposits }])),
+  };
 }
 
 async function editBooking(env, origin, id, body) {
@@ -534,6 +490,17 @@ export async function crmApi(request, env, path) {
       if (!isDate(date)) throw new Invalid("Data non valida.");
       await db.prepare("INSERT OR IGNORE INTO tour_closures (slug, date) VALUES (?, ?)").bind(key, date).run();
       return json({ ok: true });
+    }
+    // What a guest of this experience receives, sent to the owner to check.
+    if (action === "sample-email" && method === "POST") {
+      const date = addDays(today(), 7);
+      const total = totalFor(tour, 2);
+      const sample = {
+        code: "RSM-SAMPLE", slug: tour.slug, title: tour.title, date, time: tour.times[0], guests: 2,
+        name: "RomeSoMuch", email: notifyTo(env), meeting_point: tour.meeting_point, cancel_hours: tour.cancel_hours,
+        total_cents: total, paid_cents: depositFor(tour, total),
+      };
+      return json({ emailed: await sendEmail(env, "confirmed", sample, url.origin), to: sample.email });
     }
     if (action === "closures" && extra && method === "DELETE") {
       await db.prepare("DELETE FROM tour_closures WHERE slug = ? AND date = ?").bind(key, extra).run();

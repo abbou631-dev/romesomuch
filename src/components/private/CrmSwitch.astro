@@ -1,0 +1,11 @@
+---
+// Jump between the CRM's two sides without going back to /crm/ or signing
+// out: Tour (B2C, what guests book on the site) and Clienti B2B. The B2B app
+// removes it for team members, who only have the B2B side ([data-owner]).
+interface Props { current: "tour" | "b2b" }
+const { current } = Astro.props;
+const sides = [["tour", "/crm/tour/", "Tour B2C"], ["b2b", "/crm/b2b/", "Clienti B2B"]] as const;
+---
+<div class="switch" role="navigation" aria-label="Parte del CRM" data-owner>
+  {sides.map(([key, href, label]) => <a href={href} aria-current={key === current ? "page" : undefined}>{label}</a>)}
+</div>

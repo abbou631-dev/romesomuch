@@ -3,6 +3,7 @@
 // /api/crm. functions/crm/_middleware.js serves it only after login.
 import Shell from "../../../components/private/Shell.astro";
 import logo from "../../../assets/logo.svg";
+import CrmSwitch from "../../../components/private/CrmSwitch.astro";
 
 // The second value marks what only the owner sees; the team gets Clienti
 // and Video, plus Titoli video when the owner allows it (the server enforces
@@ -15,7 +16,6 @@ const nav: [string, string, boolean][] = [
   ["#/titoli", "Titoli video", true],
   ["#/pagamenti", "Pagamenti", true],
   ["#/promo", "Promo", true],
-  ["#/golftour", "GOLFTOUR", true],
   ["#/ugc", "UGC", true],
   ["#/leads", "Leads", true],
   ["#/report", "Report", true],
@@ -26,6 +26,7 @@ const nav: [string, string, boolean][] = [
 <Shell title="RomeSoMuch CRM">
   <header class="side">
     <a href="/crm/" class="brand" title="Torna alla home del CRM"><img class="logo" src={logo.src} alt="RomeSoMuch" /><span class="tag">CLIENTI B2B</span></a>
+    <CrmSwitch current="b2b" />
     <nav>{nav.map(([href, label, owner]) => <a href={href} data-nav data-owner={owner ? "" : undefined}>{label}</a>)}</nav>
     <form method="post" action="/api/crm/logout" class="logout"><button type="submit" class="link">Esci</button></form>
   </header>

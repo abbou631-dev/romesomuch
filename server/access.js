@@ -19,7 +19,7 @@ export const sessionCookie = async (env, user) =>
 
 // `replyTo`: where the recipient's answer lands (customers' emails go back to
 // the agency's mailbox, not to the sending address).
-export async function mail(env, { to, subject, text, replyTo }) {
+export async function mail(env, { to, subject, text, html, from, replyTo }) {
   if (!env.RESEND_API_KEY) {
     console.log("RESEND_API_KEY is not set: email not sent", subject);
     return false;
@@ -28,7 +28,8 @@ export async function mail(env, { to, subject, text, replyTo }) {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: env.ENQUIRY_FROM ?? "RomeSoMuch <forms@romesomuch.com>", to: [to], subject, text,
+      from: from ?? env.ENQUIRY_FROM ?? "RomeSoMuch <forms@romesomuch.com>", to: [to], subject, text,
+      ...(html ? { html } : {}),
       ...(replyTo ? { reply_to: replyTo } : {}),
     }),
   });

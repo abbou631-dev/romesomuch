@@ -1,6 +1,8 @@
 // The CRM's Tour section (/crm/tour/): bookings made on the site, with edit,
-// cancel and refund, and the settings of each experience. A hash-routed app
-// over /api/crm/tours (server/tours.js), owner only.
+// cancel and refund, the settings of each experience, and the golf cart
+// partner's back office. A hash-routed app over /api/crm/tours
+// (server/tours.js), owner only. Money is the owner's: the deposits that
+// reached Stripe; the balance goes to the operator on the day.
 
 import { type Field, type Row, apiFor, say, form, esc, eur, day, today, head, kpi, table, stackTables, badge } from "./ui";
 import { SOURCES } from "../../../server/tour-sources.js";
@@ -17,6 +19,22 @@ let slug = "";
 let query = "";
 let tours: Row[] = [];
 let bookings: Row[] = [];
+let sum: Row = {};
+// A tap on an experience opens its settings form straight away.
+let editNext = "";
+
+// One line icon per experience (24px grid, drawn with currentColor).
+const ICONS: Record<string, string> = {
+  "vespa-tour": '<circle cx="5.5" cy="17" r="2.5"/><circle cx="18.5" cy="17" r="2.5"/><path d="M8 17h8l2-6h-3.5l-1.5 6"/><path d="M18 11 16.5 5H19"/><path d="M3 14.5h6.5l1-3.5H4"/>',
+  "vespa-sidecar-tour": '<circle cx="5" cy="18" r="2"/><circle cx="14" cy="18" r="2"/><path d="M7 18h5l1.5-5H11"/><path d="M13.5 13 12.5 8h2"/><path d="M16 14h5a1 1 0 0 1 1 1v.5A3.5 3.5 0 0 1 18.5 19H16"/><path d="M2 15h5"/>',
+  "tiber-cruise": '<path d="M3 14h18l-2.5 4h-13z"/><path d="M6 14v-4h8.5l3 4"/><path d="M9 10V7h4v3"/><path d="M2 21c1.7 0 2.5-1 4-1s2.3 1 4 1 2.5-1 4-1 2.3 1 4 1 2.3-1 4-1"/>',
+  "pasta-cooking-class": '<path d="M3 12h18a9 9 0 0 1-18 0z"/><path d="M7.5 12c0-3 2-3.5 2-6.5M12 12c0-3 2-3.5 2-6.5M16.5 12c0-2.5 1.5-3 1.5-5.5"/>',
+  "roman-mosaic-class": '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/>',
+  "micromosaic-jewelry-class": '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M12 21 8 9l4-6 4 6z"/>',
+};
+const PIN = '<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>';
+const icon = (slug: string, size = 20) =>
+  `<svg class="tour-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[slug] ?? PIN}</svg>`;
 
 const balance = (b: Row) => b.total_cents - b.paid_cents;
 const refundable = (b: Row) => b.paid_cents - b.refunded_cents;
@@ -32,13 +50,13 @@ function row(b: Row) {
   const contact = [b.email, b.phone].filter(Boolean).map((x) => esc(x)).join(" · ") + wa;
   const money = scope === "cancelled"
     ? `<td class="num">${eur(b.paid_cents)}</td><td class="num">${eur(b.refunded_cents)}</td>`
-    : `<td class="num">${eur(b.total_cents)}</td><td class="num">${eur(b.paid_cents - b.refunded_cents)}</td><td class="num"><strong>${eur(balance(b))}</strong></td>`;
+    : `<td class="num"><strong>${eur(b.paid_cents - b.refunded_cents)}</strong><br /><small class="mute">su ${eur(b.total_cents)} · ${eur(balance(b))} sul posto</small></td>`;
   const actions = scope === "cancelled"
     ? (refundable(b) > 0 ? `<button class="link" data-cancel="${b.id}">Rimborsa</button>` : "")
     : `<button class="link" data-edit="${b.id}">Modifica</button><button class="link" data-resend="${b.id}">Rimanda email</button><button class="link danger" data-cancel="${b.id}">Cancella</button>`;
   return `<tr>
     <td>${when(b)}</td>
-    <td>${esc(b.title)}</td>
+    <td><span class="tour-name">${icon(b.slug)}${esc(b.title)}</span></td>
     <td><strong>${esc(b.name)}</strong><br /><small class="mute">${contact}</small>${b.source ? `<br /><small>Ci ha conosciuti: ${esc((SOURCES as Record<string, string>)[b.source] ?? b.source)}</small>` : ""}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
     <td class="num">${b.guests}</td>
     ${money}
@@ -49,19 +67,19 @@ function row(b: Row) {
 
 async function bookingsView() {
   const params = new URLSearchParams({ scope, ...(slug ? { slug } : {}), ...(query ? { q: query } : {}) });
-  const [sum, list] = await Promise.all([api<Row>("tours/summary"), api<Row[]>(`tours/bookings?${params}`)]);
+  const list = await api<Row[]>(`tours/bookings?${params}`);
   bookings = list;
   const heads = scope === "cancelled"
-    ? ["Quando", "Esperienza", "Cliente", "Ospiti", "Pagato", "Rimborsato", "Codice", ""]
-    : ["Quando", "Esperienza", "Cliente", "Ospiti", "Totale", "Deposito", "Saldo sul posto", "Codice", ""];
-  view.innerHTML = `${head("Prenotazioni", "", "Il cliente paga il deposito online; il saldo lo paga sul posto")}
+    ? ["Quando", "Esperienza", "Cliente", "Ospiti", "Deposito pagato", "Rimborsato", "Codice", ""]
+    : ["Quando", "Esperienza", "Cliente", "Ospiti", "Deposito incassato", "Codice", ""];
+  view.innerHTML = `${head("Prenotazioni", "", "Qui conta il deposito: è quello che entra su Stripe. Il saldo lo incassa chi fa il tour.")}
     <div class="kpis">
+      ${kpi("Depositi incassati, mese", eur(sum.deposits_month), "entrati su Stripe, meno i rimborsi", "good")}
+      ${kpi("Depositi incassati, anno", eur(sum.deposits_year), "dal 1° gennaio")}
       ${kpi("Oggi", String(sum.today_n), `${sum.today_guests} ospiti`)}
       ${kpi("Prossimi 7 giorni", String(sum.week_n), `${sum.week_guests} ospiti`)}
-      ${kpi("Depositi del mese", eur(sum.deposits_month), "incassati meno rimborsi")}
-      ${kpi("Saldi da incassare", eur(sum.balance_due), "sul posto, prenotazioni future")}
     </div>
-    ${sum.sources.length ? `<p class="sub" style="margin:-4px 0 16px">Come ci hanno conosciuti, questo mese: ${sum.sources.map((x: Row) => `<strong>${esc(x.label)}</strong> ${x.n}`).join(" · ")}</p>` : ""}
+    <p class="sub sold">Tour venduti questo mese: <strong>${sum.sold_month}</strong> · valore dei tour ${eur(sum.sold_month_value)}${sum.sources.length ? ` · come ci hanno conosciuti: ${sum.sources.map((x: Row) => `${esc(x.label)} ${x.n}`).join(", ")}` : ""}</p>
     <nav class="months" aria-label="Elenco">${Object.entries(SCOPES).map(([k, l]) =>
       `<button type="button" data-scope="${k}" class="${k === scope ? "on" : ""}">${l}</button>`).join("")}</nav>
     <div class="filters">
@@ -124,10 +142,26 @@ function cancelBooking(b: Row) {
 
 const weekdaysText = (w: string) => DAYS.filter(([k]) => w.includes(k)).map(([, l]) => l).join(" ");
 
-function tourCard(t: Row) {
-  return `<section class="panel tour-set">
-    <div class="panel-head"><h2>${esc(t.title)} ${t.active ? badge("attivo", "In vendita") : badge("concluso", "Ferma")}</h2>
-      <button class="btn small" data-tour="${esc(t.slug)}">Modifica</button></div>
+function tile(t: Row) {
+  const m = sum.by_tour?.[t.slug] ?? { n: 0, deposits: 0 };
+  return `<a class="tour-tile${t.active ? "" : " off"}" href="#/esperienze/${esc(t.slug)}">
+    <span class="ico">${icon(t.slug, 28)}</span>
+    <strong>${esc(t.title)}</strong>
+    <small>${eur(t.price_cents)} ${UNIT[t.unit] ?? ""} · deposito ${t.deposit_pct}%</small>
+    <small class="mute">${t.active ? `Questo mese: ${m.n} venduti · ${eur(m.deposits)} di depositi` : "Ferma: non si vende sul sito"}</small>
+  </a>`;
+}
+
+function toursView() {
+  view.innerHTML = `${head("Esperienze", "", "Tocca un'esperienza per vederne e cambiarne le impostazioni. Le modifiche valgono subito anche sul sito.")}
+    <div class="tour-tiles">${tours.map(tile).join("")}</div>`;
+}
+
+function tourView(t: Row) {
+  view.innerHTML = `<p class="crumb"><a href="#/esperienze">← Esperienze</a></p>
+    ${head(`${t.title}`, `<button class="btn" data-sample="${esc(t.slug)}">Email di prova</button><button class="btn primary" data-tour="${esc(t.slug)}">Modifica impostazioni</button>`, t.active ? "In vendita sul sito" : "Ferma: non si vende sul sito")}
+    <section class="panel tour-set">
+    <div class="panel-head"><h2><span class="tour-name">${icon(t.slug, 24)}Impostazioni</span></h2></div>
     <dl class="info">
       <dt>Prezzo</dt><dd>${eur(t.price_cents)} ${UNIT[t.unit] ?? ""}</dd>
       <dt>Deposito online</dt><dd>${t.deposit_pct}% · il resto sul posto</dd>
@@ -138,16 +172,25 @@ function tourCard(t: Row) {
       <dt>Cancellazione gratuita</dt><dd>fino a ${t.cancel_hours} ore prima</dd>
       <dt>Punto d'incontro</dt><dd>${esc(t.meeting_point ?? "—")}</dd>
     </dl>
-    <h3 style="margin-top:16px">Giorni chiusi</h3>
+    </section>
+    <section class="panel">
+    <h2>Giorni chiusi</h2>
     <div class="closures">${t.closures.map((d: string) =>
       `<span class="chip">${day(d)} <button class="link" data-open-day="${esc(t.slug)}|${d}" aria-label="Riapri ${day(d)}">✕</button></span>`).join("") || '<span class="mute">Nessuno</span>'}</div>
     <div class="filters" style="margin:10px 0 0"><label>Chiudi un giorno<input type="date" min="${today()}" data-close-day="${esc(t.slug)}" /></label></div>
-  </section>`;
+    </section>`;
 }
 
-function toursView() {
-  view.innerHTML = `${head("Esperienze", "", "Prezzi, deposito, orari e capienza delle prenotazioni sul sito. Il prezzo sulle card del sito si cambia anche dal CMS.")}
-    ${tours.map(tourCard).join("")}`;
+// The golf cart partner's back office (commissions, bookings, monthly report).
+// It keeps its own password.
+const GOLFCART = "https://romebycart.com/partners/romesomuch/admin.html";
+function golfcartView() {
+  view.innerHTML = `${head("Golf cart")}
+    <section class="panel golftour">
+      <div class="panel-head"><h2>Back office golf cart <small class="mute">commissioni, prenotazioni e resoconto</small></h2>
+        <a class="btn small" href="${GOLFCART}" target="_blank" rel="noopener">Apri in una nuova scheda</a></div>
+      <iframe src="${GOLFCART}" title="Back office golf cart"></iframe>
+    </section>`;
 }
 
 function editTour(t: Row) {
@@ -172,12 +215,19 @@ function editTour(t: Row) {
 // ---- routing and events -------------------------------------------------------------
 
 async function render() {
-  const route = location.hash.replace(/^#\/?/, "").split("?")[0].split("/")[0];
+  const [route, arg] = location.hash.replace(/^#\/?/, "").split("?")[0].split("/");
   document.querySelectorAll<HTMLAnchorElement>("[data-nav]").forEach((a) =>
     a.classList.toggle("on", a.getAttribute("href")!.replace(/^#\/?/, "") === route));
   try {
-    tours = await api<Row[]>("tours/catalog");
-    if (route === "esperienze") toursView();
+    if (route === "golfcart") { golfcartView(); return; }
+    [tours, sum] = await Promise.all([api<Row[]>("tours/catalog"), api<Row>("tours/summary")]);
+    const tour = tours.find((t) => t.slug === arg);
+    if (route === "esperienze" && tour) {
+      tourView(tour);
+      if (editNext === tour.slug) editTour(tour);
+      editNext = "";
+    }
+    else if (route === "esperienze") toursView();
     else await bookingsView();
     stackTables(view);
   } catch (error) {
@@ -196,6 +246,8 @@ async function act(work: () => Promise<unknown>, done: string) {
 }
 
 view.addEventListener("click", (event) => {
+  const tileLink = (event.target as HTMLElement).closest<HTMLAnchorElement>("a.tour-tile");
+  if (tileLink) editNext = tileLink.getAttribute("href")!.split("/").pop()!;
   const el = (event.target as HTMLElement).closest<HTMLElement>("button");
   if (!el) return;
   const d = el.dataset;
@@ -208,6 +260,11 @@ view.addEventListener("click", (event) => {
     if (b && confirm(`Rimandare l'email di conferma a ${b.email}?`)) {
       act(async () => { if (!(await api<Row>(`tours/bookings/${b.id}/resend`, { method: "POST", data: {} })).emailed) throw new Error("L'email non è partita"); }, "Email rimandata");
     }
+  } else if (d.sample) {
+    act(async () => {
+      const r = await api<Row>(`tours/catalog/${d.sample}/sample-email`, { method: "POST", data: {} });
+      if (!r.emailed) throw new Error("L'email non è partita");
+    }, "Email di conferma di prova mandata alla casella delle notifiche");
   } else if (d.tour) { const t = tours.find((x) => x.slug === d.tour); if (t) editTour(t); }
   else if (d.openDay) {
     const [s, date] = d.openDay.split("|");
