@@ -28,6 +28,14 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const whatsappUrl = `https://wa.me/${site.whatsapp.replace(/\D/g, "")}`;
 const mapUrl = (place) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
 
+// Other experiences the confirmation suggests at the bottom: the private
+// guided tours, sold on request over WhatsApp. Photos are 560x360 JPGs in
+// public/email (made from src/assets/experiences).
+const MORE = [
+  { slug: "private-colosseum-tour", title: "Private Colosseum Tour", blurb: "The Colosseum and Ancient Rome, with a guide just for your group.", photo: "colosseum.jpg" },
+  { slug: "private-vatican-museums-tour", title: "Private Vatican Museums Tour", blurb: "The Vatican Museums and the Sistine Chapel, with a guide just for your group.", photo: "vatican.jpg" },
+];
+
 // What each email says. `details` adds the booking card and the payment split.
 const KINDS = {
   confirmed: (b) => ({
@@ -35,6 +43,7 @@ const KINDS = {
     title: "Your booking is confirmed",
     intro: ["Thank you for booking with us. Everything is set: here is what you need for the day."],
     details: true,
+    more: true,
   }),
   updated: (b) => ({
     subject: `Booking updated: ${b.title}, ${longDate(b.date)}`,
@@ -84,6 +93,10 @@ function text(b, e) {
     lines.push(...money(b).map(([k, v]) => `${k}: ${v}`), "");
     lines.push(`Details and map: ${SITE}/experience/${b.slug}/`, "", policy(b), "");
   }
+  if (e.more) {
+    lines.push("More time in Rome? We also organise private tours:");
+    lines.push(...MORE.filter((m) => m.slug !== b.slug).map((m) => `- ${m.title}: ${m.blurb} ${SITE}/experience/${m.slug}/`), "");
+  }
   lines.push(`Questions? Reply to this email or write to us on WhatsApp: ${site.whatsapp} (${whatsappUrl}).`, "", "See you in Rome,", "RomeSoMuch", SITE);
   return lines.join("\n");
 }
@@ -91,6 +104,24 @@ function text(b, e) {
 const row = ([k, v], strong = false) => `<tr>
   <td style="padding:7px 0;color:${MUTE};font-size:14px;vertical-align:top;width:42%">${esc(k)}</td>
   <td style="padding:7px 0;color:${INK};font-size:14px;text-align:right;font-weight:${strong ? 700 : 500}">${esc(v)}</td></tr>`;
+
+// Two cards side by side; each cell is 50% wide so it holds on a phone too.
+function more(b) {
+  const cards = MORE.filter((m) => m.slug !== b.slug);
+  const cell = (m) => `<td width="50%" valign="top" style="padding:0 6px">
+    <a href="${SITE}/experience/${m.slug}/" style="text-decoration:none;color:${INK}">
+      <img src="${SITE}/email/${m.photo}" width="240" alt="${esc(m.title)}" style="display:block;width:100%;max-width:240px;height:auto;border:0;border-radius:10px" />
+      <p style="margin:10px 0 4px;font-size:15px;font-weight:700;line-height:1.3">${esc(m.title)}</p>
+      <p style="margin:0 0 8px;font-size:13px;line-height:1.45;color:${MUTE}">${esc(m.blurb)}</p>
+      <p style="margin:0;font-size:13px;font-weight:700;text-decoration:underline">Ask for a date</p>
+    </a></td>`;
+  return `<tr><td style="padding:28px 32px 0"><div style="height:1px;background:${HAIR}"></div></td></tr>
+    <tr><td style="padding:22px 26px 0">
+      <p style="margin:0 6px 4px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:${MUTE};font-weight:700">More time in Rome?</p>
+      <p style="margin:0 6px 14px;font-size:18px;font-weight:700;color:${INK}">Private tours with our guides</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${cards.map(cell).join("")}</tr></table>
+    </td></tr>`;
+}
 
 function html(b, e) {
   const card = e.details ? `
@@ -128,6 +159,7 @@ function html(b, e) {
         <p style="margin:0 0 10px;font-size:15px;line-height:1.55">Hi ${esc(firstName(b.name))},</p>
         ${e.intro.map((p) => `<p style="margin:0 0 10px;font-size:15px;line-height:1.55">${esc(p)}</p>`).join("")}
       </td></tr>${card}
+      ${e.more ? more(b) : ""}
       <tr><td style="padding:22px 32px 30px;color:${INK};font-size:15px;line-height:1.55">
         Questions? Reply to this email or <a href="${whatsappUrl}" style="color:${INK};font-weight:700">write to us on WhatsApp</a>.<br /><br />See you in Rome,<br /><strong>RomeSoMuch</strong>
       </td></tr>
