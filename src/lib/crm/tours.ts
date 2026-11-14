@@ -74,7 +74,8 @@ async function bookingsView() {
     : ["Quando", "Esperienza", "Cliente", "Ospiti", "Deposito incassato", "Codice", ""];
   view.innerHTML = `${head("Prenotazioni", "", "Qui conta il deposito: è quello che entra su Stripe. Il saldo lo incassa chi fa il tour.")}
     <div class="kpis">
-      ${kpi("Depositi incassati, mese", eur(sum.deposits_month), "entrati su Stripe, meno i rimborsi", "good")}
+      ${kpi("Depositi incassati, ultimi 7 giorni", eur(sum.deposits_week), "entrati su Stripe, meno i rimborsi", "good")}
+      ${kpi("Depositi incassati, mese", eur(sum.deposits_month), "dal 1° del mese", "good")}
       ${kpi("Depositi incassati, anno", eur(sum.deposits_year), "dal 1° gennaio")}
       ${kpi("Oggi", String(sum.today_n), `${sum.today_guests} ospiti`)}
       ${kpi("Prossimi 7 giorni", String(sum.week_n), `${sum.week_guests} ospiti`)}

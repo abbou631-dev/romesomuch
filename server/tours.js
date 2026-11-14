@@ -376,6 +376,7 @@ async function summary(env) {
       (SELECT coalesce(sum(guests), 0) FROM tour_bookings WHERE status = 'confirmed' AND date = ?1) AS today_guests,
       (SELECT count(*) FROM tour_bookings WHERE status = 'confirmed' AND date > ?1 AND date <= ?2) AS week_n,
       (SELECT coalesce(sum(guests), 0) FROM tour_bookings WHERE status = 'confirmed' AND date > ?1 AND date <= ?2) AS week_guests,
+      (SELECT coalesce(sum(paid_cents - refunded_cents), 0) FROM tour_bookings WHERE status != 'pending' AND confirmed_at >= datetime('now', '-7 days')) AS deposits_week,
       (SELECT coalesce(sum(paid_cents - refunded_cents), 0) FROM tour_bookings WHERE ${PAID} ?3) AS deposits_month,
       (SELECT coalesce(sum(paid_cents - refunded_cents), 0) FROM tour_bookings WHERE ${PAID} ?4) AS deposits_year,
       (SELECT count(*) FROM tour_bookings WHERE status = 'confirmed' AND confirmed_at LIKE ?3) AS sold_month,
