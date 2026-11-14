@@ -1,0 +1,30 @@
+---
+// The CRM's Tour side: bookings made on the site (deposit online, balance on
+// the day) and the settings of each experience. src/lib/crm/tours.ts fills it
+// from /api/crm/tours; owner only (the API refuses the team).
+import Shell from "../../../components/private/Shell.astro";
+import logo from "../../../assets/logo.svg";
+
+const nav: [string, string][] = [
+  ["#/", "Prenotazioni"],
+  ["#/esperienze", "Esperienze"],
+];
+---
+<Shell title="RomeSoMuch CRM · Tour">
+  <header class="side">
+    <a href="/crm/" class="brand" title="Torna alla home del CRM"><img class="logo" src={logo.src} alt="RomeSoMuch" /><span class="tag">TOUR</span></a>
+    <nav>{nav.map(([href, label]) => <a href={href} data-nav>{label}</a>)}</nav>
+    <form method="post" action="/api/crm/logout" class="logout"><button type="submit" class="link">Esci</button></form>
+  </header>
+  <main id="view" aria-live="polite"></main>
+  <dialog id="dialog"></dialog>
+  <div id="toast" role="status"></div>
+  <script>
+    import { start } from "../../../lib/crm/tours";
+    // The team works on the B2B side only.
+    fetch("/api/crm/me").then((r) => r.json()).then((me) => {
+      if (me.role === "team") location.replace("/crm/b2b/");
+      else start();
+    }).catch(() => start());
+  </script>
+</Shell>

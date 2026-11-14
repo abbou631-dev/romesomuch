@@ -1,5 +1,5 @@
 // The UGC creators who applied from the site's /ugc/ form, as cards with
-// filters. Shared by the CRM (/crm/#/ugc, every application with its contacts)
+// filters. Shared by the CRM (/crm/b2b/#/ugc, every application with its contacts)
 // and the client area (/area-clienti/#/ugc), where the server sends a
 // creator's email, WhatsApp and full name only when they agreed to share them
 // with partner venues; social handles are public and always shown.

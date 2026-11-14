@@ -46,7 +46,7 @@ const FORMS = {
     ],
     // Arrival and departure must be real dates, in that order.
     stay: ["arrival", "departure"],
-    // Each application is also kept in the CRM (/crm/#/ugc): form field → column.
+    // Each application is also kept in the CRM (/crm/b2b/#/ugc): form field → column.
     crm: {
       table: "ugc",
       columns: {

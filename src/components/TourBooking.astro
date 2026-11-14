@@ -1,0 +1,340 @@
+---
+/**
+ * Booking box for RomeSoMuch's own experiences: guests, a date and a start
+ * time from live availability (/api/tours), the visitor's details, then the
+ * deposit paid with Stripe's Payment Element right here; the balance is paid
+ * on the day. Same look as the golf cart box (styles/booking-box.css).
+ * Prices, deposit share, times and seats come from the CRM's Tour section.
+ */
+import "../styles/booking-box.css";
+import { phoneCodes } from "../lib/site";
+
+interface Props { slug: string; title: string; maxGuests?: number | null }
+const { slug, title, maxGuests = null } = Astro.props;
+---
+<div class="rq" data-tb={slug} data-cap={maxGuests ?? 10}>
+  <div class="rq-card" data-form>
+    <section class="rq-sec">
+      <h3>Guests<small data-paxhint>all ages</small></h3>
+      <div class="rq-step">
+        <button type="button" data-g="-1" aria-label="One guest fewer">–</button>
+        <output aria-live="polite">2</output>
+        <button type="button" data-g="1" aria-label="One more guest">+</button>
+      </div>
+    </section>
+
+    <section class="rq-sec">
+      <h3>Choose a date</h3>
+      <div class="rq-cal">
+        <div class="rq-hd">
+          <button type="button" data-m="-1" aria-label="Previous month">‹</button>
+          <b aria-live="polite"></b>
+          <button type="button" data-m="1" aria-label="Next month">›</button>
+        </div>
+        <div class="rq-grid" role="grid"></div>
+      </div>
+    </section>
+
+    <section class="rq-sec" data-times hidden>
+      <h3>Choose a time<small data-datelbl></small></h3>
+      <div class="rq-slots" role="group" aria-label="Start time"></div>
+      <p class="rq-hint" data-slotnote></p>
+    </section>
+
+    <section class="rq-sec rq-f" data-details hidden>
+      <h3>Your details</h3>
+      <div class="rq-field"><label for={`tbName-${slug}`}>Full name</label><input id={`tbName-${slug}`} data-name autocomplete="name" /></div>
+      <div class="rq-field"><label for={`tbMail-${slug}`}>Email</label><input id={`tbMail-${slug}`} data-mail type="email" autocomplete="email" /></div>
+      <div class="rq-field">
+        <label for={`tbTel-${slug}`}>Mobile number</label>
+        <div class="rq-tel">
+          <select data-cc aria-label="Country code">{phoneCodes.map(([c, n]) => <option value={c}>{c} {n}</option>)}</select>
+          <input id={`tbTel-${slug}`} data-tel type="tel" inputmode="tel" autocomplete="tel-national" placeholder="Phone number" />
+        </div>
+      </div>
+      <div class="rq-field">
+        <label id={`tbWaL-${slug}`}>Do you have WhatsApp on this number?</label>
+        <div class="rq-slots" role="radiogroup" aria-labelledby={`tbWaL-${slug}`}>
+          <button type="button" role="radio" aria-checked="false" data-wa="1">Yes</button>
+          <button type="button" role="radio" aria-checked="false" data-wa="0">No</button>
+        </div>
+      </div>
+      <div class="rq-field">
+        <label for={`tbSrc-${slug}`}>How did you hear about us?</label>
+        <select id={`tbSrc-${slug}`} data-src>
+          <option value="">Choose one</option>
+          <option value="instagram">Instagram</option>
+          <option value="tiktok">TikTok</option>
+          <option value="facebook">Facebook</option>
+          <option value="online">Online (Google, other sites)</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="rq-field"><label for={`tbNote-${slug}`}>Notes (optional)</label><textarea id={`tbNote-${slug}`} data-note rows="2" placeholder="Allergies, children, occasions"></textarea></div>
+      <label class="rq-chk"><input type="checkbox" data-terms /><span data-termstext>I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.</span></label>
+    </section>
+
+    <div class="rq-sum" hidden>
+      <p class="rq-lbl">Your booking</p>
+      <p class="rq-item">{title}</p>
+      <p class="rq-meta" data-meta></p>
+      <p class="rq-total" data-total></p>
+      <p class="rq-split"><span>Pay now · deposit <b data-deposit></b></span><span>On the day · balance <b data-balance></b></span></p>
+    </div>
+
+    <button class="rq-btn" type="button" data-go disabled>Choose a date</button>
+    <p class="rq-err" role="alert" hidden></p>
+
+    <div class="rq-pay" data-pay hidden>
+      <div data-pe></div>
+      <button class="rq-btn" type="button" data-paybtn>Pay deposit</button>
+      <button class="rq-btn ghost" type="button" data-back>Back</button>
+      <p class="rq-fine">Secure payment by Stripe. Only the deposit is charged now.</p>
+    </div>
+    <p class="rq-fine" data-fine></p>
+  </div>
+
+  <div class="rq-done" hidden>
+    <p class="rq-kick">Booking confirmed</p>
+    <h3>See you in <span class="hl">Rome</span></h3>
+    <div class="rq-sum">
+      <p class="rq-lbl">Your booking</p>
+      <p class="rq-code" data-code></p>
+      <p class="rq-meta" data-okline></p>
+    </div>
+    <p class="rq-sub">A confirmation email is on its way with the meeting point and the balance to pay on the day.</p>
+  </div>
+</div>
+
+<script>
+  type Slot = { time: string; left: number };
+  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number };
+  const ERRORS: Record<string, string> = {
+    slot_full: "Those places have just been taken. Please choose another time.",
+    slot_closed: "That time is no longer available. Please choose another.",
+    guests: "Too many guests for one booking. Please write to us for larger groups.",
+    missing_fields: "Please check your details.",
+    tour_closed: "This experience is not taking bookings right now.",
+    payments_off: "Online booking is temporarily unavailable. Please write to us.",
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-tb]").forEach((root) => {
+    const slug = root.dataset.tb!;
+    const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector(s) as T;
+    const grid = $(".rq-grid");
+    const err = $(".rq-err");
+    const go = $<HTMLButtonElement>("[data-go]");
+    const field = (s: string) => $<HTMLInputElement>(s);
+    const [name, mail, tel, cc, note, terms, src] = ["[data-name]", "[data-mail]", "[data-tel]", "[data-cc]", "[data-note]", "[data-terms]", "[data-src]"].map(field);
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const ym = (d: Date) => iso(d).slice(0, 7);
+    const nice = (s: string) => new Date(`${s}T12:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+    const eur = (cents: number) => `€${cents % 100 ? (cents / 100).toFixed(2) : cents / 100}`;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    const state = {
+      tour: null as Tour | null, guests: 2, month: new Date(today.getFullYear(), today.getMonth(), 1), last: "",
+      days: {} as Record<string, Slot[]>, date: "", time: "", wa: "", code: "", stripe: null as any, elements: null as any, pe: null as any,
+    };
+    const cap = () => Math.min(state.tour?.maxGuests ?? Number(root.dataset.cap), 50);
+    const need = () => (state.tour?.unit === "group" ? 1 : state.guests);
+    const total = () => (state.tour ? (state.tour.unit === "group" ? state.tour.price : state.tour.price * state.guests) : 0);
+    const deposit = () => Math.round((total() * (state.tour?.depositPct ?? 0)) / 100);
+
+    try {
+      const region = (navigator.language.split("-")[1] || "").toUpperCase();
+      const match = Array.from((cc as unknown as HTMLSelectElement).options).find((o) => region && o.text.includes(region));
+      if (match) cc.value = match.value;
+    } catch { /* keeps +1 */ }
+
+    const showErr = (m = "") => { err.textContent = m; err.hidden = !m; };
+    const api = async (path: string, body?: unknown) => {
+      const r = await fetch(`/api/tours/${path}`, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : { cache: "no-store" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw Object.assign(new Error(j.error || "error"), { code: j.error });
+      return j;
+    };
+
+    const valid = () => Boolean(state.date && state.time && name.value.trim().length > 1
+      && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail.value.trim()) && tel.value.replace(/\D/g, "").length >= 6 && Boolean(state.wa) && Boolean(src.value) && terms.checked);
+
+    function sync() {
+      const t = state.tour;
+      $("output").textContent = String(state.guests);
+      $<HTMLButtonElement>('[data-g="-1"]').disabled = state.guests <= 1;
+      $<HTMLButtonElement>('[data-g="1"]').disabled = state.guests >= cap();
+      if (t) {
+        $("[data-paxhint]").textContent = t.unit === "group" ? `private boat · up to ${t.maxGuests} guests` : `1–${t.maxGuests} guests · all ages`;
+        $("[data-termstext]").innerHTML = `I pay a ${t.depositPct}% deposit now and the balance on the day. Free cancellation up to ${t.cancelHours} hours before the start. I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.`;
+        $("[data-fine]").textContent = `${eur(t.price)} per ${t.unit === "group" ? "boat" : "person"} · ${t.depositPct}% deposit online, the rest on the day`;
+      }
+      $("[data-times]").hidden = !state.date;
+      $("[data-details]").hidden = !state.time;
+      const sum = $(".rq-card .rq-sum");
+      sum.hidden = !state.date || !t;
+      if (t && state.date) {
+        $("[data-meta]").textContent = `${nice(state.date)}${state.time ? ` · ${state.time}` : ""} · ${state.guests} guest${state.guests === 1 ? "" : "s"}`;
+        $("[data-total]").textContent = eur(total());
+        $("[data-deposit]").textContent = eur(deposit());
+        $("[data-balance]").textContent = eur(total() - deposit());
+      }
+      if (!t) { go.textContent = "Loading…"; go.disabled = true; return; }
+      if (!state.date || !state.time) { go.textContent = "Choose date and time"; go.disabled = true; return; }
+      go.disabled = !valid();
+      go.textContent = valid() ? `Continue · pay ${eur(deposit())} deposit` : "Fill in your details";
+    }
+
+    function calendar() {
+      const m = state.month;
+      $(".rq-hd b").textContent = m.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+      $<HTMLButtonElement>('[data-m="-1"]').disabled = ym(m) <= ym(today);
+      $<HTMLButtonElement>('[data-m="1"]').disabled = Boolean(state.last) && ym(m) >= state.last;
+      const heads = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => `<span class="rq-dw">${d}</span>`);
+      const lead = (new Date(m.getFullYear(), m.getMonth(), 1).getDay() + 6) % 7;
+      const count = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+      const cells = Array.from({ length: lead }, () => "<span></span>");
+      for (let d = 1; d <= count; d++) {
+        const key = iso(new Date(m.getFullYear(), m.getMonth(), d));
+        const open = (state.days[key] ?? []).some((s) => s.left >= need());
+        const cls = [key === state.date && "on", key === iso(today) && "today"].filter(Boolean).join(" ");
+        cells.push(`<button type="button" data-d="${key}"${open ? "" : " disabled"}${cls ? ` class="${cls}"` : ""} aria-label="${nice(key)}">${d}</button>`);
+      }
+      grid.innerHTML = heads.concat(cells).join("");
+    }
+
+    function times() {
+      const slots = state.days[state.date] ?? [];
+      if (state.time && !slots.some((s) => s.time === state.time && s.left >= need())) state.time = "";
+      $("[data-datelbl]").textContent = state.date ? nice(state.date) : "";
+      $(".rq-slots").innerHTML = slots.map((s) => {
+        const ok = s.left >= need();
+        const few = ok && state.tour?.unit === "person" && s.left <= 3 ? ` <small>${s.left} left</small>` : "";
+        return `<button type="button" data-t="${s.time}"${ok ? "" : " disabled"}${s.time === state.time ? ' class="on"' : ""}>${s.time}${few}</button>`;
+      }).join("");
+      const any = slots.some((s) => s.left >= need());
+      $("[data-slotnote]").textContent = any ? "" : "No places left on this day for your group. Please choose another date.";
+    }
+
+    let seq = 0;
+    async function load() {
+      const my = ++seq;
+      try {
+        const r = await api(`availability?tour=${encodeURIComponent(slug)}&month=${ym(state.month)}`);
+        if (my !== seq) return;
+        state.tour = r.tour; state.days = r.days; state.last = r.last ?? state.last;
+        state.guests = Math.min(state.guests, cap());
+        showErr();
+      } catch (e) {
+        showErr(ERRORS[(e as any).code] ?? "Could not load availability. Please try again.");
+      }
+      calendar(); times(); sync();
+    }
+
+    function hidePay() {
+      $("[data-pay]").hidden = true; go.hidden = false;
+      try { state.pe?.unmount(); } catch { /* already gone */ }
+      state.elements = null;
+    }
+
+    root.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest("button");
+      if (!b || b.disabled || !root.contains(b)) return;
+      const d = b.dataset;
+      if (d.g) { state.guests = Math.min(cap(), Math.max(1, state.guests + Number(d.g))); hidePay(); calendar(); times(); }
+      else if (d.m) { state.month = new Date(state.month.getFullYear(), state.month.getMonth() + Number(d.m), 1); load(); return; }
+      else if (d.d) { state.date = d.d; state.time = ""; hidePay(); calendar(); times(); }
+      else if (d.t) { state.time = d.t; hidePay(); times(); }
+      else if (d.wa) {
+        state.wa = d.wa;
+        root.querySelectorAll<HTMLButtonElement>("[data-wa]").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", String(x === b)); });
+      }
+      else return;
+      showErr(); sync();
+    });
+    [name, mail, tel, cc, terms, src].forEach((el) => { el.addEventListener("input", sync); el.addEventListener("change", sync); });
+
+    function loadStripe() {
+      const w = window as any;
+      return w.Stripe ? Promise.resolve() : new Promise<void>((ok, ko) => {
+        const s = document.createElement("script");
+        s.src = "https://js.stripe.com/v3/"; s.onload = () => ok(); s.onerror = ko;
+        document.head.appendChild(s);
+      });
+    }
+
+    go.addEventListener("click", async () => {
+      if (!valid()) return;
+      go.disabled = true; go.textContent = "One moment…"; showErr();
+      try {
+        const r = await api("hold", {
+          tour: slug, date: state.date, time: state.time, guests: state.guests,
+          name: name.value.trim(), email: mail.value.trim(), phone: `${cc.value} ${tel.value.trim()}`, whatsapp: state.wa, notes: note.value.trim(), source: src.value,
+        });
+        state.code = r.code;
+        await loadStripe();
+        state.stripe = state.stripe ?? (window as any).Stripe(r.pk);
+        state.elements = state.stripe.elements({
+          clientSecret: r.clientSecret,
+          appearance: {
+            theme: "stripe",
+            variables: { colorPrimary: "#0A0A0A", colorBackground: "#FFFFFF", colorText: "#0A0A0A", colorDanger: "#B42318", borderRadius: "10px", fontFamily: '"Plus Jakarta Sans", Helvetica Neue, Arial, sans-serif', fontSizeBase: "16px" },
+            rules: { ".Input": { border: "1px solid rgba(10,10,10,.10)", boxShadow: "none" }, ".Input:focus": { border: "1px solid #0A0A0A", boxShadow: "none" }, ".Tab": { border: "1px solid rgba(10,10,10,.10)", boxShadow: "none" }, ".Tab--selected": { border: "1px solid #0A0A0A", boxShadow: "none" } },
+          },
+          fonts: [{ cssSrc: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" }],
+        });
+        state.pe = state.elements.create("payment", { layout: "tabs", defaultValues: { billingDetails: { name: name.value.trim(), email: mail.value.trim() } } });
+        state.pe.mount($("[data-pe]"));
+        $("[data-paybtn]").textContent = `Pay ${eur(r.deposit)} deposit`;
+        go.hidden = true; $("[data-pay]").hidden = false;
+        setTimeout(() => $("[data-pay]").scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+      } catch (e) {
+        const code = (e as any).code;
+        showErr(ERRORS[code] ?? (e as Error).message ?? "Something went wrong. Please try again.");
+        if (code === "slot_full" || code === "slot_closed") load();
+      }
+      sync();
+    });
+
+    $("[data-back]").addEventListener("click", () => { hidePay(); sync(); });
+
+    $("[data-paybtn]").addEventListener("click", async () => {
+      const b = $<HTMLButtonElement>("[data-paybtn]");
+      const label = b.textContent;
+      b.disabled = true; b.textContent = "Processing…"; showErr();
+      const back = new URL(location.href);
+      back.search = ""; back.hash = "";
+      back.searchParams.set("booking", state.code);
+      const r = await state.stripe.confirmPayment({ elements: state.elements, confirmParams: { return_url: back.href }, redirect: "if_required" });
+      if (r.error) { b.disabled = false; b.textContent = label; showErr(r.error.message); return; }
+      await done(r.paymentIntent.id);
+      b.disabled = false; b.textContent = label;
+    });
+
+    async function done(pi: string) {
+      let order: any = null;
+      for (let i = 0; i < 6 && !(order && order.status === "confirmed"); i++) {
+        try { order = await api("confirm", { pi }); } catch { /* retried */ }
+        if (!order || order.status !== "confirmed") await new Promise((ok) => setTimeout(ok, 1500));
+      }
+      if (!order) { showErr("Your payment went through, but we could not show the confirmation. Check your email or write to us."); return; }
+      $("[data-form]").hidden = true;
+      $(".rq-done").hidden = false;
+      $("[data-code]").textContent = order.code;
+      $("[data-okline]").textContent = `${order.title} · ${nice(order.date)} · ${order.time} · ${order.guests} guest${order.guests === 1 ? "" : "s"} · ${eur(order.paid)} paid, ${eur(order.balance)} on the day`;
+      root.scrollIntoView({ behavior: "smooth", block: "start" });
+      (window as any).rsmTrack?.("Purchase", { content_type: "product", content_ids: [slug], value: order.total / 100, currency: "EUR" });
+    }
+
+    // Back from a payment that needed a redirect (3-D Secure, some wallets).
+    const params = new URLSearchParams(location.search);
+    const pi = params.get("payment_intent");
+    if (params.get("booking") && pi) {
+      history.replaceState(null, "", location.pathname);
+      if (params.get("redirect_status") === "failed") showErr("The payment did not go through. Please try again.");
+      else done(pi);
+    }
+    load();
+  });
+</script>

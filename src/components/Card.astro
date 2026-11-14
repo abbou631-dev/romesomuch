@@ -2,6 +2,7 @@
 import type { CollectionEntry } from "astro:content";
 import Shot from "./Shot.astro";
 import FromPrice from "./FromPrice.astro";
+import TourPrice from "./TourPrice.astro";
 import { cardImage, categoryName, money } from "../lib/site";
 
 interface Props { exp: CollectionEntry<"experiences">; loading?: "eager" | "lazy"; rank?: number }
@@ -30,7 +31,7 @@ const d = exp.data;
     </p>
     <p class="price">
       {d.golfCart ? <FromPrice tour={d.golfCart} /> : d.price === null ? <span class="f">Price on request</span> : (
-        <><span class="f">From</span><span class="v tnum">{money(d.price!)}</span><span class="u">/ {d.unit}</span></>
+        <><span class="f">From</span>{d.liveBooking ? <TourPrice slug={exp.id} price={d.price!} unit={d.unit} /> : <><span class="v tnum">{money(d.price!)}</span><span class="u">/ {d.unit}</span></>}</>
       )}
     </p>
   </div>

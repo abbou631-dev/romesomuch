@@ -1,39 +1,35 @@
 ---
-// The agency CRM: an empty shell that src/lib/crm/app.ts fills from
-// /api/crm. functions/crm/_middleware.js serves it only after login.
+// The CRM's home: pick Tour (the experiences sold on the site) or Clienti B2B
+// (Visibilità costante and the rest of the agency work). Gated like every page
+// under /crm by functions/crm/_middleware.js.
 import Shell from "../../components/private/Shell.astro";
 import logo from "../../assets/logo.svg";
-
-// The second value marks what only the owner sees; the team gets Clienti
-// and Video, plus Titoli video when the owner allows it (the server enforces
-// the same, see functions/api/crm).
-const nav: [string, string, boolean][] = [
-  ["#/", "Panoramica", true],
-  ["#/notifiche", "Notifiche", true],
-  ["#/clienti", "Clienti", false],
-  ["#/video", "Video", false],
-  ["#/titoli", "Titoli video", true],
-  ["#/pagamenti", "Pagamenti", true],
-  ["#/promo", "Promo", true],
-  ["#/golftour", "GOLFTOUR", true],
-  ["#/ugc", "UGC", true],
-  ["#/leads", "Leads", true],
-  ["#/report", "Report", true],
-  ["#/collegamenti", "Collegamenti", true],
-  ["#/team", "Team", true],
-];
 ---
-<Shell title="RomeSoMuch CRM">
-  <header class="side">
-    <a href="#/" class="brand"><img class="logo" src={logo.src} alt="RomeSoMuch" /><span class="tag">CRM</span></a>
-    <nav>{nav.map(([href, label, owner]) => <a href={href} data-nav data-owner={owner ? "" : undefined}>{label}</a>)}</nav>
-    <form method="post" action="/api/crm/logout" class="logout"><button type="submit" class="link">Esci</button></form>
-  </header>
-  <main id="view" aria-live="polite"></main>
-  <dialog id="dialog"></dialog>
-  <div id="toast" role="status"></div>
+<Shell title="RomeSoMuch CRM" bodyClass="crm-home">
+  <main class="choose">
+    <img class="logo" src={logo.src} alt="RomeSoMuch" />
+    <h1>Cosa apri?</h1>
+    <div class="doors">
+      <a class="door" href="/crm/tour/">
+        <span class="tag">Prenotazioni sul sito</span>
+        <strong>Tour</strong>
+        <small>Prenotazioni, cancellazioni e rimborsi, calendario e prezzi delle esperienze</small>
+      </a>
+      <a class="door" href="/crm/b2b/">
+        <span class="tag">Agenzia</span>
+        <strong>Clienti B2B</strong>
+        <small>Visibilità costante, video, pagamenti, promo, UGC, leads e report</small>
+      </a>
+    </div>
+    <form method="post" action="/api/crm/logout"><button type="submit" class="link">Esci</button></form>
+  </main>
   <script>
-    import { start } from "../../lib/crm/app";
-    start();
+    // Links from before the split (/crm/#/cliente/3, in old emails and
+    // redirects) belong to the B2B side.
+    if (location.hash.length > 1) location.replace(`/crm/b2b/${location.hash}`);
+    // The team only works on the B2B side: no choice to make.
+    else fetch("/api/crm/me").then((r) => r.json()).then((me) => {
+      if (me.role === "team") location.replace("/crm/b2b/");
+    }).catch(() => {});
   </script>
 </Shell>

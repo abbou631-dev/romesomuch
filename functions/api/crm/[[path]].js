@@ -10,6 +10,7 @@ import { reportList, reportText, reportSubject, sendReport } from "../../../serv
 import { STAFF_COOKIE, VIEW_COOKIE, staffSession } from "../../../server/sessions.js";
 import { connections, refresh, tiktokAuthorizeUrl, tiktokExchange } from "../../../server/platforms.js";
 import { upload, download, removeFiles } from "../../../server/files.js";
+import { crmApi as toursApi } from "../../../server/tours.js";
 
 const SESSION_DAYS = 30;
 
@@ -472,7 +473,7 @@ async function teamEnter(env, url) {
   ).bind(await sha256(token), Date.now()).first();
   if (!member) return redirect("/crm/login/?e=scaduto");
   await env.CRM_DB.prepare("UPDATE team_members SET last_seen = datetime('now') WHERE id = ?").bind(member.id).run();
-  return redirect("/crm/#/video", { "Set-Cookie": await teamCookie(env, member) });
+  return redirect("/crm/b2b/#/video", { "Set-Cookie": await teamCookie(env, member) });
 }
 
 // ---- routing -------------------------------------------------------------------
@@ -482,6 +483,9 @@ async function api(request, env, path, session) {
   const method = request.method;
   const [table, idText, action] = path;
   const id = idText ? Number(idText) : null;
+  // The Tour section (/crm/tour/): bookings and settings, owner only (the
+  // team never gets here, see TEAM_CAN).
+  if (table === "tours") return toursApi(request, env, path);
   // Ids are numbers; TikTok's routes carry words (connect, callback).
   if (idText && !Number.isInteger(id) && table !== "tiktok") return json({ error: "Non trovato." }, 404);
 
@@ -510,14 +514,14 @@ async function api(request, env, path, session) {
     return json({ updated, left: Math.max(0, results.length - 12) });
   }
   if (table === "tiktok" && idText === "connect" && method === "GET") {
-    if (!env.TIKTOK_CLIENT_KEY) return redirect("/crm/#/collegamenti?e=tiktok-app");
+    if (!env.TIKTOK_CLIENT_KEY) return redirect("/crm/b2b/#/collegamenti?e=tiktok-app");
     return redirect(tiktokAuthorizeUrl(env, url.origin, await sign(env, "tiktok", ["state"], 0.02)));
   }
   if (table === "tiktok" && idText === "callback" && method === "GET") {
     const code = url.searchParams.get("code");
-    if (!code || !(await verify(env, "tiktok", url.searchParams.get("state")))) return redirect("/crm/#/collegamenti?e=tiktok");
+    if (!code || !(await verify(env, "tiktok", url.searchParams.get("state")))) return redirect("/crm/b2b/#/collegamenti?e=tiktok");
     await tiktokExchange(env, url.origin, code);
-    return redirect("/crm/#/collegamenti?ok=tiktok");
+    return redirect("/crm/b2b/#/collegamenti?ok=tiktok");
   }
   if (table === "files" && id && method === "GET") return download(env, id);
   if (table === "documents" && !id && method === "POST") return upload(env, request);
@@ -586,7 +590,7 @@ export async function onRequest({ request, env, params }) {
   }
   // The team never reaches money, documents, reports, access or settings.
   if (session.role === "team" && !TEAM_CAN(request.method, path, session)) {
-    return path[0] === "tiktok" ? redirect("/crm/#/video") : json({ error: "Non disponibile per il team." }, 403);
+    return path[0] === "tiktok" ? redirect("/crm/b2b/#/video") : json({ error: "Non disponibile per il team." }, 403);
   }
   return guarded(() => api(request, env, path, session));
 }

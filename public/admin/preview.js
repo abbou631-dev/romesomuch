@@ -197,7 +197,7 @@
           "div",
           {
             className: "detail",
-            // One column: the booking panel is the Bokun widget, and it only
+            // One column: the booking panel is the live booking box, and it only
             // runs on the live page. Capped at the width the copy gets there.
             style: { gridTemplateColumns: "minmax(0,1fr)", maxWidth: "780px" },
           },
@@ -271,7 +271,7 @@
           ),
         ),
       ),
-      // The booking column is the Bokun widget, which only runs on the live
+      // The booking column is the live booking box, which only runs on the live
       // page; what follows is the card this experience shows up as in the rails.
       h(
         "div",

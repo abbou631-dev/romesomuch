@@ -51,7 +51,7 @@ async function requestAccess(request, env) {
   await mail(env, {
     to: notifyTo(env),
     subject: `Richiesta d'accesso: ${name} per ${client.name}`,
-    text: `${name} (${email}) chiede di entrare nell'area clienti di ${client.name}.\n\nApprova o rifiuta dal CRM: ${origin}/crm/#/cliente/${client.id}`,
+    text: `${name} (${email}) chiede di entrare nell'area clienti di ${client.name}.\n\nApprova o rifiuta dal CRM: ${origin}/crm/b2b/#/cliente/${client.id}`,
   });
   return back("inviata");
 }
@@ -162,7 +162,7 @@ export async function onRequest({ request, env, params, waitUntil }) {
   if (action === "logout" && method === "POST") {
     // The agency leaving a preview goes back to the CRM, still signed in there.
     if ((await signedInClient(request, env))?.preview) {
-      return redirect("/crm/#/clienti", { "Set-Cookie": setCookie(VIEW_COOKIE, "", 0) });
+      return redirect("/crm/b2b/#/clienti", { "Set-Cookie": setCookie(VIEW_COOKIE, "", 0) });
     }
     return redirect("/area-clienti/login/", { "Set-Cookie": setCookie(CLIENT_COOKIE, "", 0) });
   }

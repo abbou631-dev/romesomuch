@@ -3,7 +3,7 @@ order: 1
 title: Vespa Tour
 category: tours
 blurb: Rome like a local, on the back of a classic Vespa
-price: 91
+price: 90
 unit: person
 duration: 1.5
 durationLabel: 90min
@@ -29,10 +29,7 @@ included:
   - Guided city tour
   - Tiramisu tasting at Two Sizes, Piazza Navona
 cancellationPolicy: Refund if cancelled at least 2 days before the event.
-bokunEmbed: |-
-  <script type="text/javascript" src="https://widgets.bokun.io/assets/javascripts/apps/build/BokunWidgetsLoader.js?bookingChannelUUID=4128ae68-652d-470e-9584-0d5493dd35c1" async></script>
-  <div class="bokunWidget" data-src="https://widgets.bokun.io/online-sales/4128ae68-652d-470e-9584-0d5493dd35c1/experience-calendar/930925"></div>
-  <noscript>Please enable javascript in your browser to book</noscript>
+liveBooking: true
 ---
 
 Ride through the streets of Rome like a true local on the back of a classic Vespa, driven by a friendly local guide. You'll see the city's most iconic sights and its hidden corners, picking up stories, views and the breeze of the Eternal City along the way.
