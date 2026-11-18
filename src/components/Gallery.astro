@@ -22,7 +22,7 @@ const label = [photos && `${photos} photo${photos > 1 ? "s" : ""}`, clips && `${
 ---
 <section class="mosaic-wrap">
   <div class="wrap">
-    <div class="mosaic-frame">
+    <div class:list={["mosaic-frame", `f${tiles.length}`]}>
       <div class:list={["mosaic", `n${tiles.length}`]}>
         {tiles.map((image, i) => (
           <button class="tile" data-i={i} type="button" aria-label={`Open media ${i + 1}`}>
