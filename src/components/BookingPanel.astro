@@ -43,8 +43,9 @@ const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
     // Ours, sold on the site: live times, deposit online, balance on the day.
     <div class="book tall" id="bookingBox">
       <span class="badge-live">Live availability</span>
-      <h3 style="margin-top:10px">Book instantly</h3>
-      <p class="fine" style="margin-top:4px"><TourPrice slug={exp.id} price={d.price!} unit={d.unit} perWord /> · {d.durationLabel} · deposit online, the rest on the day</p>
+      <h3 style="margin-top:10px" data-tb-head={exp.id}>Book instantly</h3>
+      <p class="book-price"><TourPrice slug={exp.id} price={d.price!} unit={d.unit} priceFor={d.priceFor} perWord /></p>
+      <p class="fine" style="margin-top:4px">{d.durationLabel} · <span data-tb-line={exp.id}>secure online payment</span></p>
       <TourBooking slug={exp.id} title={d.title} maxGuests={d.maxGuests} />
       <p class="fine">{d.cancellationPolicy ?? cancellationDefault}</p>
     </div>
@@ -74,8 +75,8 @@ const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 <div class="mbar" id="mbar">
   <div class="p">
     <span>{live ? "From · live availability" : "From · on request"}</span>
-    {golf ? <b class="tnum"><FromPrice tour={golf} fallback="Live prices" /></b> : request ? <b>On request</b> : d.liveBooking ? <b><TourPrice slug={exp.id} price={d.price!} unit={d.unit} /></b> : <b class="tnum">{money(d.price!)}<em>/ {d.unit}</em></b>}
-    <small>{d.durationLabel} · {live ? "confirmed straight away" : request ? "we reply on WhatsApp" : "answer within 48 hours"}</small>
+    {golf ? <b class="tnum"><FromPrice tour={golf} fallback="Live prices" /></b> : request ? <b>On request</b> : d.liveBooking ? <b><TourPrice slug={exp.id} price={d.price!} unit={d.unit} priceFor={d.priceFor} /></b> : <b class="tnum">{money(d.price!)}<em>/ {d.unit}</em></b>}
+    <small>{d.durationLabel} · {live ? <span data-tb-line={d.liveBooking ? exp.id : undefined}>{d.liveBooking ? "secure online payment" : "confirmed straight away"}</span> : request ? "we reply on WhatsApp" : "answer within 48 hours"}</small>
   </div>
   <button class="btn" type="button" id="mbarCta">{live ? "See calendar" : request ? "Request a date" : "Ask for a date"}</button>
 </div>

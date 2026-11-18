@@ -29,7 +29,7 @@ const whatsappUrl = `https://wa.me/${site.whatsapp.replace(/\D/g, "")}`;
 const mapUrl = (place) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
 
 // Other experiences the confirmation suggests at the bottom: the private
-// guided tours, sold on request over WhatsApp. Photos are 560x360 JPGs in
+// guided tours, booked on the site. Photos are 560x360 JPGs in
 // public/email (made from src/assets/experiences).
 const MORE = [
   { slug: "private-colosseum-tour", title: "Private Colosseum Tour", blurb: "The Colosseum and Ancient Rome, with a guide just for your group.", photo: "colosseum.jpg" },
@@ -44,6 +44,25 @@ const KINDS = {
     intro: ["Thank you for booking with us. Everything is set: here is what you need for the day."],
     details: true,
     more: true,
+  }),
+  // A verified tour: the card is authorised, the owner checks availability.
+  requested: (b) => ({
+    subject: `Request received: ${b.title}, ${longDate(b.date)}`,
+    title: "We have your request",
+    intro: [
+      "Thank you. We are now checking availability for your date and time, and we will confirm by email.",
+      `Your card has been authorised for ${euro(b.total_cents)} but not charged. It is charged only when we confirm; if the date is not available, the authorisation is released and nothing is charged.`,
+    ],
+    details: true,
+  }),
+  declined: (b) => ({
+    subject: `Not available: ${b.title}, ${longDate(b.date)}`,
+    title: "Sorry, that date is not available",
+    intro: [
+      `We could not confirm your request ${b.code} (${b.title}, ${longDate(b.date)} at ${b.time}, ${guestsText(b.guests)}).`,
+      "Nothing has been charged: the authorisation on your card has been released. Banks usually remove it within a few days. Write to us and we will help you find another date.",
+    ],
+    details: false,
   }),
   updated: (b) => ({
     subject: `Booking updated: ${b.title}, ${longDate(b.date)}`,
@@ -77,13 +96,17 @@ const facts = (b) => [
   ["Date", longDate(b.date)],
   ["Time", b.time],
   ["Guests", String(b.guests)],
+  ...(b.participants ? [["Participants", b.participants.split(/\n+/).join("; ")]] : []),
   ...(b.meeting_point ? [["Meeting point", b.meeting_point]] : []),
 ];
 const money = (b) => [
   ...(b.discount_cents > 0 ? [[`Discount${b.promo_code ? ` (${b.promo_code})` : ""}`, `−${euro(b.discount_cents)}`]] : []),
   ["Total", euro(b.total_cents)],
-  ["Paid online (deposit)", euro(b.paid_cents)],
-  ["To pay on the day", euro(Math.max(0, b.total_cents - b.paid_cents))],
+  ...(b.status === "requested"
+    ? [["Authorised on your card, not charged yet", euro(b.deposit_cents)]]
+    : b.paid_cents >= b.total_cents
+      ? [["Paid online", euro(b.paid_cents)]]
+      : [["Paid online (deposit)", euro(b.paid_cents)], ["To pay on the day", euro(Math.max(0, b.total_cents - b.paid_cents))]]),
 ];
 const policy = (b) => `Free cancellation up to ${b.cancel_hours} hours before the start. To change or cancel, reply to this email or message us on WhatsApp.`;
 
@@ -114,7 +137,7 @@ function more(b) {
       <img src="${SITE}/email/${m.photo}" width="240" alt="${esc(m.title)}" style="display:block;width:100%;max-width:240px;height:auto;border:0;border-radius:10px" />
       <p style="margin:10px 0 4px;font-size:15px;font-weight:700;line-height:1.3">${esc(m.title)}</p>
       <p style="margin:0 0 8px;font-size:13px;line-height:1.45;color:${MUTE}">${esc(m.blurb)}</p>
-      <p style="margin:0;font-size:13px;font-weight:700;text-decoration:underline">Ask for a date</p>
+      <p style="margin:0;font-size:13px;font-weight:700;text-decoration:underline">Book online</p>
     </a></td>`;
   return `<tr><td style="padding:28px 32px 0"><div style="height:1px;background:${HAIR}"></div></td></tr>
     <tr><td style="padding:22px 26px 0">

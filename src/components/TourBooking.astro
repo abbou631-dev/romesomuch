@@ -3,7 +3,8 @@
  * Booking box for RomeSoMuch's own experiences: guests, a date and a start
  * time from live availability (/api/tours), the visitor's details, then the
  * deposit paid with Stripe's Payment Element right here; the balance is paid
- * on the day. Same look as the golf cart box (styles/booking-box.css).
+ * on the day. A tour the owner verifies (verify) asks for every participant
+ * and only authorises the card: the booking is a request until accepted. Same look as the golf cart box (styles/booking-box.css).
  * Prices, deposit share, times and seats come from the CRM's Tour section.
  */
 import "../styles/booking-box.css";
@@ -70,6 +71,10 @@ const { slug, title, maxGuests = null } = Astro.props;
           <option value="other">Other</option>
         </select>
       </div>
+      <div class="rq-field" data-partwrap hidden>
+        <label for={`tbPart-${slug}`}>Name, surname and date of birth of every participant, as on the passport</label>
+        <textarea id={`tbPart-${slug}`} data-part rows="3" placeholder="Anna Rossi, 12/03/1990"></textarea>
+      </div>
       <div class="rq-field"><label for={`tbNote-${slug}`}>Notes (optional)</label><textarea id={`tbNote-${slug}`} data-note rows="2" placeholder="Allergies, children, occasions"></textarea></div>
       <div class="rq-field">
         <label for={`tbPromo-${slug}`}>Promo code <em>· optional</em></label>
@@ -88,7 +93,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       <p class="rq-meta" data-meta></p>
       <p class="rq-disc" data-disc hidden></p>
       <p class="rq-total" data-total></p>
-      <p class="rq-split"><span>Pay now · deposit <b data-deposit></b></span><span>On the day · balance <b data-balance></b></span></p>
+      <p class="rq-split"><span data-nowlbl>Pay now · deposit <b data-deposit></b></span><span data-daylbl>On the day · balance <b data-balance></b></span></p>
     </div>
 
     <button class="rq-btn" type="button" data-go disabled>Choose a date</button>
@@ -98,27 +103,27 @@ const { slug, title, maxGuests = null } = Astro.props;
       <div data-pe></div>
       <button class="rq-btn" type="button" data-paybtn>Pay deposit</button>
       <button class="rq-btn ghost" type="button" data-back>Back</button>
-      <p class="rq-fine">Secure payment by Stripe. Only the deposit is charged now.</p>
+      <p class="rq-fine" data-payfine>Secure payment by Stripe. Only the deposit is charged now.</p>
     </div>
     <p class="rq-fine" data-fine></p>
   </div>
 
   <div class="rq-done" hidden>
-    <p class="rq-kick">Booking confirmed</p>
+    <p class="rq-kick" data-donekick>Booking confirmed</p>
     <h3>See you in <span class="hl">Rome</span></h3>
     <div class="rq-sum">
       <p class="rq-lbl">Your booking</p>
       <p class="rq-code" data-code></p>
       <p class="rq-meta" data-okline></p>
     </div>
-    <p class="rq-sub">A confirmation email is on its way with the meeting point and the balance to pay on the day.</p>
+    <p class="rq-sub" data-donesub>A confirmation email is on its way with the meeting point and the balance to pay on the day.</p>
   </div>
 </div>
 
 <script>
   type Slot = { time: string; left: number };
   type Promo = { code: string; percent: number | null; amount: number | null };
-  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number };
+  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number; tiers: Record<string, number> | null; verify: boolean };
   const ERRORS: Record<string, string> = {
     slot_full: "Those places have just been taken. Please choose another time.",
     slot_closed: "That time is no longer available. Please choose another.",
@@ -137,7 +142,7 @@ const { slug, title, maxGuests = null } = Astro.props;
     const err = $(".rq-err");
     const go = $<HTMLButtonElement>("[data-go]");
     const field = (s: string) => $<HTMLInputElement>(s);
-    const [name, mail, tel, cc, note, terms, src, promoIn] = ["[data-name]", "[data-mail]", "[data-tel]", "[data-cc]", "[data-note]", "[data-terms]", "[data-src]", "[data-promo]"].map(field);
+    const [name, mail, tel, cc, note, terms, src, promoIn, part] = ["[data-name]", "[data-mail]", "[data-tel]", "[data-cc]", "[data-note]", "[data-terms]", "[data-src]", "[data-promo]", "[data-part]"].map(field);
 
     const pad = (n: number) => String(n).padStart(2, "0");
     const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -152,7 +157,15 @@ const { slug, title, maxGuests = null } = Astro.props;
     };
     const cap = () => Math.min(state.tour?.maxGuests ?? Number(root.dataset.cap), 50);
     const need = () => (state.tour?.unit === "group" ? 1 : state.guests);
-    const full = () => (state.tour ? (state.tour.unit === "group" ? state.tour.price : state.tour.price * state.guests) : 0);
+    // Same arithmetic as the server (server/tours.js totalFor).
+    const full = () => {
+      const t = state.tour;
+      if (!t) return 0;
+      if (t.tiers) return t.tiers[state.guests] ?? t.price;
+      return t.unit === "group" ? t.price : t.price * state.guests;
+    };
+    const verify = () => Boolean(state.tour?.verify);
+    const allOnline = () => (state.tour?.depositPct ?? 0) >= 100;
     // Same arithmetic as the server (server/tours.js discountFor, depositFor).
     const discount = () => {
       const p = state.promo;
@@ -176,7 +189,8 @@ const { slug, title, maxGuests = null } = Astro.props;
     };
 
     const valid = () => Boolean(state.date && state.time && name.value.trim().length > 1
-      && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail.value.trim()) && tel.value.replace(/\D/g, "").length >= 6 && Boolean(state.wa) && Boolean(src.value) && terms.checked);
+      && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail.value.trim()) && tel.value.replace(/\D/g, "").length >= 6 && Boolean(state.wa) && Boolean(src.value) && terms.checked
+      && (!verify() || part.value.trim().length >= 5));
 
     function sync() {
       const t = state.tour;
@@ -184,9 +198,19 @@ const { slug, title, maxGuests = null } = Astro.props;
       $<HTMLButtonElement>('[data-g="-1"]').disabled = state.guests <= 1;
       $<HTMLButtonElement>('[data-g="1"]').disabled = state.guests >= cap();
       if (t) {
-        $("[data-paxhint]").textContent = t.unit === "group" ? `private boat · up to ${t.maxGuests} guests` : `1–${t.maxGuests} guests · all ages`;
-        $("[data-termstext]").innerHTML = `I pay a ${t.depositPct}% deposit now and the balance on the day. Free cancellation up to ${t.cancelHours} hours before the start. I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.`;
-        $("[data-fine]").textContent = `${eur(t.price)} per ${t.unit === "group" ? "boat" : "person"} · ${t.depositPct}% deposit online, the rest on the day`;
+        $("[data-paxhint]").textContent = t.tiers ? `private group · up to ${t.maxGuests}`
+          : t.unit === "group" ? `private boat · up to ${t.maxGuests} guests` : `1–${t.maxGuests} guests · all ages`;
+        const pay = verify() ? "My card is authorised now and charged only when you confirm availability; if you cannot, nothing is charged."
+          : allOnline() ? "I pay the full price now." : `I pay a ${t.depositPct}% deposit now and the balance on the day.`;
+        $("[data-termstext]").innerHTML = `${pay} Free cancellation up to ${t.cancelHours} hours before the start. I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.`;
+        $("[data-fine]").textContent = `${t.tiers ? `${eur(full())} for ${state.guests} guest${state.guests === 1 ? "" : "s"}` : `${eur(t.price)} per ${t.unit === "group" ? "boat" : "person"}`} · ${payLine()}`;
+        $("[data-partwrap]").hidden = !t.verify;
+        if (t.verify) document.querySelectorAll<HTMLElement>(`[data-tb-head="${slug}"]`).forEach((el) => { el.textContent = "Book your date"; });
+        $("[data-nowlbl]").firstChild!.textContent = verify() ? "Authorised now, charged when we confirm · " : allOnline() ? "Pay now · " : "Pay now · deposit ";
+        $("[data-daylbl]").hidden = allOnline();
+        $("[data-payfine]").textContent = verify() ? "Secure payment by Stripe. Your card is only authorised now: it is charged when we confirm the date."
+          : allOnline() ? "Secure payment by Stripe." : "Secure payment by Stripe. Only the deposit is charged now.";
+        document.querySelectorAll<HTMLElement>(`[data-tb-line="${slug}"]`).forEach((el) => { el.textContent = payLine(); });
       }
       $("[data-times]").hidden = !state.date;
       $("[data-details]").hidden = !state.time;
@@ -204,7 +228,13 @@ const { slug, title, maxGuests = null } = Astro.props;
       if (!t) { go.textContent = "Loading…"; go.disabled = true; return; }
       if (!state.date || !state.time) { go.textContent = "Choose date and time"; go.disabled = true; return; }
       go.disabled = !valid();
-      go.textContent = valid() ? `Continue · pay ${eur(deposit())} deposit` : "Fill in your details";
+      go.textContent = !valid() ? "Fill in your details" : verify() ? `Continue · request for ${eur(deposit())}`
+        : allOnline() ? `Continue · pay ${eur(deposit())}` : `Continue · pay ${eur(deposit())} deposit`;
+    }
+
+    // How the price is paid, for the box's small print and the panel above it.
+    function payLine() {
+      return verify() ? "paid online once we confirm availability" : allOnline() ? "paid online" : `${state.tour?.depositPct}% deposit online, the rest on the day`;
     }
 
     function calendar() {
@@ -275,7 +305,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       else return;
       showErr(); sync();
     });
-    [name, mail, tel, cc, terms, src].forEach((el) => { el.addEventListener("input", sync); el.addEventListener("change", sync); });
+    [name, mail, tel, cc, terms, src, part].forEach((el) => { el.addEventListener("input", sync); el.addEventListener("change", sync); });
 
     const promoNote = (m = "", ok = false) => { const n = $("[data-promonote]"); n.textContent = m; n.classList.toggle("ok", ok); };
     async function applyPromo() {
@@ -312,7 +342,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       try {
         const r = await api("hold", {
           tour: slug, date: state.date, time: state.time, guests: state.guests,
-          name: name.value.trim(), email: mail.value.trim(), phone: `${cc.value} ${tel.value.trim()}`, whatsapp: state.wa, notes: note.value.trim(), source: src.value, promo: state.promo?.code ?? "",
+          name: name.value.trim(), email: mail.value.trim(), phone: `${cc.value} ${tel.value.trim()}`, whatsapp: state.wa, notes: note.value.trim(), participants: part.value.trim(), source: src.value, promo: state.promo?.code ?? "",
         });
         state.code = r.code;
         await loadStripe();
@@ -328,7 +358,7 @@ const { slug, title, maxGuests = null } = Astro.props;
         });
         state.pe = state.elements.create("payment", { layout: "tabs", defaultValues: { billingDetails: { name: name.value.trim(), email: mail.value.trim() } } });
         state.pe.mount($("[data-pe]"));
-        $("[data-paybtn]").textContent = `Pay ${eur(r.deposit)} deposit`;
+        $("[data-paybtn]").textContent = verify() ? `Authorise ${eur(r.deposit)}` : allOnline() ? `Pay ${eur(r.deposit)}` : `Pay ${eur(r.deposit)} deposit`;
         go.hidden = true; $("[data-pay]").hidden = false;
         setTimeout(() => $("[data-pay]").scrollIntoView({ behavior: "smooth", block: "start" }), 150);
       } catch (e) {
@@ -356,15 +386,24 @@ const { slug, title, maxGuests = null } = Astro.props;
 
     async function done(pi: string) {
       let order: any = null;
-      for (let i = 0; i < 6 && !(order && order.status === "confirmed"); i++) {
+      const settled = () => order && (order.status === "confirmed" || order.status === "requested");
+      for (let i = 0; i < 6 && !settled(); i++) {
         try { order = await api("confirm", { pi }); } catch { /* retried */ }
-        if (!order || order.status !== "confirmed") await new Promise((ok) => setTimeout(ok, 1500));
+        if (!settled()) await new Promise((ok) => setTimeout(ok, 1500));
       }
       if (!order) { showErr("Your payment went through, but we could not show the confirmation. Check your email or write to us."); return; }
       $("[data-form]").hidden = true;
       $(".rq-done").hidden = false;
       $("[data-code]").textContent = order.code;
-      $("[data-okline]").textContent = `${order.title} · ${nice(order.date)} · ${order.time} · ${order.guests} guest${order.guests === 1 ? "" : "s"} · ${eur(order.paid)} paid, ${eur(order.balance)} on the day`;
+      const asked = order.status === "requested";
+      const money = asked ? `${eur(order.total)} authorised, not charged yet` : order.balance > 0 ? `${eur(order.paid)} paid, ${eur(order.balance)} on the day` : `${eur(order.paid)} paid`;
+      $("[data-okline]").textContent = `${order.title} · ${nice(order.date)} · ${order.time} · ${order.guests} guest${order.guests === 1 ? "" : "s"} · ${money}`;
+      if (asked) {
+        $("[data-donekick]").textContent = "Request received";
+        $("[data-donesub]").textContent = "We are checking availability and will confirm by email. Your card is charged only when we confirm.";
+      } else if (order.balance <= 0) {
+        $("[data-donesub]").textContent = "A confirmation email is on its way with the meeting point and all the details.";
+      }
       root.scrollIntoView({ behavior: "smooth", block: "start" });
       (window as any).rsmTrack?.("Purchase", { content_type: "product", content_ids: [slug], value: order.total / 100, currency: "EUR" });
     }

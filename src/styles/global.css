@@ -326,6 +326,9 @@ select.sort{position:absolute;inset-inline:0;top:50%;transform:translateY(-50%);
 
 .book{position:sticky;top:100px;border:1px solid var(--hair);background:var(--surface);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
 .book h3{font-size:26px}
+.book-price{margin:12px 0 0;line-height:1}
+.book-price .v{font-family:var(--disp);font-size:52px;font-weight:400}
+.book-price .u{font-size:14px;font-weight:600;color:var(--muted)}
 .field{margin-top:15px}
 .field label{display:block;font-size:9.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
 .field input,.field select{width:100%;padding:13px 14px;border:1px solid var(--hair);background:var(--paper);border-radius:10px;font-size:14.5px;font-weight:500}
@@ -549,6 +552,7 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
     full width instead of sitting inside two paddings. */
  .book{margin-inline:calc(var(--pad) * -1);padding:16px 12px;border-radius:0;border-inline:0}
  .book h3{font-size:22px}
+ .book-price .v{font-size:44px}
  .legal{padding:18px 0}
  .lsec{padding:16px 0}
  .lsec h2{font-size:17px;gap:10px}

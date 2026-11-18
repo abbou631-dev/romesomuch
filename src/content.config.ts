@@ -18,6 +18,9 @@ const experiences = defineCollection({
     // Null only on a partner tour (live price) or a request-only tour (price on request).
     price: z.number().positive().nullable().default(null),
     unit: z.enum(["person", "group"]),
+    // A private group priced by size: how many guests the "from" price covers,
+    // printed until the live price arrives ("€485 for 2 guests").
+    priceFor: z.number().int().positive().nullable().default(null),
     duration: z.number().positive(),
     durationLabel: z.string(),
     maxGuests: z.number().int().positive().nullable().default(null),

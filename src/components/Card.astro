@@ -31,7 +31,7 @@ const d = exp.data;
     </p>
     <p class="price">
       {d.golfCart ? <FromPrice tour={d.golfCart} /> : d.price === null ? <span class="f">Price on request</span> : (
-        <><span class="f">From</span>{d.liveBooking ? <TourPrice slug={exp.id} price={d.price!} unit={d.unit} /> : <><span class="v tnum">{money(d.price!)}</span><span class="u">/ {d.unit}</span></>}</>
+        <><span class="f">From</span>{d.liveBooking ? <TourPrice slug={exp.id} price={d.price!} unit={d.unit} priceFor={d.priceFor} /> : <><span class="v tnum">{money(d.price!)}</span><span class="u">/ {d.unit}</span></>}</>
       )}
     </p>
   </div>

@@ -12,6 +12,7 @@ languages: EN · IT
 meetingPoint: Via dei Volsci 40-42, 00185 Rome
 meetingCoords: "41.8967274,12.5129590"
 isNew: true
+liveBooking: true
 images:
   - type: video
     video: /media/coccio-ceramics-class.mp4

@@ -7,12 +7,13 @@
  * number too, so listing filters and sorting follow.
  *
  * Usage:  <TourPrice slug="vespa-tour" price={90} unit="person" />
+ *         <TourPrice slug="private-colosseum-tour" price={485} unit="group" priceFor={2} />
  */
 import { money } from "../lib/site";
 
-interface Props { slug: string; price: number; unit: "person" | "group"; perWord?: boolean }
-const { slug, price, unit, perWord = false } = Astro.props;
-const unitText = (u: string) => (perWord ? `per ${u === "group" ? "boat" : "person"}` : `/ ${u}`);
+interface Props { slug: string; price: number; unit: "person" | "group"; perWord?: boolean; priceFor?: number | null }
+const { slug, price, unit, perWord = false, priceFor = null } = Astro.props;
+const unitText = (u: string) => (priceFor ? `${perWord ? "for" : "/"} ${priceFor} guests` : perWord ? `per ${u === "group" ? "boat" : "person"}` : `/ ${u}`);
 ---
 <span class="tour-price" data-tour-price={slug} data-per={perWord ? "1" : ""}><span class="v tnum">{money(price)}</span>{" "}<span class="u">{unitText(unit)}</span></span>
 
@@ -29,7 +30,9 @@ const unitText = (u: string) => (perWord ? `per ${u === "group" ? "boat" : "pers
             var t = all[el.getAttribute("data-tour-price")];
             if (!t) return;
             var euros = t.price / 100;
-            var unit = el.getAttribute("data-per") ? "per " + (t.unit === "group" ? "boat" : "person") : "/ " + t.unit;
+            // A private group priced by size shows the price for the smallest group.
+            var unit = t.for ? (el.getAttribute("data-per") ? "for " + t.for + " guests" : "/ " + t.for + " guests")
+              : el.getAttribute("data-per") ? "per " + (t.unit === "group" ? "boat" : "person") : "/ " + t.unit;
             el.querySelector(".v").textContent = "€" + (euros % 1 ? euros.toFixed(2) : euros);
             el.querySelector(".u").textContent = unit;
             var card = el.closest("[data-price]");
