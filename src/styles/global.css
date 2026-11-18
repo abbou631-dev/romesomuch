@@ -11,9 +11,6 @@
   --disp:"Anton","Haettenschweiler","Arial Narrow",Impact,sans-serif;
   --body:"Satoshi","Plus Jakarta Sans","Helvetica Neue",Arial,sans-serif;
   --edge:#a7b2ba; --r-shot:8px 8px 8px 0;
-  /* One accent, for marks that point at something (highlights, underlines,
-     bullets, the New tag); --yellow stays the soft surface colour. */
-  --accent:#e8c547; --accent-ink:#0a0a0a;
   /* Radii: a box nested in another uses the outer radius minus its padding. */
   --r-lg:16px; --r-md:12px; --r-sm:8px;
   --pad:clamp(16px,4vw,56px); --maxw:1320px;
@@ -35,7 +32,7 @@ p{margin:0;text-wrap:pretty}
 .lbl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;color:var(--muted)}
 .tnum{font-variant-numeric:tabular-nums}
 .hl{position:relative;display:inline-block;z-index:0;padding-inline:.06em;color:#0a0a0a}
-.hl::before{content:"";position:absolute;left:-.12em;right:-.12em;top:-.04em;bottom:-.04em;background:var(--accent);transform:rotate(-2deg);z-index:-1}
+.hl::before{content:"";position:absolute;left:-.12em;right:-.12em;top:-.04em;bottom:-.04em;background:var(--yellow);transform:rotate(-2deg);z-index:-1}
 .badge{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
 .badge::before{content:"";width:8px;height:8px;border-radius:99px;background:var(--yellow-deep);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
 
@@ -180,7 +177,7 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 .rail-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:20px}
 .rail-head h2{font-size:clamp(30px,4.2vw,54px)}
 .rail-head .sub{font-size:14.5px;color:var(--muted);margin-top:10px;max-width:56ch;font-weight:400}
-.see{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;padding-bottom:3px;border-bottom:2px solid var(--accent)}
+.see{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;padding-bottom:3px;border-bottom:2px solid var(--yellow-deep)}
 .see:hover{border-bottom-width:4px}
 .track{display:grid;grid-auto-flow:column;grid-auto-columns:min(232px,43vw);gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:10px}
 .track>*{scroll-snap-align:start}
@@ -206,7 +203,7 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 /* Sits opposite the category so the two never collide, whatever the card width.
    Two classes deliberately: the narrow-screen rules below re-set .tag's left, and
    a single class would lose to them and stretch this pill across the card. */
-.tag.tag-new{left:auto;right:9px;background:var(--accent);color:var(--accent-ink)}
+.tag.tag-new{left:auto;right:9px;background:var(--ink);color:#fff}
 .shotwrap{position:relative}
 /* rank numerals — decorative, top picks rail only */
 .rankcard{padding-left:28px}
@@ -327,7 +324,7 @@ select.sort{position:absolute;inset-inline:0;top:50%;transform:translateY(-50%);
 .prose p{color:var(--ink-2);max-width:66ch;margin-bottom:12px;line-height:1.7}
 .incl{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px;max-width:60ch}
 .incl li{padding-left:24px;position:relative;color:var(--ink-2);font-size:14.5px}
-.incl li::before{content:"";position:absolute;left:0;top:8px;width:10px;height:10px;border-radius:99px;background:var(--accent)}
+.incl li::before{content:"";position:absolute;left:0;top:8px;width:12px;height:12px;border-radius:99px;background:var(--yellow);border:1px solid var(--yellow-deep)}
 
 .book{position:sticky;top:100px;border:1px solid var(--hair);background:var(--surface);border-radius:var(--r-lg);padding:22px;box-shadow:var(--shadow)}
 .book h3{font-size:26px}
