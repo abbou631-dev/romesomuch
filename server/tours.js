@@ -10,8 +10,9 @@ import { guestEmail } from "./tour-emails.js";
 import site from "../src/data/site.json";
 
 const ROME = "Europe/Rome";
-// A booking waiting for its payment keeps its seats this long.
-const HOLD = "(status = 'confirmed' OR (status = 'pending' AND created_at > datetime('now', '-20 minutes')))";
+// Seats are taken by confirmed bookings, by requests waiting for the owner
+// (card authorised), and by a booking waiting for its payment for 20 minutes.
+const HOLD = "(status IN ('confirmed', 'requested') OR (status = 'pending' AND created_at > datetime('now', '-20 minutes')))";
 const MONTHS_AHEAD = 12;
 const notifyTo = (env) => env.CRM_NOTIFY ?? "romesomuch@gmail.com";
 const replyTo = site.contactEmail;
@@ -54,11 +55,15 @@ const guestsText = (n) => `${n} ${n === 1 ? "guest" : "guests"}`;
 
 // ---- tours ------------------------------------------------------------------------
 
-const parseTour = (row) => row && { ...row, times: JSON.parse(row.times) };
+const parseTour = (row) => row && { ...row, times: JSON.parse(row.times), price_tiers: row.price_tiers ? JSON.parse(row.price_tiers) : null };
 const getTour = async (env, slug) =>
   parseTour(await env.CRM_DB.prepare("SELECT * FROM tours WHERE slug = ?").bind(String(slug ?? "")).first());
 
-export const totalFor = (tour, guests) => (tour.unit === "group" ? tour.price_cents : tour.price_cents * guests);
+// A private group priced by size (price_tiers) pays the price for its number
+// of guests; otherwise the price is per person, or flat per group (a boat).
+export const totalFor = (tour, guests) =>
+  tour.price_tiers ? tour.price_tiers[guests] ?? tour.price_cents
+    : tour.unit === "group" ? tour.price_cents : tour.price_cents * guests;
 export const depositFor = (tour, total) => Math.round((total * tour.deposit_pct) / 100);
 // Seats a booking takes in its slot: guests, or one boat for a private group.
 const need = (tour, guests) => (tour.unit === "group" ? 1 : guests);
@@ -67,8 +72,12 @@ const usedSql = (tour) => (tour.unit === "group" ? "count(*)" : "coalesce(sum(gu
 // What the site's booking box needs to know about an experience.
 const publicTour = (t) => ({
   slug: t.slug, title: t.title, price: t.price_cents, unit: t.unit, depositPct: t.deposit_pct,
-  maxGuests: t.max_guests, cancelHours: t.cancel_hours,
+  maxGuests: t.max_guests, cancelHours: t.cancel_hours, tiers: t.price_tiers, verify: Boolean(t.verify),
 });
+// Most guests the "from" price covers (2 for €485 when one and two pay the same).
+const fromGuests = (t) => (t.price_tiers
+  ? Math.max(...Object.entries(t.price_tiers).filter(([, c]) => c === t.price_cents).map(([n]) => Number(n)), 1)
+  : null);
 
 // Open start times of one month: { "2026-11-21": [{ time, left }] }. A day is
 // listed only if it runs and still has a time that can be sold.
@@ -149,20 +158,27 @@ export const sendEmail = (env, kind, b, origin, ...extra) =>
 
 const notifyOwner = (env, b, origin) => mail(env, {
   to: notifyTo(env),
-  subject: `Nuova prenotazione: ${b.title}, ${itDate(b.date)} ${b.time}`,
+  subject: b.status === "requested"
+    ? `Richiesta da accettare: ${b.title}, ${itDate(b.date)} ${b.time}`
+    : `Nuova prenotazione: ${b.title}, ${itDate(b.date)} ${b.time}`,
   replyTo: b.email,
   text: [
-    `${b.name} ha prenotato ${b.title}.`,
+    b.status === "requested"
+      ? `${b.name} chiede ${b.title}. La carta è autorizzata per ${euro(b.total_cents)} ma non ancora addebitata: verifica la disponibilità e accetta o rifiuta dal gestionale entro 7 giorni (poi Stripe libera l'autorizzazione).`
+      : `${b.name} ha prenotato ${b.title}.`,
     "",
     `Quando: ${itDate(b.date)}, ${b.time}`,
     `Ospiti: ${b.guests}`,
     `Email: ${b.email}`,
     `Telefono: ${b.phone ?? "—"} · WhatsApp: ${b.whatsapp === 1 ? `sì (https://wa.me/${String(b.phone ?? "").replace(/\D/g, "").replace(/^00/, "")})` : b.whatsapp === 0 ? "no" : "—"}`,
+    ...(b.participants ? ["Partecipanti:", b.participants] : []),
     ...(b.notes ? [`Note: ${b.notes}`] : []),
     `Ci ha conosciuti: ${SOURCES[b.source] ?? "—"}`,
     "",
     ...(b.promo_code ? [`Codice sconto: ${b.promo_code} (−${euro(b.discount_cents)})`] : []),
-    `Totale ${euro(b.total_cents)} · deposito incassato ${euro(b.paid_cents)} · saldo sul posto ${euro(b.total_cents - b.paid_cents)}`,
+    b.status === "requested"
+      ? `Totale ${euro(b.total_cents)} · autorizzato sulla carta, da incassare quando accetti`
+      : `Totale ${euro(b.total_cents)} · incassato online ${euro(b.paid_cents)} · saldo sul posto ${euro(b.total_cents - b.paid_cents)}`,
     `Codice ${b.code}`,
     "",
     `Gestionale: ${origin}/crm/tour/`,
@@ -170,7 +186,7 @@ const notifyOwner = (env, b, origin) => mail(env, {
 });
 
 // A booking with everything the emails print.
-const BOOKING = `SELECT b.*, t.title, t.unit, t.meeting_point, t.cancel_hours, t.price_cents
+const BOOKING = `SELECT b.*, t.title, t.unit, t.meeting_point, t.cancel_hours, t.price_cents, t.verify
   FROM tour_bookings b JOIN tours t ON t.slug = b.slug`;
 const bookingBy = (env, column, value) => env.CRM_DB.prepare(`${BOOKING} WHERE b.${column} = ?`).bind(value).first();
 
@@ -187,13 +203,20 @@ const publicOrder = (b) => ({
 });
 
 // Marks a paid booking confirmed and sends the emails, once: the browser and
-// Stripe's webhook may both get here.
+// Stripe's webhook may both get here. On a tour the owner verifies, an
+// authorised card makes the booking a request instead.
 async function confirmPayment(env, origin, intentId) {
   if (!/^pi_[A-Za-z0-9_]+$/.test(intentId ?? "")) throw new Invalid("Pagamento non valido.");
   const booking = await bookingBy(env, "payment_intent", intentId);
   if (!booking) throw new Invalid("Prenotazione non trovata.");
   if (booking.status !== "pending") return publicOrder(booking);
   const intent = await stripe(env, "GET", `payment_intents/${intentId}`);
+  if (booking.verify && intent.status === "requires_capture") {
+    const { meta } = await env.CRM_DB.prepare("UPDATE tour_bookings SET status = 'requested' WHERE id = ? AND status = 'pending'").bind(booking.id).run();
+    const asked = { ...booking, status: "requested" };
+    if (meta.changes) await Promise.all([sendEmail(env, "requested", asked, origin), notifyOwner(env, asked, origin)]);
+    return publicOrder(asked);
+  }
   if (intent.status !== "succeeded") return { ...publicOrder(booking), payment: intent.status };
   const { meta } = await env.CRM_DB.prepare(
     "UPDATE tour_bookings SET status = 'confirmed', paid_cents = ?, confirmed_at = datetime('now') WHERE id = ? AND status = 'pending'",
@@ -209,7 +232,7 @@ const PROMO = /^[A-Z0-9-]{3,30}$/;
 const promoCode = (raw) => String(raw ?? "").trim().toUpperCase();
 // Bookings that count as a use: paid ones, and ones waiting for their payment.
 const promoUses = `(SELECT count(*) FROM tour_bookings u WHERE u.promo_code = p.code
-  AND (u.status = 'confirmed' OR (u.status = 'pending' AND u.created_at > datetime('now', '-20 minutes'))))`;
+  AND (u.status IN ('confirmed', 'requested') OR (u.status = 'pending' AND u.created_at > datetime('now', '-20 minutes'))))`;
 
 // The code if it works for this experience today, null when none was typed.
 async function promoFor(env, raw, tour) {
@@ -232,6 +255,8 @@ async function hold(env, body) {
   const email = String(body.email ?? "").trim().slice(0, 200);
   const phone = String(body.phone ?? "").trim().slice(0, 40);
   const notes = String(body.notes ?? "").trim().slice(0, 1000) || null;
+  const participants = String(body.participants ?? "").trim().slice(0, 2000) || null;
+  if (tour.verify && (participants ?? "").length < 5) throw new Invalid("missing_fields");
   const source = String(body.source ?? "");
   const whatsapp = { 1: 1, 0: 0 }[String(body.whatsapp)];
   if (whatsapp === undefined) throw new Invalid("missing_fields");
@@ -256,11 +281,11 @@ async function hold(env, body) {
   // The seat check and the insert are one statement, so two people cannot
   // both take the last seats.
   const { meta } = await env.CRM_DB.prepare(
-    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, source, total_cents, deposit_cents, promo_code, discount_cents)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total_cents, deposit_cents, promo_code, discount_cents)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
      WHERE (SELECT ${usedSql(tour)} FROM tour_bookings WHERE slug = ? AND date = ? AND time = ? AND ${HOLD}) + ? <= ?
        AND (SELECT count(*) FROM tour_bookings WHERE promo_code = ? AND ${HOLD}) < ?`,
-  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, source, total, deposit, promo?.code ?? null, discount,
+  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total, deposit, promo?.code ?? null, discount,
     tour.slug, date, time, need(tour, guests), tour.capacity, promo?.code ?? null, promo?.max_uses ?? 1e9).run();
   if (!meta.changes) throw new Invalid("slot_full");
 
@@ -269,8 +294,10 @@ async function hold(env, body) {
       amount: deposit,
       currency: "eur",
       automatic_payment_methods: { enabled: true },
+      // Verified tours only authorise the card; the CRM charges it on accept.
+      ...(tour.verify ? { capture_method: "manual" } : {}),
       receipt_email: email,
-      description: `Deposit ${code} · ${tour.title} · ${date} ${time} · ${guestsText(guests)}${promo ? ` · code ${promo.code}` : ""}`,
+      description: `${deposit === total ? "Payment" : "Deposit"} ${code} · ${tour.title} · ${date} ${time} · ${guestsText(guests)}${promo ? ` · code ${promo.code}` : ""}`,
       metadata: { code, tour: tour.slug, date, time, guests, ...(promo ? { promo: promo.code } : {}) },
     }, `hold-${code}`);
     await env.CRM_DB.prepare("UPDATE tour_bookings SET payment_intent = ? WHERE code = ?").bind(intent.id, code).run();
@@ -312,8 +339,8 @@ export async function siteApi(request, env, path) {
   }
   // Live prices for cards and pages (src/components/TourPrice.astro).
   if (what === "prices" && request.method === "GET") {
-    const { results } = await env.CRM_DB.prepare("SELECT slug, price_cents, unit FROM tours WHERE active = 1").all();
-    return Response.json(Object.fromEntries(results.map((t) => [t.slug, { price: t.price_cents, unit: t.unit }])), {
+    const { results } = await env.CRM_DB.prepare("SELECT slug, price_cents, unit, price_tiers, times FROM tours WHERE active = 1").all();
+    return Response.json(Object.fromEntries(results.map(parseTour).map((t) => [t.slug, { price: t.price_cents, unit: t.unit, for: fromGuests(t) }])), {
       headers: { "Cache-Control": "public, max-age=60" },
     });
   }
@@ -337,7 +364,8 @@ export async function webhook(request, env) {
   if (!env.STRIPE_WEBHOOK_SECRET) return json({ error: "webhook not configured" }, 503);
   const event = await signedEvent(env, request);
   if (!event) return json({ error: "bad signature" }, 400);
-  if (event.type === "payment_intent.succeeded" && event.data?.object?.metadata?.code) {
+  // amount_capturable_updated: a verified tour's card was authorised.
+  if (["payment_intent.succeeded", "payment_intent.amount_capturable_updated"].includes(event.type) && event.data?.object?.metadata?.code) {
     await confirmPayment(env, new URL(request.url).origin, event.data.object.id).catch((e) => console.log("webhook confirm", e?.message));
   }
   return json({ received: true });
@@ -347,8 +375,24 @@ export async function webhook(request, env) {
 
 const TOUR_FIELDS = {
   title: "t", price_cents: "i", unit: "t", deposit_pct: "i", capacity: "i", max_guests: "i",
-  weekdays: "t", cutoff_hours: "i", cancel_hours: "i", meeting_point: "t", active: "i",
+  weekdays: "t", cutoff_hours: "i", cancel_hours: "i", meeting_point: "t", active: "i", verify: "i",
 };
+
+// "2=485, 3=540" (euros, as typed in the CRM) to {"2": 48500, "3": 54000}.
+// Empty means no tiers. Every size from 1 to the largest must have a price.
+function tiersValue(raw) {
+  const text = String(raw ?? "").trim();
+  if (!text) return null;
+  const tiers = {};
+  for (const part of text.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean)) {
+    const m = part.match(/^(\d+)\s*[=:]\s*€?\s*(\d+(?:[.,]\d{1,2})?)$/);
+    if (!m) throw new Invalid(`Prezzi per persone: «${part}» non è nel formato 2=485.`);
+    tiers[Number(m[1])] = Math.round(Number(m[2].replace(",", ".")) * 100);
+  }
+  const top = Math.max(...Object.keys(tiers).map(Number));
+  for (let n = 1; n <= top; n++) if (!tiers[n]) throw new Invalid(`Prezzi per persone: manca il prezzo per ${n}.`);
+  return JSON.stringify(tiers);
+}
 
 function tourValues(body) {
   const out = {};
@@ -370,6 +414,7 @@ function tourValues(body) {
     out.weekdays = [...new Set(String(out.weekdays ?? "").replace(/\D/g, ""))].filter((d) => d <= "6").sort().join("");
     if (!out.weekdays) throw new Invalid("Scegli almeno un giorno.");
   }
+  if ("price_tiers" in body) out.price_tiers = tiersValue(body.price_tiers);
   if ("times" in body) {
     const times = [...new Set([].concat(body.times ?? []).flatMap((t) => String(t).split(/[\s,;]+/)).filter(Boolean)
       .map((t) => t.replace(".", ":").replace(/^(\d):/, "0$1:")))].sort();
@@ -385,7 +430,8 @@ async function listBookings(env, url) {
   const binds = [];
   const now = today();
   let order = "b.date, b.time";
-  if (scope === "upcoming") { where.push("b.status = 'confirmed' AND b.date >= ?"); binds.push(now); }
+  if (scope === "requested") where.push("b.status = 'requested'");
+  else if (scope === "upcoming") { where.push("b.status = 'confirmed' AND b.date >= ?"); binds.push(now); }
   else if (scope === "past") { where.push("b.status = 'confirmed' AND b.date < ?"); binds.push(now); order = "b.date DESC, b.time DESC"; }
   else if (scope === "cancelled") { where.push("b.status = 'cancelled'"); order = "b.cancelled_at DESC"; }
   else throw new Invalid("Elenco non valido.");
@@ -407,6 +453,7 @@ async function summary(env) {
   const year = `${now.slice(0, 4)}-%`;
   const PAID = "status != 'pending' AND confirmed_at LIKE";
   const row = await env.CRM_DB.prepare(`SELECT
+      (SELECT count(*) FROM tour_bookings WHERE status = 'requested') AS requested_n,
       (SELECT count(*) FROM tour_bookings WHERE status = 'confirmed' AND date = ?1) AS today_n,
       (SELECT coalesce(sum(guests), 0) FROM tour_bookings WHERE status = 'confirmed' AND date = ?1) AS today_guests,
       (SELECT count(*) FROM tour_bookings WHERE status = 'confirmed' AND date > ?1 AND date <= ?2) AS week_n,
@@ -442,6 +489,7 @@ async function editBooking(env, origin, id, body) {
     date: body.date ?? b.date, time: body.time ?? b.time, guests: body.guests === undefined ? b.guests : Number(body.guests),
     name: String(body.name ?? b.name).trim(), email: String(body.email ?? b.email).trim(),
     phone: body.phone === undefined ? b.phone : String(body.phone).trim() || null,
+    participants: body.participants === undefined ? b.participants : String(body.participants).trim() || null,
     notes: body.notes === undefined ? b.notes : String(body.notes).trim() || null,
     whatsapp: body.whatsapp === undefined || body.whatsapp === "" ? b.whatsapp : Number(body.whatsapp) ? 1 : 0,
   };
@@ -449,7 +497,7 @@ async function editBooking(env, origin, id, body) {
   if (!Number.isInteger(next.guests) || next.guests < 1) throw new Invalid("Numero di ospiti non valido.");
   if (next.name.length < 2 || !EMAIL.test(next.email)) throw new Invalid("Nome o email non validi.");
   // Moving or growing a booking must fit the slot, not counting itself.
-  if (b.status === "confirmed" && (next.date !== b.date || next.time !== b.time || next.guests !== b.guests)) {
+  if (["confirmed", "requested"].includes(b.status) && (next.date !== b.date || next.time !== b.time || next.guests !== b.guests)) {
     const { n } = await env.CRM_DB.prepare(`SELECT ${usedSql(tour)} AS n FROM tour_bookings WHERE slug = ? AND date = ? AND time = ? AND id != ? AND ${HOLD}`)
       .bind(b.slug, next.date, next.time, id).first();
     const left = tour.capacity - n;
@@ -459,17 +507,43 @@ async function editBooking(env, origin, id, body) {
   let total = body.total_cents === undefined || body.total_cents === null ? b.total_cents : Number(body.total_cents);
   if (next.guests !== b.guests && Number(body.total_cents) === b.total_cents) total = totalFor(tour, next.guests);
   if (!Number.isInteger(total) || total < 0) throw new Invalid("Totale non valido.");
-  await env.CRM_DB.prepare("UPDATE tour_bookings SET date = ?, time = ?, guests = ?, name = ?, email = ?, phone = ?, whatsapp = ?, notes = ?, total_cents = ? WHERE id = ?")
-    .bind(next.date, next.time, next.guests, next.name, next.email, next.phone, next.whatsapp, next.notes, total, id).run();
+  await env.CRM_DB.prepare("UPDATE tour_bookings SET date = ?, time = ?, guests = ?, name = ?, email = ?, phone = ?, whatsapp = ?, notes = ?, participants = ?, total_cents = ? WHERE id = ?")
+    .bind(next.date, next.time, next.guests, next.name, next.email, next.phone, next.whatsapp, next.notes, next.participants, total, id).run();
   const updated = await bookingBy(env, "id", id);
   let emailed = false;
   if (body.notify && updated.status === "confirmed") emailed = await sendEmail(env, "updated", updated, origin);
   return { booking: updated, emailed };
 }
 
+// A verified tour's request: accepting charges the authorised card (up to
+// what was authorised) and confirms; declining releases the authorisation.
+async function acceptBooking(env, origin, id) {
+  const b = await bookingBy(env, "id", id);
+  if (!b || b.status !== "requested") throw new Invalid("Questa richiesta non è più da accettare.");
+  const intent = await stripe(env, "GET", `payment_intents/${b.payment_intent}`);
+  if (intent.status !== "requires_capture") throw new Invalid("L'autorizzazione sulla carta non c'è più (scaduta dopo 7 giorni o annullata): rifiuta la richiesta e scrivi al cliente.");
+  const captured = await stripe(env, "POST", `payment_intents/${b.payment_intent}/capture`,
+    { amount_to_capture: Math.min(b.deposit_cents, intent.amount_capturable) }, `capture-${b.code}`);
+  await env.CRM_DB.prepare("UPDATE tour_bookings SET status = 'confirmed', paid_cents = ?, confirmed_at = datetime('now') WHERE id = ? AND status = 'requested'")
+    .bind(captured.amount_received, id).run();
+  const done = await bookingBy(env, "id", id);
+  return { emailed: await sendEmail(env, "confirmed", done, origin) };
+}
+
+async function declineBooking(env, origin, id, body) {
+  const b = await bookingBy(env, "id", id);
+  if (!b || b.status !== "requested") throw new Invalid("Questa richiesta non è più da rifiutare.");
+  const intent = await stripe(env, "GET", `payment_intents/${b.payment_intent}`);
+  if (intent.status === "requires_capture") await stripe(env, "POST", `payment_intents/${b.payment_intent}/cancel`, {}, `decline-${b.code}`);
+  await env.CRM_DB.prepare("UPDATE tour_bookings SET status = 'cancelled', cancelled_at = datetime('now') WHERE id = ? AND status = 'requested'").bind(id).run();
+  return { emailed: body.notify ? await sendEmail(env, "declined", b, origin) : false };
+}
+
 async function cancelBooking(env, origin, id, body) {
   const b = await bookingBy(env, "id", id);
   if (!b) throw new Invalid("Prenotazione non trovata.");
+  // Nothing was charged on a request: cancelling it releases the card.
+  if (b.status === "requested") return declineBooking(env, origin, id, body);
   const refundable = b.paid_cents - b.refunded_cents;
   const refund = Number(body.refund_cents ?? 0);
   if (!Number.isInteger(refund) || refund < 0 || refund > refundable) {
@@ -548,6 +622,8 @@ export async function crmApi(request, env, path) {
     const id = Number(key);
     if (!Number.isInteger(id)) return json({ error: "Non trovato." }, 404);
     if (!action && method === "PATCH") return json(await editBooking(env, url.origin, id, await request.json()));
+    if (action === "accept" && method === "POST") return json(await acceptBooking(env, url.origin, id));
+    if (action === "decline" && method === "POST") return json(await declineBooking(env, url.origin, id, await request.json()));
     if (action === "cancel" && method === "POST") return json(await cancelBooking(env, url.origin, id, await request.json()));
     if (action === "resend" && method === "POST") {
       const b = await bookingBy(env, "id", id);

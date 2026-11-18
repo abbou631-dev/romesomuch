@@ -10,7 +10,7 @@ import { SOURCES } from "../../../server/tour-sources.js";
 const api = apiFor("/api/crm", "/crm/login/");
 const view = document.getElementById("view")!;
 
-const SCOPES = { upcoming: "Prossime", past: "Passate", cancelled: "Cancellate" } as Record<string, string>;
+const SCOPES = { requested: "Da accettare", upcoming: "Prossime", past: "Passate", cancelled: "Cancellate" } as Record<string, string>;
 const DAYS: [string, string][] = [["1", "Lun"], ["2", "Mar"], ["3", "Mer"], ["4", "Gio"], ["5", "Ven"], ["6", "Sab"], ["0", "Dom"]];
 const UNIT = { person: "a persona", group: "a gruppo / barca" } as Record<string, string>;
 
@@ -32,6 +32,9 @@ const ICONS: Record<string, string> = {
   "roman-mosaic-class": '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/>',
   "micromosaic-jewelry-class": '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M12 21 8 9l4-6 4 6z"/>',
 };
+ICONS["coccio-ceramics-class"] = '<path d="M8 3h8"/><path d="M9 3v3c-3 1.5-5 4.5-5 8a8 8 0 0 0 16 0c0-3.5-2-6.5-5-8V3"/><path d="M5 13h14"/>';
+ICONS["private-vatican-museums-tour"] = '<path d="M4 20h16"/><path d="M5 20v-8M9 20v-8M15 20v-8M19 20v-8"/><path d="M3 12h18"/><path d="M5 12a7 7 0 0 1 14 0"/><path d="M12 5V3"/>';
+ICONS["private-colosseum-tour"] = '<ellipse cx="12" cy="8" rx="9" ry="3"/><path d="M3 8v9c0 1.7 4 3 9 3s9-1.3 9-3V8"/><path d="M7 11v7M12 11.5v8M17 11v7"/>';
 const PIN = '<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>';
 // "How did you hear about us?": one colour per platform, the same in the
 // rows and in the summary (.pf-* in crm.css).
@@ -52,6 +55,10 @@ const icon = (slug: string, size = 20) =>
   `<svg class="tour-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[slug] ?? PIN}</svg>`;
 
 const balance = (b: Row) => b.total_cents - b.paid_cents;
+// Stripe drops an authorisation it was never asked to capture after 7 days.
+const authEnds = (b: Row) => new Date(new Date(`${String(b.created_at).replace(" ", "T")}Z`).getTime() + 7 * 864e5).toISOString().slice(0, 10);
+const tiersText = (t: Row) => t.price_tiers
+  ? Object.entries(t.price_tiers as Record<string, number>).map(([n, c]) => `${n}=${c / 100}`).join(", ") : "";
 const refundable = (b: Row) => b.paid_cents - b.refunded_cents;
 const when = (b: Row) => `${day(b.date)} · ${esc(b.time)}`;
 // The browser runs on the owner's clock, which is Rome's.
@@ -65,14 +72,18 @@ function row(b: Row) {
   const contact = [b.email, b.phone].filter(Boolean).map((x) => esc(x)).join(" · ") + wa;
   const money = scope === "cancelled"
     ? `<td class="num">${eur(b.paid_cents)}</td><td class="num">${eur(b.refunded_cents)}</td>`
+    : scope === "requested"
+    ? `<td class="num"><strong>${eur(b.deposit_cents)}</strong><br /><small class="mute">autorizzati, non incassati · rispondi entro ${day(authEnds(b))}</small></td>`
     : `<td class="num"><strong>${eur(b.paid_cents - b.refunded_cents)}</strong><br /><small class="mute">su ${eur(b.total_cents)} · ${eur(balance(b))} sul posto</small></td>`;
-  const actions = scope === "cancelled"
+  const actions = scope === "requested"
+    ? `<button class="link" data-accept="${b.id}">Accetta e incassa</button><button class="link" data-edit="${b.id}">Modifica</button><button class="link danger" data-decline="${b.id}">Rifiuta</button>`
+    : scope === "cancelled"
     ? (refundable(b) > 0 ? `<button class="link" data-cancel="${b.id}">Rimborsa</button>` : "")
     : `<button class="link" data-edit="${b.id}">Modifica</button><button class="link" data-resend="${b.id}">Rimanda email</button><button class="link danger" data-cancel="${b.id}">Cancella</button>`;
   return `<tr>
     <td>${when(b)}</td>
     <td><span class="tour-name">${icon(b.slug)}${esc(b.title)}</span></td>
-    <td><strong>${esc(b.name)}</strong><br /><small class="mute">${contact}</small><br />${sourceTag(b.source)}${b.promo_code ? ` <span class="promo-tag">${esc(b.promo_code)} −${eur(b.discount_cents)}</span>` : ""}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
+    <td><strong>${esc(b.name)}</strong><br /><small class="mute">${contact}</small><br />${sourceTag(b.source)}${b.promo_code ? ` <span class="promo-tag">${esc(b.promo_code)} −${eur(b.discount_cents)}</span>` : ""}${b.participants ? `<br /><small><strong>Partecipanti:</strong> ${esc(b.participants).replace(/\n/g, "<br />")}</small>` : ""}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
     <td class="num">${b.guests}</td>
     ${money}
     <td style="white-space:nowrap"><small class="mute">${esc(b.code)}</small></td>
@@ -86,12 +97,14 @@ async function bookingsView() {
   bookings = list;
   const heads = scope === "cancelled"
     ? ["Quando", "Esperienza", "Cliente", "Ospiti", "Deposito pagato", "Rimborsato", "Codice", ""]
+    : scope === "requested" ? ["Quando", "Esperienza", "Cliente", "Ospiti", "Sulla carta", "Codice", ""]
     : ["Quando", "Esperienza", "Cliente", "Ospiti", "Deposito incassato", "Codice", ""];
   view.innerHTML = `${head("Prenotazioni", "", "Qui conta il deposito: è quello che entra su Stripe. Il saldo lo incassa chi fa il tour.")}
     <div class="kpis">
       ${kpi("Depositi incassati, ultimi 7 giorni", eur(sum.deposits_week), "entrati su Stripe, meno i rimborsi", "good")}
       ${kpi("Depositi incassati, mese", eur(sum.deposits_month), "dal 1° del mese", "good")}
       ${kpi("Depositi incassati, anno", eur(sum.deposits_year), "dal 1° gennaio")}
+      ${sum.requested_n ? kpi("Richieste da accettare", String(sum.requested_n), "Vaticano, Colosseo: verifica e rispondi entro 7 giorni", "alert") : ""}
       ${kpi("Oggi", String(sum.today_n), `${sum.today_guests} ospiti`)}
       ${kpi("Prossimi 7 giorni", String(sum.week_n), `${sum.week_guests} ospiti`)}
     </div>
@@ -100,7 +113,7 @@ async function bookingsView() {
       <div class="grid2">${sourcesPanel("Questo mese", sum.sources)}${sourcesPanel("Da sempre", sum.sources_all)}</div>
     </section>
     <nav class="months" aria-label="Elenco">${Object.entries(SCOPES).map(([k, l]) =>
-      `<button type="button" data-scope="${k}" class="${k === scope ? "on" : ""}">${l}</button>`).join("")}</nav>
+      `<button type="button" data-scope="${k}" class="${k === scope ? "on" : ""}">${l}${k === "requested" && sum.requested_n ? ` (${sum.requested_n})` : ""}</button>`).join("")}</nav>
     <div class="filters">
       <label>Esperienza<select data-slug><option value="">Tutte</option>${tours.map((t) =>
         `<option value="${esc(t.slug)}"${t.slug === slug ? " selected" : ""}>${esc(t.title)}</option>`).join("")}</select></label>
@@ -119,6 +132,7 @@ function editBooking(b: Row) {
     { name: "email", label: "Email", type: "email", required: true },
     { name: "phone", label: "Telefono", type: "tel", required: true },
     { name: "whatsapp", label: "Ha WhatsApp su questo numero?", type: "select", options: [["1", "Sì"], ["0", "No"]] },
+    { name: "participants", label: "Partecipanti (nome, cognome, data di nascita)", type: "textarea" },
     { name: "notes", label: "Note", type: "textarea" },
     { name: "notify", label: "Email", type: "checks", options: [["1", "Manda al cliente l'email con i nuovi dettagli"]] },
   ];
@@ -166,7 +180,7 @@ function tile(t: Row) {
   return `<a class="tour-tile${t.active ? "" : " off"}" href="#/esperienze/${esc(t.slug)}">
     <span class="ico">${icon(t.slug, 28)}</span>
     <strong>${esc(t.title)}</strong>
-    <small>${eur(t.price_cents)} ${UNIT[t.unit] ?? ""} · deposito ${t.deposit_pct}%</small>
+    <small>${t.price_tiers ? `da ${eur(t.price_cents)} a gruppo` : `${eur(t.price_cents)} ${UNIT[t.unit] ?? ""}`} · ${t.deposit_pct >= 100 ? "tutto online" : `deposito ${t.deposit_pct}%`}${t.verify ? " · da accettare" : ""}</small>
     <small class="mute">${t.active ? `Questo mese: ${m.n} venduti · ${eur(m.deposits)} di depositi` : "Ferma: non si vende sul sito"}</small>
   </a>`;
 }
@@ -182,8 +196,9 @@ function tourView(t: Row) {
     <section class="panel tour-set">
     <div class="panel-head"><h2><span class="tour-name">${icon(t.slug, 24)}Impostazioni</span></h2></div>
     <dl class="info">
-      <dt>Prezzo</dt><dd>${eur(t.price_cents)} ${UNIT[t.unit] ?? ""}</dd>
-      <dt>Deposito online</dt><dd>${t.deposit_pct}% · il resto sul posto</dd>
+      <dt>Prezzo</dt><dd>${t.price_tiers ? Object.entries(t.price_tiers as Record<string, number>).map(([n, c]) => `${n} pers. ${eur(c)}`).join(" · ") : `${eur(t.price_cents)} ${UNIT[t.unit] ?? ""}`}</dd>
+      <dt>Pagamento online</dt><dd>${t.deposit_pct >= 100 ? "tutto online" : `${t.deposit_pct}% · il resto sul posto`}</dd>
+      <dt>Conferma</dt><dd>${t.verify ? "la accetti tu: la carta è solo autorizzata finché non accetti (entro 7 giorni); chiede i partecipanti" : "immediata"}</dd>
       <dt>Capienza</dt><dd>${t.capacity} ${t.unit === "group" ? (t.capacity === 1 ? "gruppo" : "gruppi") : "posti"} per orario · massimo ${t.max_guests} ospiti a prenotazione</dd>
       <dt>Orari</dt><dd>${t.times.map(esc).join(" · ")}</dd>
       <dt>Giorni</dt><dd>${weekdaysText(t.weekdays)}</dd>
@@ -264,6 +279,8 @@ function editTour(t: Row) {
     { name: "active", label: "In vendita sul sito", type: "select", options: [["1", "Sì"], ["0", "No, ferma"]] },
     { name: "price_cents", label: "Prezzo (€)", type: "money", required: true },
     { name: "unit", label: "Il prezzo è", type: "select", options: Object.entries(UNIT) },
+    { name: "price_tiers", label: "Prezzi per numero di persone (€)", hint: "Solo per i gruppi privati: 1=485, 2=485, 3=540… fino al massimo. Vuoto: si usa il prezzo sopra. Il prezzo sopra resta il «da» mostrato sul sito." },
+    { name: "verify", label: "Conferma", type: "select", options: [["0", "Immediata"], ["1", "La accetto io (carta autorizzata, chiede i partecipanti)"]] },
     { name: "deposit_pct", label: "Deposito online (%)", type: "number", min: 1, max: 100, required: true },
     { name: "capacity", label: "Capienza per orario", type: "number", min: 1, max: 500, required: true, hint: "Posti; per i prezzi a gruppo, quanti gruppi (barche) per orario" },
     { name: "max_guests", label: "Massimo ospiti in una prenotazione", type: "number", min: 1, max: 500, required: true },
@@ -273,7 +290,7 @@ function editTour(t: Row) {
     { name: "cancel_hours", label: "Cancellazione gratuita fino a ore prima", type: "number", min: 0, max: 720, required: true },
     { name: "meeting_point", label: "Punto d'incontro (nelle email)" },
   ];
-  form(t.title, fields, { ...t, times: t.times.join(", "), weekdays: t.weekdays.split(""), active: String(t.active) }, (data) =>
+  form(t.title, fields, { ...t, times: t.times.join(", "), weekdays: t.weekdays.split(""), active: String(t.active), verify: String(t.verify), price_tiers: tiersText(t) }, (data) =>
     api(`tours/catalog/${t.slug}`, { method: "PATCH", data: { ...data, weekdays: data.weekdays.join("") } }), render);
 }
 
@@ -321,6 +338,17 @@ view.addEventListener("click", (event) => {
   if (d.scope) { scope = d.scope; render(); }
   else if (d.edit) { const b = booking(d.edit); if (b) editBooking(b); }
   else if (d.cancel) { const b = booking(d.cancel); if (b) cancelBooking(b); }
+  else if (d.accept) {
+    const b = booking(d.accept);
+    if (b && confirm(`Accettare la richiesta di ${b.name} (${b.title}, ${day(b.date)} ${b.time})? Incassi ${eur(b.deposit_cents)} sulla sua carta e gli mandi la conferma.`)) {
+      act(async () => { if (!(await api<Row>(`tours/bookings/${b.id}/accept`, { method: "POST", data: {} })).emailed) say("Incassato, ma l'email non è partita", true); }, "Accettata e incassata");
+    }
+  } else if (d.decline) {
+    const b = booking(d.decline);
+    if (b && confirm(`Rifiutare la richiesta di ${b.name} (${b.title}, ${day(b.date)} ${b.time})? L'autorizzazione sulla carta viene liberata e il cliente riceve un'email.`)) {
+      act(() => api(`tours/bookings/${b.id}/decline`, { method: "POST", data: { notify: true } }), "Richiesta rifiutata, niente addebitato");
+    }
+  }
   else if (d.resend) {
     const b = booking(d.resend);
     if (b && confirm(`Rimandare l'email di conferma a ${b.email}?`)) {
