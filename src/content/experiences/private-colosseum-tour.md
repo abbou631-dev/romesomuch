@@ -12,6 +12,9 @@ durationLabel: About 3h
 isNew: true
 liveBooking: true
 images:
+  - type: video
+    video: /media/private-colosseum-tour.mp4
+    videoPoster: /media/private-colosseum-tour-poster.jpg
   - type: photo
     photo: colosseum-hero
 included:
@@ -25,4 +28,4 @@ The Colosseum is the one sight nobody leaves Rome without, and the stories are w
 
 The visit can carry on into the Roman Forum and the Palatine Hill, the heart of ancient Rome, at the pace that suits your group.
 
-Choose your date, start time and group size below, and give us the name and date of birth of everyone coming, as on their passports: Colosseum tickets are personal. Your card is authorised, not charged. We check availability and confirm by email; only then is it charged. Groups larger than ten, write to us.
+Choose your date and group size below, tell us the start time you would like, and give us the name and date of birth of everyone coming, as on their passports: Colosseum tickets are personal. Your card is authorised, not charged. We check availability and confirm by email; only then is it charged. Groups larger than ten, write to us.

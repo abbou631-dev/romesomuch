@@ -37,8 +37,12 @@ const { slug, title, maxGuests = null } = Astro.props;
     </section>
 
     <section class="rq-sec" data-times hidden>
-      <h3>Choose a time<small data-datelbl></small></h3>
+      <h3 data-timehead>Choose a time<small data-datelbl></small></h3>
       <div class="rq-slots" role="group" aria-label="Start time"></div>
+      <div class="rq-field" data-prefwrap hidden>
+        <label for={`tbPref-${slug}`}>Your preferred start time</label>
+        <input id={`tbPref-${slug}`} data-pref type="time" step="900" />
+      </div>
       <p class="rq-hint" data-slotnote></p>
     </section>
 
@@ -105,7 +109,6 @@ const { slug, title, maxGuests = null } = Astro.props;
       <button class="rq-btn ghost" type="button" data-back>Back</button>
       <p class="rq-fine" data-payfine>Secure payment by Stripe. Only the deposit is charged now.</p>
     </div>
-    <p class="rq-fine" data-fine></p>
   </div>
 
   <div class="rq-done" hidden>
@@ -123,7 +126,7 @@ const { slug, title, maxGuests = null } = Astro.props;
 <script>
   type Slot = { time: string; left: number };
   type Promo = { code: string; percent: number | null; amount: number | null };
-  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number; policy: string; tiers: Record<string, number> | null; verify: boolean };
+  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number; policy: string; tiers: Record<string, number> | null; verify: boolean; freeTime: boolean };
   const ERRORS: Record<string, string> = {
     slot_full: "Those places have just been taken. Please choose another time.",
     slot_closed: "That time is no longer available. Please choose another.",
@@ -142,7 +145,7 @@ const { slug, title, maxGuests = null } = Astro.props;
     const err = $(".rq-err");
     const go = $<HTMLButtonElement>("[data-go]");
     const field = (s: string) => $<HTMLInputElement>(s);
-    const [name, mail, tel, cc, note, terms, src, promoIn, part] = ["[data-name]", "[data-mail]", "[data-tel]", "[data-cc]", "[data-note]", "[data-terms]", "[data-src]", "[data-promo]", "[data-part]"].map(field);
+    const [name, mail, tel, cc, note, terms, src, promoIn, part, pref] = ["[data-name]", "[data-mail]", "[data-tel]", "[data-cc]", "[data-note]", "[data-terms]", "[data-src]", "[data-promo]", "[data-part]", "[data-pref]"].map(field);
 
     const pad = (n: number) => String(n).padStart(2, "0");
     const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -204,7 +207,6 @@ const { slug, title, maxGuests = null } = Astro.props;
           : allOnline() ? "I pay the full price now." : `I pay a ${t.depositPct}% deposit now and the balance on the day.`;
         const ids = verify() ? " The names and dates of birth I give match each passport, and everyone brings a valid ID." : "";
         $("[data-termstext]").innerHTML = `${pay} ${t.policy}${ids} I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.`;
-        $("[data-fine]").textContent = `${t.tiers ? `${eur(full())} for ${state.guests} guest${state.guests === 1 ? "" : "s"}` : `${eur(t.price)} per ${t.unit === "group" ? "boat" : "person"}`} · ${payLine()}`;
         $("[data-partwrap]").hidden = !t.verify;
         if (t.verify) document.querySelectorAll<HTMLElement>(`[data-tb-head="${slug}"]`).forEach((el) => { el.textContent = "Book your date"; });
         $("[data-nowlbl]").firstChild!.textContent = verify() ? "Authorised now, charged when we confirm · " : allOnline() ? "Pay now · " : "Pay now · deposit ";
@@ -258,6 +260,17 @@ const { slug, title, maxGuests = null } = Astro.props;
 
     function times() {
       const slots = state.days[state.date] ?? [];
+      // No fixed times: the guest writes one; the day carries the places left.
+      const free = Boolean(state.tour?.freeTime);
+      $(".rq-slots").hidden = free;
+      $("[data-prefwrap]").hidden = !free;
+      $("[data-timehead]").firstChild!.textContent = free ? "Preferred time" : "Choose a time";
+      if (free) {
+        const any = slots.some((s) => s.left >= need());
+        $("[data-datelbl]").textContent = state.date ? nice(state.date) : "";
+        $("[data-slotnote]").textContent = any ? "We confirm the exact start time with you when we confirm availability." : "No places left on this day. Please choose another date.";
+        return;
+      }
       if (state.time && !slots.some((s) => s.time === state.time && s.left >= need())) state.time = "";
       $("[data-datelbl]").textContent = state.date ? nice(state.date) : "";
       $(".rq-slots").innerHTML = slots.map((s) => {
@@ -272,6 +285,7 @@ const { slug, title, maxGuests = null } = Astro.props;
     let seq = 0;
     async function load() {
       const my = ++seq;
+      $(".rq-cal").setAttribute("aria-busy", "true");
       try {
         const r = await api(`availability?tour=${encodeURIComponent(slug)}&month=${ym(state.month)}`);
         if (my !== seq) return;
@@ -281,6 +295,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       } catch (e) {
         showErr(ERRORS[(e as any).code] ?? "Could not load availability. Please try again.");
       }
+      if (my === seq) $(".rq-cal").removeAttribute("aria-busy");
       calendar(); times(); sync();
     }
 
@@ -294,9 +309,12 @@ const { slug, title, maxGuests = null } = Astro.props;
       const b = (e.target as HTMLElement).closest("button");
       if (!b || b.disabled || !root.contains(b)) return;
       const d = b.dataset;
-      if (d.g) { state.guests = Math.min(cap(), Math.max(1, state.guests + Number(d.g))); hidePay(); calendar(); times(); }
+      if (d.g) {
+        state.guests = Math.min(cap(), Math.max(1, state.guests + Number(d.g))); hidePay(); calendar(); times();
+        const out = $("output"); out.classList.remove("bump"); void out.offsetWidth; out.classList.add("bump");
+      }
       else if (d.m) { state.month = new Date(state.month.getFullYear(), state.month.getMonth() + Number(d.m), 1); load(); return; }
-      else if (d.d) { state.date = d.d; state.time = ""; hidePay(); calendar(); times(); }
+      else if (d.d) { state.date = d.d; state.time = state.tour?.freeTime ? pref.value : ""; hidePay(); calendar(); times(); }
       else if (d.t) { state.time = d.t; hidePay(); times(); }
       else if ("apply" in d) { applyPromo(); return; }
       else if (d.wa) {
@@ -306,6 +324,8 @@ const { slug, title, maxGuests = null } = Astro.props;
       else return;
       showErr(); sync();
     });
+    // A private tour's time is the one the guest writes.
+    pref.addEventListener("input", () => { state.time = /^\d{2}:\d{2}$/.test(pref.value) ? pref.value : ""; hidePay(); sync(); });
     [name, mail, tel, cc, terms, src, part].forEach((el) => { el.addEventListener("input", sync); el.addEventListener("change", sync); });
 
     const promoNote = (m = "", ok = false) => { const n = $("[data-promonote]"); n.textContent = m; n.classList.toggle("ok", ok); };

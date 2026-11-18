@@ -66,6 +66,12 @@ export const totalFor = (tour, guests) =>
   tour.price_tiers ? tour.price_tiers[guests] ?? tour.price_cents
     : tour.unit === "group" ? tour.price_cents : tour.price_cents * guests;
 export const depositFor = (tour, total) => Math.round((total * tour.deposit_pct) / 100);
+// No fixed start times: the guest writes the time they would like, and the
+// day is the slot (capacity counts per day).
+const freeTime = (tour) => tour.times.length === 0;
+// The bookings that share a slot with one at `time`: same time, or same day.
+const slotSql = (tour) => (freeTime(tour) ? "" : "AND time = ?");
+const slotBind = (tour, time) => (freeTime(tour) ? [] : [time]);
 // Seats a booking takes in its slot: guests, or one boat for a private group.
 const need = (tour, guests) => (tour.unit === "group" ? 1 : guests);
 const usedSql = (tour) => (tour.unit === "group" ? "count(*)" : "coalesce(sum(guests), 0)");
@@ -73,7 +79,7 @@ const usedSql = (tour) => (tour.unit === "group" ? "count(*)" : "coalesce(sum(gu
 // What the site's booking box needs to know about an experience.
 const publicTour = (t) => ({
   slug: t.slug, title: t.title, price: t.price_cents, unit: t.unit, depositPct: t.deposit_pct,
-  maxGuests: t.max_guests, cancelHours: t.cancel_hours, policy: cancelPolicy(t), tiers: t.price_tiers, verify: Boolean(t.verify),
+  maxGuests: t.max_guests, cancelHours: t.cancel_hours, freeTime: freeTime(t), policy: cancelPolicy(t), tiers: t.price_tiers, verify: Boolean(t.verify),
 });
 // Most guests the "from" price covers (2 for €485 when one and two pay the same).
 const fromGuests = (t) => (t.price_tiers
@@ -97,6 +103,12 @@ async function availability(env, tour, month) {
   for (let d = 1; d <= days; d++) {
     const date = `${month}-${String(d).padStart(2, "0")}`;
     if (shut.has(date) || !tour.weekdays.includes(String(weekday(date)))) continue;
+    if (freeTime(tour)) {
+      // One slot for the day; the guest's own time is checked on booking.
+      const n = used.filter((r) => r.date === date).reduce((a, r) => a + r.n, 0);
+      if (romeInstant(date, "23:59") - tour.cutoff_hours * 3600e3 > now) out[date] = [{ time: "", left: Math.max(0, tour.capacity - n) }];
+      continue;
+    }
     const times = tour.times
       .filter((time) => romeInstant(date, time) - tour.cutoff_hours * 3600e3 > now)
       .map((time) => ({ time, left: Math.max(0, tour.capacity - (taken.get(`${date} ${time}`) ?? 0)) }));
@@ -264,9 +276,10 @@ async function hold(env, body) {
   if (!SOURCES[source]) throw new Invalid("missing_fields");
   if (name.length < 2 || !EMAIL.test(email) || phone.replace(/\D/g, "").length < 6) throw new Invalid("missing_fields");
   if (!Number.isInteger(guests) || guests < 1 || guests > tour.max_guests) throw new Invalid("guests");
-  if (!isDate(date) || !TIME.test(time ?? "") || !tour.times.includes(time)) throw new Invalid("slot_closed");
+  if (!isDate(date) || !TIME.test(time ?? "") || !(freeTime(tour) || tour.times.includes(time))) throw new Invalid("slot_closed");
+  if (romeInstant(date, time) - tour.cutoff_hours * 3600e3 <= Date.now()) throw new Invalid("slot_closed");
   const open = await availability(env, tour, date.slice(0, 7));
-  const slot = open[date]?.find((s) => s.time === time);
+  const slot = open[date]?.find((s) => freeTime(tour) || s.time === time);
   if (!slot) throw new Invalid("slot_closed");
   if (slot.left < need(tour, guests)) throw new Invalid("slot_full");
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PUBLISHABLE_KEY) throw new Invalid("payments_off");
@@ -284,10 +297,10 @@ async function hold(env, body) {
   const { meta } = await env.CRM_DB.prepare(
     `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total_cents, deposit_cents, promo_code, discount_cents)
      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-     WHERE (SELECT ${usedSql(tour)} FROM tour_bookings WHERE slug = ? AND date = ? AND time = ? AND ${HOLD}) + ? <= ?
+     WHERE (SELECT ${usedSql(tour)} FROM tour_bookings WHERE slug = ? AND date = ? ${slotSql(tour)} AND ${HOLD}) + ? <= ?
        AND (SELECT count(*) FROM tour_bookings WHERE promo_code = ? AND ${HOLD}) < ?`,
   ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total, deposit, promo?.code ?? null, discount,
-    tour.slug, date, time, need(tour, guests), tour.capacity, promo?.code ?? null, promo?.max_uses ?? 1e9).run();
+    tour.slug, date, ...slotBind(tour, time), need(tour, guests), tour.capacity, promo?.code ?? null, promo?.max_uses ?? 1e9).run();
   if (!meta.changes) throw new Invalid("slot_full");
 
   try {
@@ -421,7 +434,8 @@ function tourValues(body) {
   if ("times" in body) {
     const times = [...new Set([].concat(body.times ?? []).flatMap((t) => String(t).split(/[\s,;]+/)).filter(Boolean)
       .map((t) => t.replace(".", ":").replace(/^(\d):/, "0$1:")))].sort();
-    if (!times.length || !times.every((t) => TIME.test(t))) throw new Invalid("Orari non validi: scrivili come 09:30, 14:00.");
+    // Empty: no fixed times, the guest writes the time they would like.
+    if (!times.every((t) => TIME.test(t))) throw new Invalid("Orari non validi: scrivili come 09:30, 14:00.");
     out.times = JSON.stringify(times);
   }
   return out;
@@ -501,8 +515,8 @@ async function editBooking(env, origin, id, body) {
   if (next.name.length < 2 || !EMAIL.test(next.email)) throw new Invalid("Nome o email non validi.");
   // Moving or growing a booking must fit the slot, not counting itself.
   if (["confirmed", "requested"].includes(b.status) && (next.date !== b.date || next.time !== b.time || next.guests !== b.guests)) {
-    const { n } = await env.CRM_DB.prepare(`SELECT ${usedSql(tour)} AS n FROM tour_bookings WHERE slug = ? AND date = ? AND time = ? AND id != ? AND ${HOLD}`)
-      .bind(b.slug, next.date, next.time, id).first();
+    const { n } = await env.CRM_DB.prepare(`SELECT ${usedSql(tour)} AS n FROM tour_bookings WHERE slug = ? AND date = ? ${slotSql(tour)} AND id != ? AND ${HOLD}`)
+      .bind(b.slug, next.date, ...slotBind(tour, next.time), id).first();
     const left = tour.capacity - n;
     if (left < need(tour, next.guests)) throw new Invalid(`Non c'è posto in quello slot: ${Math.max(0, left)} ${tour.unit === "group" ? "barche" : "posti"} liberi.`);
   }
@@ -664,7 +678,7 @@ export async function crmApi(request, env, path) {
       const date = addDays(today(), 7);
       const total = totalFor(tour, 2);
       const sample = {
-        code: "RSM-SAMPLE", slug: tour.slug, title: tour.title, date, time: tour.times[0], guests: 2,
+        code: "RSM-SAMPLE", slug: tour.slug, title: tour.title, date, time: tour.times[0] ?? "10:00", guests: 2,
         name: "RomeSoMuch", email: notifyTo(env), meeting_point: tour.meeting_point, cancel_hours: tour.cancel_hours,
         partial_refund_pct: tour.partial_refund_pct, partial_refund_hours: tour.partial_refund_hours,
         total_cents: total, paid_cents: depositFor(tour, total),
