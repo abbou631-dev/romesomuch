@@ -202,8 +202,8 @@ function tourView(t: Row) {
       <dt>Prezzo</dt><dd>${t.price_tiers ? Object.entries(t.price_tiers as Record<string, number>).map(([n, c]) => `${n} pers. ${eur(c)}`).join(" · ") : `${eur(t.price_cents)} ${UNIT[t.unit] ?? ""}`}</dd>
       <dt>Pagamento online</dt><dd>${t.deposit_pct >= 100 ? "tutto online" : `${t.deposit_pct}% · il resto sul posto`}</dd>
       <dt>Conferma</dt><dd>${t.verify ? "la accetti tu: la carta è solo autorizzata finché non accetti (entro 7 giorni); chiede i partecipanti" : "immediata"}</dd>
-      <dt>Capienza</dt><dd>${t.capacity} ${t.unit === "group" ? (t.capacity === 1 ? "gruppo" : "gruppi") : "posti"} per orario · massimo ${t.max_guests} ospiti a prenotazione</dd>
-      <dt>Orari</dt><dd>${t.times.map(esc).join(" · ")}</dd>
+      <dt>Capienza</dt><dd>${t.capacity} ${t.unit === "group" ? (t.capacity === 1 ? "gruppo" : "gruppi") : "posti"} ${t.times.length ? "per orario" : "al giorno"} · massimo ${t.max_guests} ospiti a prenotazione</dd>
+      <dt>Orari</dt><dd>${t.times.length ? t.times.map(esc).join(" · ") : "liberi: il cliente scrive l'orario che preferisce"}</dd>
       <dt>Giorni</dt><dd>${weekdaysText(t.weekdays)}</dd>
       <dt>Chiusura vendite</dt><dd>${t.cutoff_hours} ore prima</dd>
       <dt>Cancellazione</dt><dd>${esc(cancelPolicy(t))}</dd>
@@ -287,7 +287,7 @@ function editTour(t: Row) {
     { name: "deposit_pct", label: "Deposito online (%)", type: "number", min: 1, max: 100, required: true },
     { name: "capacity", label: "Capienza per orario", type: "number", min: 1, max: 500, required: true, hint: "Posti; per i prezzi a gruppo, quanti gruppi (barche) per orario" },
     { name: "max_guests", label: "Massimo ospiti in una prenotazione", type: "number", min: 1, max: 500, required: true },
-    { name: "times", label: "Orari di partenza", required: true, hint: "Separati da virgola: 09:30, 14:00" },
+    { name: "times", label: "Orari di partenza", hint: "Separati da virgola: 09:30, 14:00. Vuoto: il cliente scrive l'orario che preferisce e la capienza vale per giorno" },
     { name: "weekdays", label: "Giorni", type: "checks", options: DAYS, required: true },
     { name: "cutoff_hours", label: "Chiudi le vendite ore prima", type: "number", min: 0, max: 720, required: true },
     { name: "cancel_hours", label: "Cancellazione gratuita fino a ore prima", type: "number", min: 0, max: 2160, required: true, hint: "720 = 30 giorni" },

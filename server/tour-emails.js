@@ -95,7 +95,7 @@ const facts = (b) => [
   ["Booking code", b.code],
   ["Experience", b.title],
   ["Date", longDate(b.date)],
-  ["Time", b.time],
+  [b.status === "requested" ? "Preferred time" : "Time", b.time],
   ["Guests", String(b.guests)],
   ...(b.participants ? [["Participants", b.participants.split(/\n+/).join("; ")]] : []),
   ...(b.meeting_point ? [["Meeting point", b.meeting_point]] : []),

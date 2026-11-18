@@ -31,4 +31,4 @@ The Vatican Museums are some of the largest in the world, and without a plan mos
 
 The visit builds up to the Sistine Chapel, where Michelangelo's ceiling and the Last Judgement are explained before you walk in, since talking is not allowed inside.
 
-Choose your date, start time and group size below, and give us the name and date of birth of everyone coming, as on their passports: the Vatican needs them for the tickets. Your card is authorised, not charged. We check availability and confirm by email; only then is it charged. Groups larger than ten, write to us.
+Choose your date and group size below, tell us the start time you would like, and give us the name and date of birth of everyone coming, as on their passports: the Vatican needs them for the tickets. Your card is authorised, not charged. We check availability and confirm by email; only then is it charged. Groups larger than ten, write to us.
