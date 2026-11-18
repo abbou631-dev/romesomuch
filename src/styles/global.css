@@ -256,6 +256,11 @@ select.sort{position:absolute;inset-inline:0;top:50%;transform:translateY(-50%);
 .dhead{padding:clamp(20px,3vw,38px) 0 16px}
 .mosaic-wrap{padding-bottom:clamp(16px,2vw,26px)}
 .mosaic-frame{position:relative}
+/* Tiles keep the four-across size whatever their number, so a page with one to
+   three pictures is not bigger than the others; the band then starts at the left. */
+.mosaic-frame.f1{width:calc((100% - 24px) / 4)}
+.mosaic-frame.f2{width:calc((100% - 24px) / 2 + 8px)}
+.mosaic-frame.f3{width:calc((100% - 24px) * 3 / 4 + 16px)}
 .mosaic{display:grid;gap:8px;grid-template-columns:repeat(4,minmax(0,1fr))}
 .mosaic.n1{grid-template-columns:minmax(0,1fr)}
 .mosaic.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -300,6 +305,8 @@ select.sort{position:absolute;inset-inline:0;top:50%;transform:translateY(-50%);
   .mosaic .tile:nth-child(n+3){display:none}
   .mosaic .tile:first-child{border-radius:16px 6px 6px 16px}
   .mosaic .tile:nth-child(2){border-radius:6px 16px 16px 6px}
+  .mosaic-frame.f2,.mosaic-frame.f3{width:auto}
+  .mosaic-frame.f1{width:calc((100% - 8px) / 2)}
 }
 @media(max-width:700px){
   /* On a phone the band becomes a swipeable strip: the lead tile is capped by height
@@ -309,6 +316,7 @@ select.sort{position:absolute;inset-inline:0;top:50%;transform:translateY(-50%);
     margin-inline:calc(var(--pad) * -1);padding-inline:var(--pad);scroll-padding-inline:var(--pad)}
   .mosaic::-webkit-scrollbar{display:none}
   .mosaic .tile,.mosaic .tile:nth-child(n+3){display:block;flex:0 0 auto;height:min(54vh,440px);width:auto;scroll-snap-align:start;border-radius:16px}
+  .mosaic-frame.f1{width:auto}
   .mosaic-actions{position:static;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
   .seeall,.sound{position:static}
   .lb{grid-template-columns:1fr;padding:10px}

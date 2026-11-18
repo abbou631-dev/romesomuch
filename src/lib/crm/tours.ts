@@ -63,7 +63,8 @@ const tiersText = (t: Row) => t.price_tiers
 const refundable = (b: Row) => b.paid_cents - b.refunded_cents;
 const when = (b: Row) => `${day(b.date)} · ${esc(b.time)}`;
 // The browser runs on the owner's clock, which is Rome's.
-const hoursTo = (b: Row) => (new Date(`${b.date}T${b.time}:00`).getTime() - Date.now()) / 3600e3;
+// A private tour's time may still be the guest's words: count from the morning.
+const hoursTo = (b: Row) => (new Date(`${b.date}T${/^\d{2}:\d{2}$/.test(b.time) ? b.time : "09:00"}:00`).getTime() - Date.now()) / 3600e3;
 
 // ---- Prenotazioni ------------------------------------------------------------------
 
@@ -126,7 +127,7 @@ async function bookingsView() {
 function editBooking(b: Row) {
   const fields: Field[] = [
     { name: "date", label: "Data", type: "date", required: true },
-    { name: "time", label: "Orario", required: true, hint: "Come 09:30" },
+    { name: "time", label: "Orario", required: true, hint: "Come 09:30. Vaticano e Colosseo: c'è quello che ha scritto il cliente, sostituiscilo con l'orario concordato" },
     { name: "guests", label: "Ospiti", type: "number", min: 1, max: 100, required: true },
     { name: "total_cents", label: "Totale della prenotazione (€)", type: "money", hint: "Se cambi gli ospiti e lasci il totale com'è, viene ricalcolato col prezzo dell'esperienza" },
     { name: "name", label: "Nome", required: true },

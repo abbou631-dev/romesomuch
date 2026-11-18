@@ -66,10 +66,14 @@ export const totalFor = (tour, guests) =>
   tour.price_tiers ? tour.price_tiers[guests] ?? tour.price_cents
     : tour.unit === "group" ? tour.price_cents : tour.price_cents * guests;
 export const depositFor = (tour, total) => Math.round((total * tour.deposit_pct) / 100);
-// No fixed start times: the guest writes the time they would like, and the
-// day is the slot (capacity counts per day).
+// No fixed start times: the guest writes, in their own words, when they would
+// like to start ("morning, around 10"); tour_bookings.time keeps that text
+// until the owner replaces it with the agreed time. The day is the slot
+// (capacity counts per day).
 const freeTime = (tour) => tour.times.length === 0;
 // The bookings that share a slot with one at `time`: same time, or same day.
+// The guest's own words for the start time: 2 to 80 characters.
+const timeNote = (s) => typeof s === "string" && s.trim().length >= 2 && s.length <= 80;
 const slotSql = (tour) => (freeTime(tour) ? "" : "AND time = ?");
 const slotBind = (tour, time) => (freeTime(tour) ? [] : [time]);
 // Seats a booking takes in its slot: guests, or one boat for a private group.
@@ -262,7 +266,9 @@ const publicPromo = (p) => ({ code: p.code, percent: p.percent, amount: p.amount
 async function hold(env, body) {
   const tour = await getTour(env, body.tour);
   if (!tour || !tour.active) throw new Invalid("tour_closed");
-  const { date, time } = body;
+  const { date } = body;
+  // On a tour without fixed times this is the guest's own words.
+  const time = freeTime(tour) ? String(body.time ?? "").trim().replace(/\s+/g, " ").slice(0, 80) : body.time;
   const guests = Number(body.guests);
   const name = String(body.name ?? "").trim().slice(0, 120);
   const email = String(body.email ?? "").trim().slice(0, 200);
@@ -276,8 +282,13 @@ async function hold(env, body) {
   if (!SOURCES[source]) throw new Invalid("missing_fields");
   if (name.length < 2 || !EMAIL.test(email) || phone.replace(/\D/g, "").length < 6) throw new Invalid("missing_fields");
   if (!Number.isInteger(guests) || guests < 1 || guests > tour.max_guests) throw new Invalid("guests");
-  if (!isDate(date) || !TIME.test(time ?? "") || !(freeTime(tour) || tour.times.includes(time))) throw new Invalid("slot_closed");
-  if (romeInstant(date, time) - tour.cutoff_hours * 3600e3 <= Date.now()) throw new Invalid("slot_closed");
+  if (!isDate(date)) throw new Invalid("slot_closed");
+  if (freeTime(tour)) {
+    if (!timeNote(time)) throw new Invalid("missing_fields");
+  } else {
+    if (!TIME.test(time ?? "") || !tour.times.includes(time)) throw new Invalid("slot_closed");
+    if (romeInstant(date, time) - tour.cutoff_hours * 3600e3 <= Date.now()) throw new Invalid("slot_closed");
+  }
   const open = await availability(env, tour, date.slice(0, 7));
   const slot = open[date]?.find((s) => freeTime(tour) || s.time === time);
   if (!slot) throw new Invalid("slot_closed");
@@ -510,7 +521,8 @@ async function editBooking(env, origin, id, body) {
     notes: body.notes === undefined ? b.notes : String(body.notes).trim() || null,
     whatsapp: body.whatsapp === undefined || body.whatsapp === "" ? b.whatsapp : Number(body.whatsapp) ? 1 : 0,
   };
-  if (!isDate(next.date) || !TIME.test(next.time)) throw new Invalid("Data o orario non validi (orario come 09:30).");
+  next.time = String(next.time).trim();
+  if (!isDate(next.date) || !(TIME.test(next.time) || (freeTime(tour) && timeNote(next.time)))) throw new Invalid("Data o orario non validi (orario come 09:30).");
   if (!Number.isInteger(next.guests) || next.guests < 1) throw new Invalid("Numero di ospiti non valido.");
   if (next.name.length < 2 || !EMAIL.test(next.email)) throw new Invalid("Nome o email non validi.");
   // Moving or growing a booking must fit the slot, not counting itself.
