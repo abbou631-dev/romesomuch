@@ -6,6 +6,7 @@
 // drops SVG.
 
 import site from "../src/data/site.json";
+import { cancelPolicy } from "./tour-policy.js";
 
 // Images and links must be absolute and public, even when the email is sent
 // from a preview or a local server.
@@ -108,7 +109,7 @@ const money = (b) => [
       ? [["Paid online", euro(b.paid_cents)]]
       : [["Paid online (deposit)", euro(b.paid_cents)], ["To pay on the day", euro(Math.max(0, b.total_cents - b.paid_cents))]]),
 ];
-const policy = (b) => `Free cancellation up to ${b.cancel_hours} hours before the start. To change or cancel, reply to this email or message us on WhatsApp.`;
+const policy = (b) => `${cancelPolicy(b)} To change or cancel, reply to this email or message us on WhatsApp.`;
 
 function text(b, e) {
   const lines = [`Hi ${firstName(b.name)},`, "", ...e.intro.flatMap((p) => [p, ""])];

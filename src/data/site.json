@@ -39,7 +39,7 @@
     "terms": {
       "t": "Terms of Service",
       "l": "The rules that apply when you book an experience through RomeSoMuch.",
-      "u": "Last updated: 12 November 2026",
+      "u": "Last updated: 18 November 2026",
       "s": [
         [
           "Who we are",
@@ -47,19 +47,23 @@
         ],
         [
           "Booking and confirmation",
-          "A booking is complete when you receive our written confirmation by email. Experiences with live availability are confirmed automatically at checkout; all others are requests, which we answer within 48 hours and which become bookings only once confirmed."
+          "A booking is complete when you receive our written confirmation by email. Experiences with live availability are confirmed automatically at checkout. Private guided tours with entry tickets (Vatican Museums, Colosseum) are requests: your card is authorised but not charged, we check availability, and the booking is confirmed, and the card charged, only when we confirm by email. If we cannot confirm, the authorisation is released and nothing is charged. Other experiences without live availability are requests that we answer within 48 hours and that become bookings only once confirmed."
         ],
         [
           "Prices and payment",
-          "Prices are shown per person or per group, as stated on each experience, and include VAT where applicable. Entry tickets, transfers and meals are included only where the experience says so. For experiences booked online, you pay a deposit when you book: its amount is shown before you pay, as a share of the total, and the balance is paid on the day of the experience. Card payments are processed by Stripe."
+          "Prices are shown per person or per group, as stated on each experience, and include VAT where applicable. Entry tickets, transfers and meals are included only where the experience says so. For experiences booked online you pay either a deposit, with the balance paid on the day of the experience, or the full price, as each experience states. What you pay online, and what is left for the day, is shown before you pay. Card payments are processed by Stripe."
         ],
         [
           "Cancellation",
-          "All sales are final unless otherwise noted. Where an experience states its own cancellation terms — on its page and in your confirmation — those terms apply to that booking. If you cancel within the free-cancellation period shown for your booking, we refund the deposit to the card you paid with. If we cancel, for weather, illness or the closure of a site, you choose between a new date and a full refund."
+          "All sales are final unless otherwise noted. Where an experience states its own cancellation terms — on its page, in the booking box and in your confirmation — those terms apply to that booking. If you cancel within the free-cancellation period shown for your booking, we refund what you paid online to the card you paid with. Some experiences have a partial refund after that period: for the private Vatican Museums and Colosseum tours, cancellation is free up to 30 days before the start, 50% of the price is refunded up to 48 hours before, and nothing is refunded after that or for a no-show, because the tickets are bought in your names. If we cancel, for weather, illness or the closure of a site, you choose between a new date and a full refund."
         ],
         [
           "Golf cart tours",
           "Golf cart tours are operated by a local licensed partner. You book and pay for them on this website through the partner's secure booking system, and the partner runs the tour, including hotel pickup, the cart and the guide. Cancellations and refunds for golf cart tours are handled by the partner under the terms shown when you book: free cancellation up to 24 hours before the tour."
+        ],
+        [
+          "Private tours with named tickets",
+          "Vatican Museums and Colosseum tickets are personal. When you book you give the full name and date of birth of every participant exactly as on their passport or ID card, and each participant must bring that document on the day. If someone is refused entry because the details given were wrong or the document is missing, the price is not refunded. Name changes after we confirm depend on the ticket office and may cost the price of a new ticket."
         ],
         [
           "Late arrival and no-show",
@@ -82,7 +86,7 @@
     "privacy": {
       "t": "Privacy Policy",
       "l": "What personal data we collect when you book, why, and how long we keep it.",
-      "u": "Last updated: 21 September 2026",
+      "u": "Last updated: 18 November 2026",
       "s": [
         [
           "Data controller",
@@ -90,7 +94,7 @@
         ],
         [
           "What we collect",
-          "Booking data: name, email, phone, date, number of guests and any notes you send us. Enquiry data: if you write through the work-with-us or partnership forms, the name, contact details, links and text you choose to send. Payment data is handled by our payment provider, and we never see or store card numbers. Technical data: the pages you visit on this site, in aggregate. Advertising data, only if you accept it: the fact that your browser visited this site, sent to Meta so that we can show you our experiences again on Facebook and Instagram."
+          "Booking data: name, email, phone, date, number of guests and any notes you send us. For tours with named entry tickets (Vatican Museums, Colosseum), also the name and date of birth of every participant, which the ticket office requires. Enquiry data: if you write through the work-with-us or partnership forms, the name, contact details, links and text you choose to send. Payment data is handled by our payment provider, and we never see or store card numbers. Technical data: the pages you visit on this site, in aggregate. Advertising data, only if you accept it: the fact that your browser visited this site, sent to Meta so that we can show you our experiences again on Facebook and Instagram."
         ],
         [
           "Why we use it",
@@ -98,7 +102,7 @@
         ],
         [
           "Who else sees it",
-          "The people who need it to deliver your experience: the guide, chef or driver assigned to you, our booking system provider, our payment provider, and our accountant. If, and only if, you accept advertising cookies, Meta Platforms Ireland also receives the fact that your browser visited this site, which is what lets us advertise to you again; Meta acts as an independent controller for that data under its own policy, and transfers outside the European Union rely on its standard contractual clauses. We never sell your data, and we share it with nobody else for their own marketing."
+          "The people who need it to deliver your experience: the guide, chef or driver assigned to you, the ticket office of the site you visit (participants' names and dates of birth, for named tickets), our booking system provider, our payment provider, and our accountant. If, and only if, you accept advertising cookies, Meta Platforms Ireland also receives the fact that your browser visited this site, which is what lets us advertise to you again; Meta acts as an independent controller for that data under its own policy, and transfers outside the European Union rely on its standard contractual clauses. We never sell your data, and we share it with nobody else for their own marketing."
         ],
         [
           "How long we keep it",

@@ -6,6 +6,7 @@
 
 import { type Field, type Row, apiFor, say, form, esc, eur, day, today, head, kpi, table, stackTables, badge } from "./ui";
 import { SOURCES } from "../../../server/tour-sources.js";
+import { cancelPolicy, refundShare } from "../../../server/tour-policy.js";
 
 const api = apiFor("/api/crm", "/crm/login/");
 const view = document.getElementById("view")!;
@@ -147,18 +148,20 @@ function editBooking(b: Row) {
 function cancelBooking(b: Row) {
   const max = refundable(b);
   const already = b.status === "cancelled";
-  // The site promises a free cancellation up to cancel_hours before the start.
-  const free = hoursTo(b) >= (b.cancel_hours ?? 48);
+  // What the policy the guest accepted gives back now.
+  const tour = tours.find((t) => t.slug === b.slug) ?? b;
+  const share = refundShare(tour, hoursTo(b));
   const fields: Field[] = [
     {
       name: "refund", label: `Rimborso (€), da 0 a ${eur(max)}`, type: "money",
       hint: already ? "Torna sulla carta del cliente con Stripe"
-        : free ? `Mancano più di ${b.cancel_hours} ore: secondo le condizioni il deposito va rimborsato tutto`
-        : `Mancano meno di ${b.cancel_hours} ore: secondo le condizioni non è dovuto nessun rimborso`,
+        : share === 100 ? "Secondo le condizioni va rimborsato tutto quello che ha pagato"
+        : share ? `Secondo le condizioni va rimborsato il ${share}% di quello che ha pagato`
+        : "Secondo le condizioni non è dovuto nessun rimborso",
     },
     { name: "notify", label: "Email", type: "checks", options: [["1", already ? "Avvisa il cliente del rimborso" : "Manda al cliente l'email di cancellazione"]] },
   ];
-  const suggested = already ? max : free ? max : 0;
+  const suggested = already ? max : Math.min(max, Math.round((b.paid_cents * share) / 100));
   form(already ? `Rimborso ${b.code}` : `Cancella ${b.code}`, fields, { refund: suggested, notify: ["1"] }, async (data) => {
     const refund = data.refund ?? 0;
     if (refund > max) throw new Error(`Il rimborso massimo è ${eur(max)}.`);
@@ -203,7 +206,7 @@ function tourView(t: Row) {
       <dt>Orari</dt><dd>${t.times.map(esc).join(" · ")}</dd>
       <dt>Giorni</dt><dd>${weekdaysText(t.weekdays)}</dd>
       <dt>Chiusura vendite</dt><dd>${t.cutoff_hours} ore prima</dd>
-      <dt>Cancellazione gratuita</dt><dd>fino a ${t.cancel_hours} ore prima</dd>
+      <dt>Cancellazione</dt><dd>${esc(cancelPolicy(t))}</dd>
       <dt>Punto d'incontro</dt><dd>${esc(t.meeting_point ?? "—")}</dd>
     </dl>
     </section>
@@ -287,7 +290,9 @@ function editTour(t: Row) {
     { name: "times", label: "Orari di partenza", required: true, hint: "Separati da virgola: 09:30, 14:00" },
     { name: "weekdays", label: "Giorni", type: "checks", options: DAYS, required: true },
     { name: "cutoff_hours", label: "Chiudi le vendite ore prima", type: "number", min: 0, max: 720, required: true },
-    { name: "cancel_hours", label: "Cancellazione gratuita fino a ore prima", type: "number", min: 0, max: 720, required: true },
+    { name: "cancel_hours", label: "Cancellazione gratuita fino a ore prima", type: "number", min: 0, max: 2160, required: true, hint: "720 = 30 giorni" },
+    { name: "partial_refund_pct", label: "Dopo, rimborso parziale (%)", type: "number", min: 0, max: 99, required: true, hint: "0 = nessun rimborso dopo la cancellazione gratuita" },
+    { name: "partial_refund_hours", label: "Rimborso parziale fino a ore prima", type: "number", min: 0, max: 2160, required: true, hint: "Dopo questo, nessun rimborso" },
     { name: "meeting_point", label: "Punto d'incontro (nelle email)" },
   ];
   form(t.title, fields, { ...t, times: t.times.join(", "), weekdays: t.weekdays.split(""), active: String(t.active), verify: String(t.verify), price_tiers: tiersText(t) }, (data) =>

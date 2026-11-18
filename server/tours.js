@@ -7,6 +7,7 @@ import { Invalid, json, today, hmac, same } from "./common.js";
 import { mail } from "./access.js";
 import { SOURCES } from "./tour-sources.js";
 import { guestEmail } from "./tour-emails.js";
+import { cancelPolicy } from "./tour-policy.js";
 import site from "../src/data/site.json";
 
 const ROME = "Europe/Rome";
@@ -72,7 +73,7 @@ const usedSql = (tour) => (tour.unit === "group" ? "count(*)" : "coalesce(sum(gu
 // What the site's booking box needs to know about an experience.
 const publicTour = (t) => ({
   slug: t.slug, title: t.title, price: t.price_cents, unit: t.unit, depositPct: t.deposit_pct,
-  maxGuests: t.max_guests, cancelHours: t.cancel_hours, tiers: t.price_tiers, verify: Boolean(t.verify),
+  maxGuests: t.max_guests, cancelHours: t.cancel_hours, policy: cancelPolicy(t), tiers: t.price_tiers, verify: Boolean(t.verify),
 });
 // Most guests the "from" price covers (2 for €485 when one and two pay the same).
 const fromGuests = (t) => (t.price_tiers
@@ -186,7 +187,7 @@ const notifyOwner = (env, b, origin) => mail(env, {
 });
 
 // A booking with everything the emails print.
-const BOOKING = `SELECT b.*, t.title, t.unit, t.meeting_point, t.cancel_hours, t.price_cents, t.verify
+const BOOKING = `SELECT b.*, t.title, t.unit, t.meeting_point, t.cancel_hours, t.partial_refund_pct, t.partial_refund_hours, t.price_cents, t.verify
   FROM tour_bookings b JOIN tours t ON t.slug = b.slug`;
 const bookingBy = (env, column, value) => env.CRM_DB.prepare(`${BOOKING} WHERE b.${column} = ?`).bind(value).first();
 
@@ -376,6 +377,7 @@ export async function webhook(request, env) {
 const TOUR_FIELDS = {
   title: "t", price_cents: "i", unit: "t", deposit_pct: "i", capacity: "i", max_guests: "i",
   weekdays: "t", cutoff_hours: "i", cancel_hours: "i", meeting_point: "t", active: "i", verify: "i",
+  partial_refund_pct: "i", partial_refund_hours: "i",
 };
 
 // "2=485, 3=540" (euros, as typed in the CRM) to {"2": 48500, "3": 54000}.
@@ -409,6 +411,7 @@ function tourValues(body) {
   if ("unit" in out && !["person", "group"].includes(out.unit)) throw new Invalid("Unità non valida.");
   if ("deposit_pct" in out && (out.deposit_pct < 1 || out.deposit_pct > 100)) throw new Invalid("Il deposito va da 1 a 100%.");
   if ("price_cents" in out && out.price_cents < 100) throw new Invalid("Prezzo non valido.");
+  if ("partial_refund_pct" in out && out.partial_refund_pct > 99) throw new Invalid("Il rimborso parziale va da 0 a 99%.");
   for (const k of ["capacity", "max_guests"]) if (k in out && out[k] < 1) throw new Invalid(`${k}: almeno 1.`);
   if ("weekdays" in out) {
     out.weekdays = [...new Set(String(out.weekdays ?? "").replace(/\D/g, ""))].filter((d) => d <= "6").sort().join("");
@@ -663,6 +666,7 @@ export async function crmApi(request, env, path) {
       const sample = {
         code: "RSM-SAMPLE", slug: tour.slug, title: tour.title, date, time: tour.times[0], guests: 2,
         name: "RomeSoMuch", email: notifyTo(env), meeting_point: tour.meeting_point, cancel_hours: tour.cancel_hours,
+        partial_refund_pct: tour.partial_refund_pct, partial_refund_hours: tour.partial_refund_hours,
         total_cents: total, paid_cents: depositFor(tour, total),
       };
       return json({ emailed: await sendEmail(env, "confirmed", sample, url.origin), to: sample.email });
