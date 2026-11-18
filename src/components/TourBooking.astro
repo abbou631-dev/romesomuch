@@ -216,7 +216,8 @@ const { slug, title, maxGuests = null } = Astro.props;
         document.querySelectorAll<HTMLElement>(`[data-tb-line="${slug}"]`).forEach((el) => { el.textContent = payLine(); });
       }
       $("[data-times]").hidden = !state.date;
-      $("[data-details]").hidden = !state.time;
+      // Once a day is picked, everything still to fill in shows at once (time and details).
+      $("[data-details]").hidden = !state.date;
       const sum = $(".rq-card .rq-sum");
       sum.hidden = !state.date || !t;
       if (t && state.date) {
@@ -229,7 +230,8 @@ const { slug, title, maxGuests = null } = Astro.props;
         $("[data-balance]").textContent = eur(total() - deposit());
       }
       if (!t) { go.textContent = "Loading…"; go.disabled = true; return; }
-      if (!state.date || !state.time) { go.textContent = "Choose date and time"; go.disabled = true; return; }
+      if (!state.date) { go.textContent = "Choose a date"; go.disabled = true; return; }
+      if (!state.time) { go.textContent = t.freeTime ? "Tell us when you'd like to start" : "Choose a time"; go.disabled = true; return; }
       go.disabled = !valid();
       go.textContent = !valid() ? "Fill in your details" : verify() ? `Continue · request for ${eur(deposit())}`
         : allOnline() ? `Continue · pay ${eur(deposit())}` : `Continue · pay ${eur(deposit())} deposit`;
