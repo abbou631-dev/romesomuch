@@ -18,7 +18,7 @@ included:
   - A private guide, just for your group
   - A route planned around what you want to see
   - Availability checked by us before your card is charged
-cancellationPolicy: Your card is charged only when we confirm availability. Free cancellation up to 48 hours before the start.
+cancellationPolicy: Your card is charged only when we confirm availability. Free cancellation up to 30 days before the start; 50% refunded up to 48 hours before; no refund after that, as the tickets are issued in your names.
 ---
 
 The Colosseum is the one sight nobody leaves Rome without, and the stories are what make it more than a ruin. On a private tour your guide is there for your group only: how 50,000 Romans filled it, where the emperor sat, what happened below the arena floor, and how it went from games to quarry to the symbol of the city.

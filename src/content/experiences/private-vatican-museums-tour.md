@@ -24,7 +24,7 @@ included:
   - A private guide, just for your group
   - A route planned around what you want to see
   - Availability checked by us before your card is charged
-cancellationPolicy: Your card is charged only when we confirm availability. Free cancellation up to 48 hours before the start.
+cancellationPolicy: Your card is charged only when we confirm availability. Free cancellation up to 30 days before the start; 50% refunded up to 48 hours before; no refund after that, as the tickets are issued in your names.
 ---
 
 The Vatican Museums are some of the largest in the world, and without a plan most visitors spend their time in queues and corridors. On a private tour your guide is there for your group only: they choose the route, set the pace around you and explain what you are looking at, from the ancient statues of the Pio-Clementino courtyard to the Gallery of Maps and the Raphael Rooms.

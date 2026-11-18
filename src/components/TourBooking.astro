@@ -123,7 +123,7 @@ const { slug, title, maxGuests = null } = Astro.props;
 <script>
   type Slot = { time: string; left: number };
   type Promo = { code: string; percent: number | null; amount: number | null };
-  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number; tiers: Record<string, number> | null; verify: boolean };
+  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number; policy: string; tiers: Record<string, number> | null; verify: boolean };
   const ERRORS: Record<string, string> = {
     slot_full: "Those places have just been taken. Please choose another time.",
     slot_closed: "That time is no longer available. Please choose another.",
@@ -202,7 +202,8 @@ const { slug, title, maxGuests = null } = Astro.props;
           : t.unit === "group" ? `private boat · up to ${t.maxGuests} guests` : `1–${t.maxGuests} guests · all ages`;
         const pay = verify() ? "My card is authorised now and charged only when you confirm availability; if you cannot, nothing is charged."
           : allOnline() ? "I pay the full price now." : `I pay a ${t.depositPct}% deposit now and the balance on the day.`;
-        $("[data-termstext]").innerHTML = `${pay} Free cancellation up to ${t.cancelHours} hours before the start. I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.`;
+        const ids = verify() ? " The names and dates of birth I give match each passport, and everyone brings a valid ID." : "";
+        $("[data-termstext]").innerHTML = `${pay} ${t.policy}${ids} I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.`;
         $("[data-fine]").textContent = `${t.tiers ? `${eur(full())} for ${state.guests} guest${state.guests === 1 ? "" : "s"}` : `${eur(t.price)} per ${t.unit === "group" ? "boat" : "person"}`} · ${payLine()}`;
         $("[data-partwrap]").hidden = !t.verify;
         if (t.verify) document.querySelectorAll<HTMLElement>(`[data-tb-head="${slug}"]`).forEach((el) => { el.textContent = "Book your date"; });
