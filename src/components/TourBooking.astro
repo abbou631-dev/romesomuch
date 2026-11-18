@@ -40,8 +40,8 @@ const { slug, title, maxGuests = null } = Astro.props;
       <h3 data-timehead>Choose a time<small data-datelbl></small></h3>
       <div class="rq-slots" role="group" aria-label="Start time"></div>
       <div class="rq-field" data-prefwrap hidden>
-        <label for={`tbPref-${slug}`}>Your preferred start time</label>
-        <input id={`tbPref-${slug}`} data-pref type="time" step="900" />
+        <label for={`tbPref-${slug}`}>When would you like to start?</label>
+        <input id={`tbPref-${slug}`} data-pref maxlength="80" autocomplete="off" placeholder="e.g. morning, around 10:00" />
       </div>
       <p class="rq-hint" data-slotnote></p>
     </section>
@@ -314,7 +314,7 @@ const { slug, title, maxGuests = null } = Astro.props;
         const out = $("output"); out.classList.remove("bump"); void out.offsetWidth; out.classList.add("bump");
       }
       else if (d.m) { state.month = new Date(state.month.getFullYear(), state.month.getMonth() + Number(d.m), 1); load(); return; }
-      else if (d.d) { state.date = d.d; state.time = state.tour?.freeTime ? pref.value : ""; hidePay(); calendar(); times(); }
+      else if (d.d) { state.date = d.d; state.time = state.tour?.freeTime && pref.value.trim().length >= 2 ? pref.value.trim() : ""; hidePay(); calendar(); times(); }
       else if (d.t) { state.time = d.t; hidePay(); times(); }
       else if ("apply" in d) { applyPromo(); return; }
       else if (d.wa) {
@@ -325,7 +325,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       showErr(); sync();
     });
     // A private tour's time is the one the guest writes.
-    pref.addEventListener("input", () => { state.time = /^\d{2}:\d{2}$/.test(pref.value) ? pref.value : ""; hidePay(); sync(); });
+    pref.addEventListener("input", () => { state.time = pref.value.trim().length >= 2 ? pref.value.trim() : ""; hidePay(); sync(); });
     [name, mail, tel, cc, terms, src, part].forEach((el) => { el.addEventListener("input", sync); el.addEventListener("change", sync); });
 
     const promoNote = (m = "", ok = false) => { const n = $("[data-promonote]"); n.textContent = m; n.classList.toggle("ok", ok); };
