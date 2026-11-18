@@ -11,6 +11,11 @@
   --disp:"Anton","Haettenschweiler","Arial Narrow",Impact,sans-serif;
   --body:"Satoshi","Plus Jakarta Sans","Helvetica Neue",Arial,sans-serif;
   --edge:#a7b2ba; --r-shot:8px 8px 8px 0;
+  /* One accent, for marks that point at something (highlights, underlines,
+     bullets, the New tag); --yellow stays the soft surface colour. */
+  --accent:#e8c547; --accent-ink:#0a0a0a;
+  /* Radii: a box nested in another uses the outer radius minus its padding. */
+  --r-lg:16px; --r-md:12px; --r-sm:8px;
   --pad:clamp(16px,4vw,56px); --maxw:1320px;
   --header-h:81px; --qf-h:66px;
   --ease:cubic-bezier(.4,0,.2,1); --dur:300ms;
@@ -25,12 +30,12 @@ a{color:inherit;text-decoration:none}
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 h1,h2,h3{margin:0;font-family:var(--disp);font-weight:400;line-height:.9;letter-spacing:normal;text-transform:uppercase;text-wrap:balance}
-p{margin:0}
+p{margin:0;text-wrap:pretty}
 .wrap{max-width:var(--maxw);margin:0 auto;padding-inline:var(--pad)}
-.lbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.lbl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;color:var(--muted)}
 .tnum{font-variant-numeric:tabular-nums}
 .hl{position:relative;display:inline-block;z-index:0;padding-inline:.06em;color:#0a0a0a}
-.hl::before{content:"";position:absolute;left:-.12em;right:-.12em;top:-.04em;bottom:-.04em;background:var(--yellow);transform:rotate(-2deg);z-index:-1}
+.hl::before{content:"";position:absolute;left:-.12em;right:-.12em;top:-.04em;bottom:-.04em;background:var(--accent);transform:rotate(-2deg);z-index:-1}
 .badge{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
 .badge::before{content:"";width:8px;height:8px;border-radius:99px;background:var(--yellow-deep);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
 
@@ -175,7 +180,7 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 .rail-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:20px}
 .rail-head h2{font-size:clamp(30px,4.2vw,54px)}
 .rail-head .sub{font-size:14.5px;color:var(--muted);margin-top:10px;max-width:56ch;font-weight:400}
-.see{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;padding-bottom:3px;border-bottom:2px solid var(--yellow-deep)}
+.see{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;padding-bottom:3px;border-bottom:2px solid var(--accent)}
 .see:hover{border-bottom-width:4px}
 .track{display:grid;grid-auto-flow:column;grid-auto-columns:min(232px,43vw);gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:10px}
 .track>*{scroll-snap-align:start}
@@ -192,7 +197,7 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 .tag{position:absolute;top:9px;left:9px;background:var(--yellow);color:#0a0a0a;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:4px;z-index:2}
 .cbody{padding:0;display:flex;flex-direction:column;gap:7px;flex:1;min-width:0}
 .cbody h3{font-family:var(--body);font-weight:700;text-transform:none;font-size:14px;line-height:1.3;letter-spacing:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.cmeta{font-size:12.5px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmeta{font-size:12.5px;color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cmeta span+span::before{content:"\00b7";margin-inline:6px}
 .price{display:block;font-size:13px;color:var(--ink)}
 .price .f{font-weight:500}
@@ -201,7 +206,7 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 /* Sits opposite the category so the two never collide, whatever the card width.
    Two classes deliberately: the narrow-screen rules below re-set .tag's left, and
    a single class would lose to them and stretch this pill across the card. */
-.tag.tag-new{left:auto;right:9px;background:var(--ink);color:#fff}
+.tag.tag-new{left:auto;right:9px;background:var(--accent);color:var(--accent-ink)}
 .shotwrap{position:relative}
 /* rank numerals — decorative, top picks rail only */
 .rankcard{padding-left:28px}
@@ -314,17 +319,17 @@ select.sort{position:absolute;inset-inline:0;top:50%;transform:translateY(-50%);
   .lb-nav.prev{left:2px}
   .lb-nav.next{right:2px}
 }
-.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(134px,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:14px;overflow:hidden;margin:26px 0}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(134px,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:var(--r-md);overflow:hidden;margin:26px 0}
 .facts div{background:var(--surface);padding:14px 16px}
-.facts dt{font-size:9.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
-.facts dd{margin:6px 0 0;font-size:14.5px;font-weight:600}
+.facts dt{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+.facts dd{margin:6px 0 0;font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
 .prose h2{font-size:28px;margin:28px 0 12px}
 .prose p{color:var(--ink-2);max-width:66ch;margin-bottom:12px;line-height:1.7}
 .incl{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px;max-width:60ch}
 .incl li{padding-left:24px;position:relative;color:var(--ink-2);font-size:14.5px}
-.incl li::before{content:"";position:absolute;left:0;top:8px;width:12px;height:12px;border-radius:99px;background:var(--yellow);border:1px solid var(--yellow-deep)}
+.incl li::before{content:"";position:absolute;left:0;top:8px;width:10px;height:10px;border-radius:99px;background:var(--accent)}
 
-.book{position:sticky;top:100px;border:1px solid var(--hair);background:var(--surface);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+.book{position:sticky;top:100px;border:1px solid var(--hair);background:var(--surface);border-radius:var(--r-lg);padding:22px;box-shadow:var(--shadow)}
 .book h3{font-size:26px}
 .book-price{margin:12px 0 0;line-height:1}
 .book-price .v{font-family:var(--disp);font-size:52px;font-weight:400}
@@ -402,7 +407,6 @@ select.sort{position:absolute;inset-inline:0;top:50%;transform:translateY(-50%);
 /* ---------- footer ---------- */
 footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 .fcta{position:relative;overflow:hidden;background:var(--yellow);color:#0a0a0a;padding:clamp(48px,7vw,104px) var(--pad);text-align:center;border-bottom:1px solid rgba(10,10,10,.12)}
-.fcta .ghosttext{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:clamp(90px,22vw,300px);color:rgba(10,10,10,.10);white-space:nowrap;pointer-events:none;letter-spacing:normal}
 .fcta .inner{position:relative;max-width:var(--maxw);margin:0 auto}
 .fcta h2{font-size:clamp(42px,8vw,110px);color:#0a0a0a;line-height:.9}
 .fcta p{color:rgba(10,10,10,.72);margin:18px auto 26px;max-width:38ch;font-size:19px;font-weight:500}
@@ -410,14 +414,12 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 .fcta .btn:hover{background:#fff;color:#0a0a0a;border-color:#0a0a0a;transform:scale(1.05)}
 .fgrid{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:28px;padding:38px 0;max-width:var(--maxw);margin:0 auto}
 @media(max-width:760px){.fgrid{grid-template-columns:1fr 1fr}}
-.fcol h4{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:700;font-family:var(--body)}
+.fcol h4{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:700;font-family:var(--body)}
 .fcol a{display:block;font-size:13.5px;color:var(--ink-2);padding:4px 0;font-weight:500}
 .fcol a:hover{color:var(--ink)}
-.fbot{border-top:1px solid var(--hair);padding:16px 0;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:500}
+.fbot{border-top:1px solid var(--hair);padding:16px 0;font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:500}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
-.badge-live{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.badge-live::before{content:"";width:8px;height:8px;border-radius:99px;background:var(--yellow-deep);box-shadow:0 0 0 3px rgba(184,145,47,.22)}
 .legal{max-width:70ch;padding:clamp(22px,3vw,42px) 0}
 .lsec{border-top:1px solid var(--hair);padding:20px 0}
 .lsec h2{font-size:clamp(19px,2.4vw,26px);display:flex;gap:14px;align-items:baseline}
@@ -522,7 +524,7 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
  .cmeta{font-size:11.5px}
  .price{font-size:12px}
  .pill{font-size:9px;padding:4px 8px}
- .tag{font-size:8.5px;padding:3px 6px;top:7px;left:7px}
+ .tag{font-size:10px;padding:3px 6px;top:7px;left:7px}
  .grid{grid-template-columns:1fr 1fr;gap:14px}
  .grid .cbody h3{font-size:12.5px}
  .grid .cmeta,.grid .price{font-size:11.5px}
@@ -590,3 +592,10 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 .mbar .p b .golfcart-from{display:flex;align-items:baseline;gap:5px}
 .mbar .p b .golfcart-from .f,.mbar .p b .golfcart-from .u{font-family:var(--body);font-size:13px;font-weight:600;color:var(--sage)}
 .book .fine .golfcart-from .v{font-weight:700;color:var(--ink)}
+
+/* ---------- loading and feedback ---------- */
+/* A picture still loading shows a soft sweep, not an empty box; the image
+   covers it once it arrives. */
+@keyframes rsm-sweep{from{background-position:150% 0}to{background-position:-50% 0}}
+.shot{background:linear-gradient(100deg,var(--tone) 40%,#fbfcfc 50%,var(--tone) 60%) var(--tone);background-size:200% 100%}
+@media(prefers-reduced-motion:no-preference){.shot{animation:rsm-sweep 1.4s linear infinite}}

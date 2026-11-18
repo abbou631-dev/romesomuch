@@ -24,8 +24,7 @@ const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
     // The partner's box runs price, calendar, payment and the confirmation email.
     // It is taller than the screen, so this panel does not stick (.book.tall).
     <div class="book tall" id="bookingBox">
-      <span class="badge-live">Live availability</span>
-      <h3 style="margin-top:10px">Book instantly</h3>
+      <h3>Book instantly</h3>
       <p class="fine" style="margin-top:4px"><FromPrice tour={golf} /> · {d.durationLabel} · confirmed straight away</p>
       <GolfCartBooking tour={golf} />
       <p class="fine">{d.cancellationPolicy ?? cancellationDefault}</p>
@@ -33,8 +32,7 @@ const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   ) : request ? (
     // Arranged by us: the box takes a request and we answer on WhatsApp.
     <div class="book tall" id="bookingBox">
-      <span class="badge">On request</span>
-      <h3 style="margin-top:10px">Request a date</h3>
+      <h3>Request a date</h3>
       <p class="fine" style="margin-top:4px">Price on request · {d.durationLabel} · we reply on WhatsApp</p>
       <RequestBooking experience={d.title} maxGuests={d.maxGuests} />
       <p class="fine">{d.cancellationPolicy ?? cancellationDefault}</p>
@@ -42,8 +40,7 @@ const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   ) : live ? (
     // Ours, sold on the site: live times, deposit online, balance on the day.
     <div class="book tall" id="bookingBox">
-      <span class="badge-live">Live availability</span>
-      <h3 style="margin-top:10px" data-tb-head={exp.id}>Book instantly</h3>
+      <h3 data-tb-head={exp.id}>Book instantly</h3>
       <p class="book-price"><TourPrice slug={exp.id} price={d.price!} unit={d.unit} priceFor={d.priceFor} perWord /></p>
       <p class="fine" style="margin-top:4px">{d.durationLabel} · <span data-tb-line={exp.id}>secure online payment</span></p>
       <TourBooking slug={exp.id} title={d.title} maxGuests={d.maxGuests} />
@@ -52,8 +49,7 @@ const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   ) : (
     // Not sold online yet: the page takes a request, answered within 48 hours.
     <div class="book" id="bookingBox">
-      <span class="badge">On request</span>
-      <h3 style="margin-top:10px">Ask for a date</h3>
+      <h3>Ask for a date</h3>
       <p class="fine" style="margin-top:4px">€{d.price} per {d.unit} · {d.durationLabel} · we answer within 48 hours</p>
       <EnquiryForm
         kind="booking"
@@ -74,7 +70,7 @@ const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
 <div class="mbar" id="mbar">
   <div class="p">
-    <span>{live ? "From · live availability" : "From · on request"}</span>
+    <span>{live ? "From" : "On request"}</span>
     {golf ? <b class="tnum"><FromPrice tour={golf} fallback="Live prices" /></b> : request ? <b>On request</b> : d.liveBooking ? <b><TourPrice slug={exp.id} price={d.price!} unit={d.unit} priceFor={d.priceFor} /></b> : <b class="tnum">{money(d.price!)}<em>/ {d.unit}</em></b>}
     <small>{d.durationLabel} · {live ? <span data-tb-line={d.liveBooking ? exp.id : undefined}>{d.liveBooking ? "secure online payment" : "confirmed straight away"}</span> : request ? "we reply on WhatsApp" : "answer within 48 hours"}</small>
   </div>
