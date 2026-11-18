@@ -12,6 +12,9 @@ durationLabel: About 3h
 isNew: true
 liveBooking: true
 images:
+  - type: video
+    video: /media/private-colosseum-tour.mp4
+    videoPoster: /media/private-colosseum-tour-poster.jpg
   - type: photo
     photo: colosseum-hero
 included:

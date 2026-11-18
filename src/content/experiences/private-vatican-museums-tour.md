@@ -12,6 +12,9 @@ durationLabel: About 3h
 isNew: true
 liveBooking: true
 images:
+  - type: video
+    video: /media/private-vatican-museums-tour.mp4
+    videoPoster: /media/private-vatican-museums-tour-poster.jpg
   - type: photo
     photo: sistine-chapel-ceiling-last-judgement
   - type: photo
