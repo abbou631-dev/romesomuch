@@ -465,6 +465,8 @@ async function listBookings(env, url) {
   else if (scope === "past") { where.push("b.status = 'confirmed' AND b.date < ?"); binds.push(now); order = "b.date DESC, b.time DESC"; }
   else if (scope === "cancelled") { where.push("b.status = 'cancelled'"); order = "b.cancelled_at DESC"; }
   else throw new Invalid("Elenco non valido.");
+  // "recent": the newest bookings first, whatever the tour date.
+  if (url.searchParams.get("sort") === "recent") order = "b.created_at DESC, b.id DESC";
   const slug = url.searchParams.get("slug");
   if (slug) { where.push("b.slug = ?"); binds.push(slug); }
   const q = url.searchParams.get("q")?.trim();

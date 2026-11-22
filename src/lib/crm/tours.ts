@@ -18,6 +18,8 @@ const UNIT = { person: "a persona", group: "a gruppo / barca" } as Record<string
 let scope = "upcoming";
 let slug = "";
 let query = "";
+// Order of the list: by tour date (next first) or newest bookings first.
+let sort = "date";
 let tours: Row[] = [];
 let bookings: Row[] = [];
 let sum: Row = {};
@@ -88,13 +90,13 @@ function row(b: Row) {
     <td><a class="who" href="#/prenotazione/${b.id}"><strong>${esc(b.name)}</strong></a><br /><small class="mute">${contact}</small><br />${sourceTag(b.source)}${b.promo_code ? ` <span class="promo-tag">${esc(b.promo_code)} −${eur(b.discount_cents)}</span>` : ""}${b.participants ? `<br /><small><strong>Partecipanti:</strong> ${esc(b.participants).replace(/\n/g, "<br />")}</small>` : ""}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
     <td class="num">${b.guests}</td>
     ${money}
-    <td style="white-space:nowrap"><small class="mute">${esc(b.code)}</small></td>
+    <td style="white-space:nowrap"><small class="mute">${esc(b.code)}<br />prenotata ${day(b.created_at)}</small></td>
     <td class="row-actions">${actions}</td>
   </tr>`;
 }
 
 async function bookingsView() {
-  const params = new URLSearchParams({ scope, ...(slug ? { slug } : {}), ...(query ? { q: query } : {}) });
+  const params = new URLSearchParams({ scope, ...(slug ? { slug } : {}), ...(query ? { q: query } : {}), ...(sort === "recent" ? { sort } : {}) });
   const list = await api<Row[]>(`tours/bookings?${params}`);
   bookings = list;
   const heads = scope === "cancelled"
@@ -119,6 +121,9 @@ async function bookingsView() {
     <div class="filters">
       <label>Esperienza<select data-slug><option value="">Tutte</option>${tours.map((t) =>
         `<option value="${esc(t.slug)}"${t.slug === slug ? " selected" : ""}>${esc(t.title)}</option>`).join("")}</select></label>
+      <label>Ordina<select data-sort>
+        <option value="date"${sort === "date" ? " selected" : ""}>${scope === "past" || scope === "cancelled" ? "Più recenti prima" : "Prossime da fare"}</option>
+        <option value="recent"${sort === "recent" ? " selected" : ""}>Ultime prenotate</option></select></label>
       <label>Cerca<input type="search" data-q value="${esc(query)}" placeholder="Nome, email, telefono, codice" /></label>
     </div>
     <section class="panel">${table(heads, list.map(row), scope === "upcoming" ? "Nessuna prenotazione in arrivo." : "Niente qui.", "", true)}</section>`;
@@ -556,6 +561,7 @@ view.addEventListener("click", (event) => {
 view.addEventListener("change", (event) => {
   const el = event.target as HTMLInputElement | HTMLSelectElement;
   if ("moveDate" in el.dataset) { loadSlots(); return; }
+  if ("sort" in el.dataset) { sort = el.value; render(); return; }
   if ("slug" in el.dataset) { slug = el.value; render(); }
   else if ("q" in el.dataset) { query = el.value.trim(); render(); }
   else if (el.dataset.closeDay && el.value) {
