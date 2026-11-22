@@ -82,10 +82,10 @@ function row(b: Row) {
     : scope === "cancelled"
     ? (refundable(b) > 0 ? `<button class="link" data-cancel="${b.id}">Rimborsa</button>` : "")
     : `<button class="link" data-edit="${b.id}">Modifica</button><button class="link" data-resend="${b.id}">Rimanda email</button><button class="link danger" data-cancel="${b.id}">Cancella</button>`;
-  return `<tr>
+  return `<tr class="open-row" data-open="${b.id}">
     <td>${when(b)}</td>
     <td><span class="tour-name">${icon(b.slug)}${esc(b.title)}</span></td>
-    <td><strong>${esc(b.name)}</strong><br /><small class="mute">${contact}</small><br />${sourceTag(b.source)}${b.promo_code ? ` <span class="promo-tag">${esc(b.promo_code)} −${eur(b.discount_cents)}</span>` : ""}${b.participants ? `<br /><small><strong>Partecipanti:</strong> ${esc(b.participants).replace(/\n/g, "<br />")}</small>` : ""}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
+    <td><a class="who" href="#/prenotazione/${b.id}"><strong>${esc(b.name)}</strong></a><br /><small class="mute">${contact}</small><br />${sourceTag(b.source)}${b.promo_code ? ` <span class="promo-tag">${esc(b.promo_code)} −${eur(b.discount_cents)}</span>` : ""}${b.participants ? `<br /><small><strong>Partecipanti:</strong> ${esc(b.participants).replace(/\n/g, "<br />")}</small>` : ""}${b.notes ? `<br /><small>${esc(b.notes)}</small>` : ""}</td>
     <td class="num">${b.guests}</td>
     ${money}
     <td style="white-space:nowrap"><small class="mute">${esc(b.code)}</small></td>
@@ -175,6 +175,171 @@ function cancelBooking(b: Row) {
   }, render);
 }
 
+// ---- una prenotazione: tutto in una pagina --------------------------------------------
+
+const STATUS: Record<string, [string, string]> = {
+  confirmed: ["attivo", "Confermata"], requested: ["pausa", "Da accettare"],
+  cancelled: ["concluso", "Cancellata"], pending: ["concluso", "Pagamento non completato"],
+};
+// What the guest sees, previewed in the CRM: the ticket and each email.
+const PREVIEWS: [string, string][] = [
+  ["ticket", "Ticket"], ["confirmed", "Email di conferma"], ["reminder", "Promemoria (giorno prima)"],
+  ["updated", "Email di modifica"], ["cancelled", "Email di cancellazione"],
+];
+const VERIFY_PREVIEWS: [string, string][] = [["requested", "Richiesta ricevuta"], ["declined", "Richiesta rifiutata"]];
+let previewFrom = "";
+let previewKind = "ticket";
+let moving: Row | null = null;
+
+const previewPanel = (from: string, verify: boolean, sub: string) => {
+  previewFrom = from;
+  const kinds = verify ? [...PREVIEWS, ...VERIFY_PREVIEWS] : PREVIEWS;
+  if (!kinds.some(([k]) => k === previewKind)) previewKind = "ticket";
+  return `<section class="panel">
+    <div class="panel-head"><h2>Cosa riceve il cliente <small class="mute">${sub}</small></h2></div>
+    <nav class="months" aria-label="Anteprima">${kinds.map(([k, l]) =>
+      `<button type="button" data-preview="${k}" class="${k === previewKind ? "on" : ""}">${l}</button>`).join("")}</nav>
+    <p class="sub preview-subject" data-preview-subject></p>
+    <iframe class="preview-frame" title="Anteprima" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" data-preview-frame></iframe>
+  </section>`;
+};
+
+async function loadPreview() {
+  const frame = view.querySelector<HTMLIFrameElement>("[data-preview-frame]");
+  if (!frame || !previewFrom) return;
+  view.querySelectorAll<HTMLButtonElement>("[data-preview]").forEach((x) => x.classList.toggle("on", x.dataset.preview === previewKind));
+  try {
+    const { subject, html } = await api<Row>(`${previewFrom}/preview?kind=${previewKind}`);
+    const label = view.querySelector("[data-preview-subject]")!;
+    label.innerHTML = previewKind === "ticket" ? "La pagina che il cliente apre dal pulsante «View your ticket» nelle email." : `Oggetto: <strong>${esc(subject)}</strong>`;
+    // Links open outside the CRM; the height follows the content.
+    frame.onload = () => { frame.style.height = `${(frame.contentDocument?.documentElement.scrollHeight ?? 800) + 4}px`; };
+    frame.srcdoc = html.replace("<head>", '<head><base target="_blank" />');
+  } catch (error) {
+    say((error as Error).message, true);
+  }
+}
+
+const stamp = (iso?: string | null) => (iso ? new Date(`${String(iso).replace(" ", "T")}Z`).toLocaleString("it-IT", { timeZone: "Europe/Rome", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
+
+async function bookingView(id: number) {
+  const b = await api<Row>(`tours/bookings/${id}`);
+  bookings = [b];
+  const t = b.tour as Row;
+  const [tone, label] = STATUS[b.status] ?? ["concluso", b.status];
+  const live = ["confirmed", "requested"].includes(b.status);
+  const past = b.date < today();
+  const wa = b.phone ? `https://wa.me/${String(b.phone).replace(/\D/g, "").replace(/^00/, "")}` : "";
+  const actions = [
+    b.ticket_url && b.status !== "pending" ? `<a class="btn" href="${esc(b.ticket_url)}" target="_blank" rel="noopener">Apri / scarica ticket</a>` : "",
+    b.status === "requested" ? `<button class="btn primary" data-accept="${b.id}">Accetta e incassa</button><button class="btn danger" data-decline="${b.id}">Rifiuta</button>` : "",
+  ].join("");
+  const history = [
+    ["Prenotata sul sito", stamp(b.created_at)], ["Pagata / confermata", stamp(b.confirmed_at)],
+    ["Promemoria mandato", stamp(b.reminded_at)], ["Cancellata", stamp(b.cancelled_at)],
+  ].filter(([, v]) => v);
+  const free = !t.times.length;
+  view.innerHTML = `<p class="crumb"><a href="#/">← Prenotazioni</a></p>
+    ${head(esc(b.name), actions, `<span class="tour-name">${icon(b.slug)}${esc(b.title)}</span> · ${esc(b.code)} · ${badge(tone, label)}${live && past ? " · già svolta" : ""}`)}
+    <div class="grid2 booking-grid">
+      <section class="panel">
+        <div class="panel-head"><h2>Data e orario</h2></div>
+        <p class="when-big">${day(b.date)} · <strong>${esc(b.time)}</strong> · ${b.guests} ${b.guests === 1 ? "ospite" : "ospiti"}</p>
+        ${live ? `<div class="move">
+          <label>Nuova data<input type="date" data-move-date value="${esc(b.date)}" /></label>
+          <label>Nuovo orario${free
+            ? `<input type="text" data-move-time value="${esc(b.time)}" placeholder="09:30" />`
+            : `<select data-move-time></select>`}</label>
+          <p class="sub" data-move-info></p>
+          <label class="check"><input type="checkbox" data-move-notify ${b.status === "confirmed" ? "checked" : "disabled"} /> ${b.status === "confirmed" ? "Manda al cliente l'email con data, orario e ticket aggiornati" : "Il cliente riceve i nuovi dettagli quando accetti"}</label>
+          <button class="btn primary" type="button" data-move>Sposta la prenotazione</button>
+        </div>` : `<p class="mute">${b.status === "cancelled" ? "Prenotazione cancellata: non si può spostare." : "Non si può spostare."}</p>`}
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Cliente</h2>${b.status !== "cancelled" ? `<button class="btn small" data-edit="${b.id}">Modifica dati</button>` : ""}</div>
+        <dl class="info">
+          <dt>Nome</dt><dd>${esc(b.name)}</dd>
+          <dt>Email</dt><dd><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></dd>
+          <dt>Telefono</dt><dd>${b.phone ? `<a href="tel:${esc(b.phone)}">${esc(b.phone)}</a>${b.whatsapp === 1 ? ` · <a href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : b.whatsapp === 0 ? " · niente WhatsApp" : ""}` : "—"}</dd>
+          <dt>Ospiti</dt><dd>${b.guests}</dd>
+          ${b.participants ? `<dt>Partecipanti</dt><dd>${esc(b.participants).replace(/\n/g, "<br />")}</dd>` : ""}
+          <dt>Ci ha conosciuti</dt><dd>${sourceTag(b.source)}</dd>
+          ${b.notes ? `<dt>Note</dt><dd>${esc(b.notes)}</dd>` : ""}
+        </dl>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Pagamento</h2></div>
+        <dl class="info">
+          <dt>Totale</dt><dd><strong>${eur(b.total_cents)}</strong>${b.promo_code ? ` <span class="promo-tag">${esc(b.promo_code)} −${eur(b.discount_cents)}</span>` : ""}</dd>
+          ${b.status === "requested"
+            ? `<dt>Sulla carta</dt><dd>${eur(b.deposit_cents)} autorizzati, non incassati · rispondi entro ${day(authEnds(b))}</dd>`
+            : `<dt>Pagato online</dt><dd>${eur(b.paid_cents)}</dd>
+               <dt>Rimborsato</dt><dd>${eur(b.refunded_cents)}</dd>
+               ${b.status === "confirmed" ? `<dt>Da pagare sul posto</dt><dd>${eur(balance(b))}</dd>` : ""}`}
+          <dt>Cancellazione</dt><dd><small>${esc(cancelPolicy(t))}</small></dd>
+          ${b.payment_intent ? `<dt>Stripe</dt><dd><a href="https://dashboard.stripe.com/payments/${esc(b.payment_intent)}" target="_blank" rel="noopener">Apri il pagamento</a></dd>` : ""}
+        </dl>
+        <div class="row-actions booking-money">
+          ${b.status === "confirmed" ? `<button class="btn danger" data-cancel="${b.id}">Cancella${refundable(b) > 0 ? " e rimborsa" : ""}</button>` : ""}
+          ${b.status === "cancelled" && refundable(b) > 0 ? `<button class="btn" data-cancel="${b.id}">Rimborsa</button>` : ""}
+          ${b.status === "confirmed" ? `<button class="btn" data-resend="${b.id}">Rimanda email di conferma</button>` : ""}
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Storico</h2></div>
+        <dl class="info">${history.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+      </section>
+    </div>
+    ${previewPanel(`tours/bookings/${b.id}`, Boolean(t.verify), "con i dati di questa prenotazione")}`;
+  moving = b;
+  if (live) await loadSlots();
+  loadPreview();
+}
+
+// The times of the chosen day, with the seats each has left.
+async function loadSlots() {
+  const b = moving;
+  const dateInput = view.querySelector<HTMLInputElement>("[data-move-date]");
+  if (!b || !dateInput?.value) return;
+  const info = view.querySelector<HTMLElement>("[data-move-info]")!;
+  try {
+    const s = await api<Row>(`tours/bookings/${b.id}/slots?date=${dateInput.value}`);
+    const unit = s.unit === "group" ? ["gruppo libero", "gruppi liberi"] : ["posto libero", "posti liberi"];
+    const seats = (n: number) => `${Math.max(0, n)} ${n === 1 ? unit[0] : unit[1]}`;
+    const warn = [s.closed ? "giorno chiuso" : "", s.runs ? "" : "l'esperienza di solito non si fa in questo giorno"].filter(Boolean);
+    const select = view.querySelector<HTMLSelectElement>("select[data-move-time]");
+    if (select) {
+      const keep = select.value || b.time;
+      select.innerHTML = s.times.map((x: Row) => {
+        const full = x.left < s.need;
+        return `<option value="${esc(x.time)}"${full ? " disabled" : ""}${x.time === keep ? " selected" : ""}>${esc(x.time)} · ${full ? "pieno" : seats(x.left)}${x.listed ? "" : " (fuori orario)"}</option>`;
+      }).join("");
+      if (select.selectedOptions[0]?.disabled) select.value = s.times.find((x: Row) => x.left >= s.need)?.time ?? "";
+    }
+    info.innerHTML = [
+      s.free_time ? `In quel giorno: ${seats(s.left)}${s.left < s.need ? " (pieno)" : ""}` : "",
+      warn.length ? `<span class="warn">Attenzione: ${warn.join(", ")}.</span>` : "",
+    ].filter(Boolean).join(" ");
+  } catch (error) {
+    info.textContent = (error as Error).message;
+  }
+}
+
+async function moveBooking() {
+  const b = moving;
+  if (!b) return;
+  const date = view.querySelector<HTMLInputElement>("[data-move-date]")!.value;
+  const time = view.querySelector<HTMLInputElement | HTMLSelectElement>("[data-move-time]")!.value.trim();
+  const notify = view.querySelector<HTMLInputElement>("[data-move-notify]")!.checked;
+  if (!date || !time) { say("Scegli data e orario.", true); return; }
+  if (date === b.date && time === b.time) { say("Data e orario sono già questi.", true); return; }
+  if (!confirm(`Spostare ${b.name} a ${day(date)} alle ${time}?${notify ? " Il cliente riceve un'email con i nuovi dettagli." : ""}`)) return;
+  act(async () => {
+    const { emailed } = await api<Row>(`tours/bookings/${b.id}`, { method: "PATCH", data: { date, time, notify } });
+    if (notify && !emailed) say("Spostata, ma l'email non è partita", true);
+  }, "Prenotazione spostata");
+}
+
 // ---- Esperienze ----------------------------------------------------------------------
 
 const weekdaysText = (w: string) => DAYS.filter(([k]) => w.includes(k)).map(([, l]) => l).join(" ");
@@ -216,7 +381,9 @@ function tourView(t: Row) {
     <div class="closures">${t.closures.map((d: string) =>
       `<span class="chip">${day(d)} <button class="link" data-open-day="${esc(t.slug)}|${d}" aria-label="Riapri ${day(d)}">✕</button></span>`).join("") || '<span class="mute">Nessuno</span>'}</div>
     <div class="filters" style="margin:10px 0 0"><label>Chiudi un giorno<input type="date" min="${today()}" data-close-day="${esc(t.slug)}" /></label></div>
-    </section>`;
+    </section>
+    ${previewPanel(`tours/catalog/${t.slug}`, Boolean(t.verify), "esempio: 2 ospiti fra 7 giorni")}`;
+  loadPreview();
 }
 
 // ---- Codici sconto ------------------------------------------------------------------
@@ -310,6 +477,8 @@ async function render() {
     if (route === "golfcart") { golfcartView(); return; }
     [tours, sum] = await Promise.all([api<Row[]>("tours/catalog"), api<Row>("tours/summary")]);
     if (route === "sconti") { await promosView(); stackTables(view); return; }
+    previewFrom = "";
+    if (route === "prenotazione" && arg) { await bookingView(Number(arg)); return; }
     const tour = tours.find((t) => t.slug === arg);
     if (route === "esperienze" && tour) {
       tourView(tour);
@@ -335,6 +504,10 @@ async function act(work: () => Promise<unknown>, done: string) {
 }
 
 view.addEventListener("click", (event) => {
+  const target = event.target as HTMLElement;
+  // A tap anywhere on a booking row, except its links and buttons, opens it.
+  const openRow = target.closest<HTMLElement>("tr[data-open]");
+  if (openRow && !target.closest("a, button")) { location.hash = `#/prenotazione/${openRow.dataset.open}`; return; }
   const tileLink = (event.target as HTMLElement).closest<HTMLAnchorElement>("a.tour-tile");
   if (tileLink) editNext = tileLink.getAttribute("href")!.split("/").pop()!;
   const el = (event.target as HTMLElement).closest<HTMLElement>("button");
@@ -342,6 +515,8 @@ view.addEventListener("click", (event) => {
   const d = el.dataset;
   const booking = (id?: string) => bookings.find((b) => b.id === Number(id));
   if (d.scope) { scope = d.scope; render(); }
+  else if (d.preview) { previewKind = d.preview; loadPreview(); }
+  else if ("move" in d) moveBooking();
   else if (d.edit) { const b = booking(d.edit); if (b) editBooking(b); }
   else if (d.cancel) { const b = booking(d.cancel); if (b) cancelBooking(b); }
   else if (d.accept) {
@@ -380,6 +555,7 @@ view.addEventListener("click", (event) => {
 
 view.addEventListener("change", (event) => {
   const el = event.target as HTMLInputElement | HTMLSelectElement;
+  if ("moveDate" in el.dataset) { loadSlots(); return; }
   if ("slug" in el.dataset) { slug = el.value; render(); }
   else if ("q" in el.dataset) { query = el.value.trim(); render(); }
   else if (el.dataset.closeDay && el.value) {

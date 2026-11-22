@@ -10,8 +10,11 @@ import { cancelPolicy } from "./tour-policy.js";
 
 // Images and links must be absolute and public, even when the email is sent
 // from a preview or a local server.
-const SITE = "https://romesomuch.com";
-const LOGO = `${SITE}/email/logo.png`;
+export const SITE = "https://romesomuch.com";
+export const LOGO = `${SITE}/email/logo.png`;
+// The guest's own ticket page (functions/ticket/[[path]].js): the code plus a
+// random key, so codes alone cannot be used to look up other guests' tickets.
+export const ticketUrl = (b) => (b.ticket_token ? `${SITE}/ticket/${encodeURIComponent(b.code)}?k=${b.ticket_token}` : null);
 
 const INK = "#111111";
 const MUTE = "#6b6b6b";
@@ -20,14 +23,14 @@ const CREAM = "#f7f3ea";
 const GOLD = "#e8c547";
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
 
-const euro = (cents) => `€${(cents / 100).toFixed(2).replace(/\.00$/, "")}`;
-const longDate = (date) =>
+export const euro = (cents) => `€${(cents / 100).toFixed(2).replace(/\.00$/, "")}`;
+export const longDate = (date) =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
-const firstName = (name) => String(name).trim().split(/\s+/)[0];
+export const firstName = (name) => String(name).trim().split(/\s+/)[0];
 const guestsText = (n) => `${n} ${n === 1 ? "guest" : "guests"}`;
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const whatsappUrl = `https://wa.me/${site.whatsapp.replace(/\D/g, "")}`;
-const mapUrl = (place) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
+export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+export const whatsappUrl = `https://wa.me/${site.whatsapp.replace(/\D/g, "")}`;
+export const mapUrl = (place) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
 
 // Other experiences the confirmation suggests at the bottom: the private
 // guided tours, booked on the site. Photos are 560x360 JPGs in
@@ -44,6 +47,7 @@ const KINDS = {
     title: "Your booking is confirmed",
     intro: ["Thank you for booking with us. Everything is set: here is what you need for the day."],
     details: true,
+    ticket: true,
     more: true,
   }),
   // A verified tour: the card is authorised, the owner checks availability.
@@ -68,14 +72,16 @@ const KINDS = {
   updated: (b) => ({
     subject: `Booking updated: ${b.title}, ${longDate(b.date)}`,
     title: "Your booking has been updated",
-    intro: ["We have changed your booking. These are the new details."],
+    intro: ["We have changed your booking. These are the new details, and your ticket is updated too."],
     details: true,
+    ticket: true,
   }),
   reminder: (b) => ({
     subject: `See you tomorrow: ${b.title} at ${b.time}`,
     title: "See you tomorrow",
     intro: ["A quick reminder: your experience is tomorrow. Please be at the meeting point a few minutes before the start."],
     details: true,
+    ticket: true,
   }),
   cancelled: (b, refund) => ({
     subject: `Booking cancelled: ${b.title}, ${longDate(b.date)}`,
@@ -91,7 +97,7 @@ const KINDS = {
 };
 
 // The booking's facts, as label/value pairs, shared by both versions.
-const facts = (b) => [
+export const facts = (b) => [
   ["Booking code", b.code],
   ["Experience", b.title],
   ["Date", longDate(b.date)],
@@ -100,7 +106,7 @@ const facts = (b) => [
   ...(b.participants ? [["Participants", b.participants.split(/\n+/).join("; ")]] : []),
   ...(b.meeting_point ? [["Meeting point", b.meeting_point]] : []),
 ];
-const money = (b) => [
+export const money = (b) => [
   ...(b.discount_cents > 0 ? [[`Discount${b.promo_code ? ` (${b.promo_code})` : ""}`, `−${euro(b.discount_cents)}`]] : []),
   ["Total", euro(b.total_cents)],
   ...(b.status === "requested"
@@ -109,13 +115,14 @@ const money = (b) => [
       ? [["Paid online", euro(b.paid_cents)]]
       : [["Paid online (deposit)", euro(b.paid_cents)], ["To pay on the day", euro(Math.max(0, b.total_cents - b.paid_cents))]]),
 ];
-const policy = (b) => `${cancelPolicy(b)} To change or cancel, reply to this email or message us on WhatsApp.`;
+export const policy = (b) => `${cancelPolicy(b)} To change or cancel, reply to this email or message us on WhatsApp.`;
 
 function text(b, e) {
   const lines = [`Hi ${firstName(b.name)},`, "", ...e.intro.flatMap((p) => [p, ""])];
   if (e.details) {
     lines.push(...facts(b).map(([k, v]) => `${k}: ${v}`), "");
     lines.push(...money(b).map(([k, v]) => `${k}: ${v}`), "");
+    if (e.ticket && ticketUrl(b)) lines.push(`Your ticket (show it on the day, or save it as PDF): ${ticketUrl(b)}`, "");
     lines.push(`Details and map: ${SITE}/experience/${b.slug}/`, "", policy(b), "");
   }
   if (e.more) {
@@ -166,7 +173,9 @@ function html(b, e) {
       </table>
     </td></tr>
     <tr><td align="center" style="padding:24px 32px 0">
-      <a href="${SITE}/experience/${esc(b.slug)}/" style="display:inline-block;background:${INK};color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 26px;border-radius:999px">See the experience and the map</a>
+      ${e.ticket && ticketUrl(b) ? `<a href="${esc(ticketUrl(b))}" style="display:inline-block;background:${INK};color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 26px;border-radius:999px">View your ticket</a>
+      <p style="margin:12px 0 0"><a href="${SITE}/experience/${esc(b.slug)}/" style="color:${INK};font-size:14px;font-weight:600">See the experience and the map</a></p>`
+      : `<a href="${SITE}/experience/${esc(b.slug)}/" style="display:inline-block;background:${INK};color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 26px;border-radius:999px">See the experience and the map</a>`}
     </td></tr>
     <tr><td style="padding:20px 32px 0;color:${MUTE};font-size:13px;line-height:1.5">${esc(policy(b))}</td></tr>` : "";
   return `<!doctype html>
@@ -194,6 +203,8 @@ function html(b, e) {
 </table>
 </body></html>`;
 }
+
+export const EMAIL_KINDS = Object.keys(KINDS);
 
 export function guestEmail(kind, b, ...extra) {
   const e = KINDS[kind](b, ...extra);

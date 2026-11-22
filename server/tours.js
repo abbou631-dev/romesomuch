@@ -6,7 +6,8 @@
 import { Invalid, json, today, hmac, same } from "./common.js";
 import { mail } from "./access.js";
 import { SOURCES } from "./tour-sources.js";
-import { guestEmail } from "./tour-emails.js";
+import { guestEmail, EMAIL_KINDS, ticketUrl } from "./tour-emails.js";
+import { ticketHtml } from "./tour-ticket.js";
 import { cancelPolicy } from "./tour-policy.js";
 import site from "../src/data/site.json";
 
@@ -205,11 +206,12 @@ const notifyOwner = (env, b, origin) => mail(env, {
 // A booking with everything the emails print.
 const BOOKING = `SELECT b.*, t.title, t.unit, t.meeting_point, t.cancel_hours, t.partial_refund_pct, t.partial_refund_hours, t.price_cents, t.verify
   FROM tour_bookings b JOIN tours t ON t.slug = b.slug`;
-const bookingBy = (env, column, value) => env.CRM_DB.prepare(`${BOOKING} WHERE b.${column} = ?`).bind(value).first();
+export const bookingBy = (env, column, value) => env.CRM_DB.prepare(`${BOOKING} WHERE b.${column} = ?`).bind(value).first();
 
 // ---- the site: availability, hold, payment ------------------------------------------------
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const newToken = () => [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
 const newCode = () => `RSM-${[...crypto.getRandomValues(new Uint8Array(6))].map((b) => CODE_CHARS[b % CODE_CHARS.length]).join("")}`;
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -306,11 +308,11 @@ async function hold(env, body) {
   // The seat check and the insert are one statement, so two people cannot
   // both take the last seats.
   const { meta } = await env.CRM_DB.prepare(
-    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total_cents, deposit_cents, promo_code, discount_cents)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total_cents, deposit_cents, promo_code, discount_cents, ticket_token)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
      WHERE (SELECT ${usedSql(tour)} FROM tour_bookings WHERE slug = ? AND date = ? ${slotSql(tour)} AND ${HOLD}) + ? <= ?
        AND (SELECT count(*) FROM tour_bookings WHERE promo_code = ? AND ${HOLD}) < ?`,
-  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total, deposit, promo?.code ?? null, discount,
+  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total, deposit, promo?.code ?? null, discount, newToken(),
     tour.slug, date, ...slotBind(tour, time), need(tour, guests), tour.capacity, promo?.code ?? null, promo?.max_uses ?? 1e9).run();
   if (!meta.changes) throw new Invalid("slot_full");
 
@@ -639,6 +641,48 @@ async function promosApi(request, env, key) {
   return json({ error: "Non trovato." }, 404);
 }
 
+// A made-up booking of this experience, for the sample email and the previews.
+function sampleBooking(env, tour) {
+  const total = totalFor(tour, 2);
+  return {
+    code: "RSM-SAMPLE", slug: tour.slug, title: tour.title, date: addDays(today(), 7), time: tour.times[0] ?? "10:00", guests: 2,
+    name: "Jane Smith", email: notifyTo(env), meeting_point: tour.meeting_point, cancel_hours: tour.cancel_hours,
+    partial_refund_pct: tour.partial_refund_pct, partial_refund_hours: tour.partial_refund_hours, verify: tour.verify,
+    participants: tour.verify ? "Jane Smith, 12/03/1985\nJohn Smith, 02/07/1983" : null,
+    status: "confirmed", total_cents: total, deposit_cents: depositFor(tour, total), paid_cents: depositFor(tour, total),
+    refunded_cents: 0, discount_cents: 0, ticket_token: "0".repeat(32),
+  };
+}
+
+// What the guest sees, as the CRM previews it: the ticket or one of the emails.
+function preview(b, kind) {
+  if (kind === "ticket") return { subject: `Ticket ${b.code}`, html: ticketHtml(b, { preview: true }) };
+  if (!EMAIL_KINDS.includes(kind)) throw new Invalid("Anteprima non valida.");
+  // A cancellation shows the refund already made, or the deposit as an example.
+  const refund = b.refunded_cents || b.paid_cents;
+  const shown = kind === "requested" ? { ...b, status: "requested" } : kind === "cancelled" || kind === "declined" ? b : { ...b, status: "confirmed" };
+  const { subject, html } = guestEmail(kind, shown, refund);
+  return { subject, html };
+}
+
+// The start times of `date` for moving a booking there, with the seats each
+// has left not counting the booking itself. Closed days and days the tour
+// does not run are flagged; the owner may still move a booking there.
+async function slotsFor(env, b, tour, date) {
+  if (!isDate(date)) throw new Invalid("Data non valida.");
+  const [{ results: used }, closed] = await Promise.all([
+    env.CRM_DB.prepare(`SELECT time, ${usedSql(tour)} AS n FROM tour_bookings WHERE slug = ? AND date = ? AND id != ? AND ${HOLD} GROUP BY time`)
+      .bind(tour.slug, date, b.id).all(),
+    env.CRM_DB.prepare("SELECT 1 FROM tour_closures WHERE slug = ? AND date = ?").bind(tour.slug, date).first(),
+  ]);
+  const base = { date, closed: Boolean(closed), runs: tour.weekdays.includes(String(weekday(date))), free_time: freeTime(tour), need: need(tour, b.guests), unit: tour.unit };
+  if (freeTime(tour)) return { ...base, left: tour.capacity - used.reduce((a, r) => a + r.n, 0), times: [] };
+  const taken = new Map(used.map((r) => [r.time, r.n]));
+  // A booking at a time no longer on the list keeps that time as a choice.
+  const times = [...new Set([...tour.times, ...(date === b.date && TIME.test(b.time) ? [b.time] : [])])].sort();
+  return { ...base, times: times.map((time) => ({ time, left: tour.capacity - (taken.get(time) ?? 0), listed: tour.times.includes(time) })) };
+}
+
 export async function crmApi(request, env, path) {
   const url = new URL(request.url);
   const method = request.method;
@@ -650,6 +694,22 @@ export async function crmApi(request, env, path) {
   if (what === "bookings" && key) {
     const id = Number(key);
     if (!Number.isInteger(id)) return json({ error: "Non trovato." }, 404);
+    if (!action && method === "GET") {
+      const b = await bookingBy(env, "id", id);
+      if (!b) return json({ error: "Non trovato." }, 404);
+      const tour = await getTour(env, b.slug);
+      return json({ ...b, tour, ticket_url: ticketUrl(b) });
+    }
+    if (action === "slots" && method === "GET") {
+      const b = await bookingBy(env, "id", id);
+      if (!b) return json({ error: "Non trovato." }, 404);
+      return json(await slotsFor(env, b, await getTour(env, b.slug), url.searchParams.get("date")));
+    }
+    if (action === "preview" && method === "GET") {
+      const b = await bookingBy(env, "id", id);
+      if (!b) return json({ error: "Non trovato." }, 404);
+      return json(preview(b, url.searchParams.get("kind") ?? "confirmed"));
+    }
     if (!action && method === "PATCH") return json(await editBooking(env, url.origin, id, await request.json()));
     if (action === "accept" && method === "POST") return json(await acceptBooking(env, url.origin, id));
     if (action === "decline" && method === "POST") return json(await declineBooking(env, url.origin, id, await request.json()));
@@ -687,16 +747,11 @@ export async function crmApi(request, env, path) {
     }
     // What a guest of this experience receives, sent to the owner to check.
     if (action === "sample-email" && method === "POST") {
-      const date = addDays(today(), 7);
-      const total = totalFor(tour, 2);
-      const sample = {
-        code: "RSM-SAMPLE", slug: tour.slug, title: tour.title, date, time: tour.times[0] ?? "10:00", guests: 2,
-        name: "RomeSoMuch", email: notifyTo(env), meeting_point: tour.meeting_point, cancel_hours: tour.cancel_hours,
-        partial_refund_pct: tour.partial_refund_pct, partial_refund_hours: tour.partial_refund_hours,
-        total_cents: total, paid_cents: depositFor(tour, total),
-      };
+      // No ticket link: the sample's ticket does not exist.
+      const sample = { ...sampleBooking(env, tour), name: "RomeSoMuch", ticket_token: null };
       return json({ emailed: await sendEmail(env, "confirmed", sample, url.origin), to: sample.email });
     }
+    if (action === "preview" && method === "GET") return json(preview(sampleBooking(env, tour), url.searchParams.get("kind") ?? "confirmed"));
     if (action === "closures" && extra && method === "DELETE") {
       await db.prepare("DELETE FROM tour_closures WHERE slug = ? AND date = ?").bind(key, extra).run();
       return json({ ok: true });

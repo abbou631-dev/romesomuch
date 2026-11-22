@@ -527,3 +527,20 @@ td .pf { margin-top: 4px; }
 /* ---- promo codes (Tour side) ---- */
 .promo-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
 .promo-tag { display: inline-block; margin-top: 4px; padding: 2px 7px; border-radius: 4px; border: 1px dashed var(--ink); font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+
+/* ---- Tour: one booking's page (#/prenotazione/<id>) ---- */
+tr.open-row { cursor: pointer; }
+tr.open-row:hover td { background: var(--wash); }
+.booking-grid > .panel { margin-bottom: 16px; }
+.when-big { font-size: 18px; margin: 0 0 14px; }
+.move { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; align-items: end; }
+.move label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--mute); font-weight: 600; }
+.move input, .move select { font: inherit; font-size: 15px; color: var(--ink); padding: 9px 10px; border: 1px solid var(--hair); border-radius: 10px; background: var(--paper); min-width: 0; }
+.move .sub, .move .check, .move .btn { grid-column: 1 / -1; margin: 0; }
+.move .check { flex-direction: row; align-items: center; gap: 8px; color: var(--ink); font-size: 14px; font-weight: 500; }
+.move .btn { justify-self: start; }
+.booking-money { text-align: left; margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; white-space: normal; }
+.booking-money > * + * { margin-left: 0; }
+.preview-frame { width: 100%; min-height: 600px; border: 1px solid var(--hair); border-radius: 12px; background: #f4f2ee; display: block; }
+.preview-subject { margin: 0 0 10px; }
+@media (max-width: 640px) { .move { grid-template-columns: 1fr; } }
