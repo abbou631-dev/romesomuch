@@ -256,6 +256,7 @@ async function bookingView(id: number) {
           <label>Nuovo orario${free
             ? `<input type="text" data-move-time value="${esc(b.time)}" placeholder="09:30" />`
             : `<select data-move-time></select>`}</label>
+          ${free ? "" : `<label class="move-extra" hidden>Orario straordinario<input type="time" data-move-extra step="300" /></label>`}
           <p class="sub" data-move-info></p>
           <label class="check"><input type="checkbox" data-move-notify ${b.status === "confirmed" ? "checked" : "disabled"} /> ${b.status === "confirmed" ? "Manda al cliente l'email con data, orario e ticket aggiornati" : "Il cliente riceve i nuovi dettagli quando accetti"}</label>
           <button class="btn primary" type="button" data-move>Sposta la prenotazione</button>
@@ -316,11 +317,13 @@ async function loadSlots() {
     const select = view.querySelector<HTMLSelectElement>("select[data-move-time]");
     if (select) {
       const keep = select.value || b.time;
+      // Last choice: any other start time, outside the experience's schedule.
       select.innerHTML = s.times.map((x: Row) => {
         const full = x.left < s.need;
-        return `<option value="${esc(x.time)}"${full ? " disabled" : ""}${x.time === keep ? " selected" : ""}>${esc(x.time)} · ${full ? "pieno" : seats(x.left)}${x.listed ? "" : " (fuori orario)"}</option>`;
-      }).join("");
-      if (select.selectedOptions[0]?.disabled) select.value = s.times.find((x: Row) => x.left >= s.need)?.time ?? "";
+        return `<option value="${esc(x.time)}"${full ? " disabled" : ""}${x.time === keep ? " selected" : ""}>${esc(x.time)} · ${full ? "pieno" : seats(x.left)}${x.listed ? "" : " (straordinario)"}</option>`;
+      }).join("") + `<option value="${EXTRA}"${keep === EXTRA ? " selected" : ""}>Altro orario (straordinario)…</option>`;
+      if (select.selectedOptions[0]?.disabled) select.value = s.times.find((x: Row) => x.left >= s.need)?.time ?? EXTRA;
+      showExtra();
     }
     info.innerHTML = [
       s.free_time ? `In quel giorno: ${seats(s.left)}${s.left < s.need ? " (pieno)" : ""}` : "",
@@ -331,11 +334,25 @@ async function loadSlots() {
   }
 }
 
+const EXTRA = "extra";
+// The free time field shows only when "Altro orario" is chosen.
+function showExtra() {
+  const select = view.querySelector<HTMLSelectElement>("select[data-move-time]");
+  const box = view.querySelector<HTMLElement>(".move-extra");
+  if (!select || !box) return;
+  box.hidden = select.value !== EXTRA;
+  const note = view.querySelector<HTMLElement>("[data-move-extra-note]");
+  if (select.value === EXTRA && !note) view.querySelector("[data-move-info]")?.insertAdjacentHTML("beforeend",
+    ' <span data-move-extra-note>Orario fuori dal calendario: vale solo per questa prenotazione e non apre posti sul sito.</span>');
+  else if (select.value !== EXTRA) note?.remove();
+}
+
 async function moveBooking() {
   const b = moving;
   if (!b) return;
   const date = view.querySelector<HTMLInputElement>("[data-move-date]")!.value;
-  const time = view.querySelector<HTMLInputElement | HTMLSelectElement>("[data-move-time]")!.value.trim();
+  let time = view.querySelector<HTMLInputElement | HTMLSelectElement>("[data-move-time]")!.value.trim();
+  if (time === EXTRA) time = view.querySelector<HTMLInputElement>("[data-move-extra]")!.value;
   const notify = view.querySelector<HTMLInputElement>("[data-move-notify]")!.checked;
   if (!date || !time) { say("Scegli data e orario.", true); return; }
   if (date === b.date && time === b.time) { say("Data e orario sono già questi.", true); return; }
@@ -562,6 +579,7 @@ view.addEventListener("click", (event) => {
 view.addEventListener("change", (event) => {
   const el = event.target as HTMLInputElement | HTMLSelectElement;
   if ("moveDate" in el.dataset) { loadSlots(); return; }
+  if ("moveTime" in el.dataset) { showExtra(); return; }
   if ("sort" in el.dataset) { sort = el.value; render(); return; }
   if ("slug" in el.dataset) { slug = el.value; render(); }
   else if ("q" in el.dataset) { query = el.value.trim(); render(); }
