@@ -79,11 +79,12 @@ function row(b: Row) {
     : scope === "requested"
     ? `<td class="num"><strong>${eur(b.deposit_cents)}</strong><br /><small class="mute">autorizzati, non incassati · rispondi entro ${day(authEnds(b))}</small></td>`
     : `<td class="num"><strong>${eur(b.paid_cents - b.refunded_cents)}</strong><br /><small class="mute">su ${eur(b.total_cents)} · ${eur(balance(b))} sul posto</small></td>`;
+  // Everything else (move, edit, cancel, refund, ticket) is on the booking's
+  // page, opened by tapping the row; requests keep their quick answer here.
+  const open = `<a class="row-open" href="#/prenotazione/${b.id}" aria-label="Apri la prenotazione di ${esc(b.name)}">Apri ›</a>`;
   const actions = scope === "requested"
-    ? `<button class="link" data-accept="${b.id}">Accetta e incassa</button><button class="link" data-edit="${b.id}">Modifica</button><button class="link danger" data-decline="${b.id}">Rifiuta</button>`
-    : scope === "cancelled"
-    ? (refundable(b) > 0 ? `<button class="link" data-cancel="${b.id}">Rimborsa</button>` : "")
-    : `<button class="link" data-edit="${b.id}">Modifica</button><button class="link" data-resend="${b.id}">Rimanda email</button><button class="link danger" data-cancel="${b.id}">Cancella</button>`;
+    ? `<button class="link" data-accept="${b.id}">Accetta e incassa</button><button class="link danger" data-decline="${b.id}">Rifiuta</button>${open}`
+    : open;
   return `<tr class="open-row" data-open="${b.id}">
     <td>${when(b)}</td>
     <td><span class="tour-name">${icon(b.slug)}${esc(b.title)}</span></td>

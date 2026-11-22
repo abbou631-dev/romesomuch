@@ -544,3 +544,5 @@ tr.open-row:hover td { background: var(--wash); }
 .preview-frame { width: 100%; min-height: 600px; border: 1px solid var(--hair); border-radius: 12px; background: #f4f2ee; display: block; }
 .preview-subject { margin: 0 0 10px; }
 @media (max-width: 640px) { .move { grid-template-columns: 1fr; } }
+.row-open { font-weight: 700; text-decoration: none; color: var(--ink); white-space: nowrap; }
+tr.open-row:hover .row-open { text-decoration: underline; }
