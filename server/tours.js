@@ -174,8 +174,9 @@ const FROM = "RomeSoMuch Bookings <bookings@romesomuch.com>";
 export const sendEmail = (env, kind, b, origin, ...extra) =>
   mail(env, { to: b.email, from: FROM, replyTo, ...guestEmail(kind, b, ...extra) });
 
+// The tour operator who runs the experience, if set, gets the same email.
 const notifyOwner = (env, b, origin) => mail(env, {
-  to: notifyTo(env),
+  to: [notifyTo(env), b.operator_email].filter(Boolean),
   subject: b.status === "requested"
     ? `Richiesta da accettare: ${b.title}, ${itDate(b.date)} ${b.time}`
     : `Nuova prenotazione: ${b.title}, ${itDate(b.date)} ${b.time}`,
@@ -204,7 +205,7 @@ const notifyOwner = (env, b, origin) => mail(env, {
 });
 
 // A booking with everything the emails print.
-const BOOKING = `SELECT b.*, t.title, t.unit, t.meeting_point, t.cancel_hours, t.partial_refund_pct, t.partial_refund_hours, t.price_cents, t.verify
+const BOOKING = `SELECT b.*, t.title, t.unit, t.meeting_point, t.cancel_hours, t.partial_refund_pct, t.partial_refund_hours, t.price_cents, t.verify, t.operator_email
   FROM tour_bookings b JOIN tours t ON t.slug = b.slug`;
 export const bookingBy = (env, column, value) => env.CRM_DB.prepare(`${BOOKING} WHERE b.${column} = ?`).bind(value).first();
 
@@ -403,7 +404,7 @@ export async function webhook(request, env) {
 const TOUR_FIELDS = {
   title: "t", price_cents: "i", unit: "t", deposit_pct: "i", capacity: "i", max_guests: "i",
   weekdays: "t", cutoff_hours: "i", cancel_hours: "i", meeting_point: "t", active: "i", verify: "i",
-  partial_refund_pct: "i", partial_refund_hours: "i",
+  partial_refund_pct: "i", partial_refund_hours: "i", operator_email: "t",
 };
 
 // "2=485, 3=540" (euros, as typed in the CRM) to {"2": 48500, "3": 54000}.
@@ -433,6 +434,7 @@ function tourValues(body) {
       out[key] = n;
     } else out[key] = raw === null || raw === "" ? null : String(raw).trim().slice(0, 300);
   }
+  if (out.operator_email && !EMAIL.test(out.operator_email)) throw new Invalid("Email dell'operatore non valida.");
   if ("title" in out && !out.title) throw new Invalid("Il titolo è obbligatorio.");
   if ("unit" in out && !["person", "group"].includes(out.unit)) throw new Invalid("Unità non valida.");
   if ("deposit_pct" in out && (out.deposit_pct < 1 || out.deposit_pct > 100)) throw new Invalid("Il deposito va da 1 a 100%.");

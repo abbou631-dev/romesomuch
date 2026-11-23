@@ -28,7 +28,7 @@ export async function mail(env, { to, subject, text, html, from, replyTo }) {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: from ?? env.ENQUIRY_FROM ?? "RomeSoMuch <forms@romesomuch.com>", to: [to], subject, text,
+      from: from ?? env.ENQUIRY_FROM ?? "RomeSoMuch <forms@romesomuch.com>", to: [].concat(to), subject, text,
       ...(html ? { html } : {}),
       ...(replyTo ? { reply_to: replyTo } : {}),
     }),
