@@ -397,6 +397,7 @@ function tourView(t: Row) {
       <dt>Chiusura vendite</dt><dd>${t.cutoff_hours} ore prima</dd>
       <dt>Cancellazione</dt><dd>${esc(cancelPolicy(t))}</dd>
       <dt>Punto d'incontro</dt><dd>${esc(t.meeting_point ?? "—")}</dd>
+      <dt>Operatore</dt><dd>${t.operator_email ? `${esc(t.operator_email)} · riceve le nuove prenotazioni` : "—"}</dd>
     </dl>
     </section>
     <section class="panel">
@@ -485,6 +486,7 @@ function editTour(t: Row) {
     { name: "partial_refund_pct", label: "Dopo, rimborso parziale (%)", type: "number", min: 0, max: 99, required: true, hint: "0 = nessun rimborso dopo la cancellazione gratuita" },
     { name: "partial_refund_hours", label: "Rimborso parziale fino a ore prima", type: "number", min: 0, max: 2160, required: true, hint: "Dopo questo, nessun rimborso" },
     { name: "meeting_point", label: "Punto d'incontro (nelle email)" },
+    { name: "operator_email", label: "Email dell'operatore", type: "email", hint: "Chi svolge l'esperienza: riceve una copia di ogni nuova prenotazione. Vuoto: solo tu" },
   ];
   form(t.title, fields, { ...t, times: t.times.join(", "), weekdays: t.weekdays.split(""), active: String(t.active), verify: String(t.verify), price_tiers: tiersText(t) }, (data) =>
     api(`tours/catalog/${t.slug}`, { method: "PATCH", data: { ...data, weekdays: data.weekdays.join("") } }), render);
