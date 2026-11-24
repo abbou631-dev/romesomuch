@@ -60,6 +60,9 @@ const icon = (slug: string, size = 20) =>
 const balance = (b: Row) => b.total_cents - b.paid_cents;
 // Stripe drops an authorisation it was never asked to capture after 7 days.
 const authEnds = (b: Row) => new Date(new Date(`${String(b.created_at).replace(" ", "T")}Z`).getTime() + 7 * 864e5).toISOString().slice(0, 10);
+// Extras as typed in the form: "Classic Italian Gourmet Basket = 50" per line.
+const extrasText = (list: { name: string; price_cents: number }[]) => list.map((x) => `${x.name} = ${x.price_cents / 100}`).join("\n");
+const extrasList = (raw: string | null) => (raw ? JSON.parse(raw) as { name: string; price_cents: number }[] : []);
 const tiersText = (t: Row) => t.price_tiers
   ? Object.entries(t.price_tiers as Record<string, number>).map(([n, c]) => `${n}=${c / 100}`).join(", ") : "";
 const refundable = (b: Row) => b.paid_cents - b.refunded_cents;
@@ -269,6 +272,7 @@ async function bookingView(id: number) {
           <dt>Email</dt><dd><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></dd>
           <dt>Telefono</dt><dd>${b.phone ? `<a href="tel:${esc(b.phone)}">${esc(b.phone)}</a>${b.whatsapp === 1 ? ` · <a href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : b.whatsapp === 0 ? " · niente WhatsApp" : ""}` : "—"}</dd>
           <dt>Ospiti</dt><dd>${b.guests}</dd>
+          ${b.extras ? `<dt>Extra</dt><dd>${extrasList(b.extras).map((x) => `${esc(x.name)} (${eur(x.price_cents)})`).join(", ")}</dd>` : ""}
           ${b.participants ? `<dt>Partecipanti</dt><dd>${esc(b.participants).replace(/\n/g, "<br />")}</dd>` : ""}
           <dt>Ci ha conosciuti</dt><dd>${sourceTag(b.source)}</dd>
           ${b.notes ? `<dt>Note</dt><dd>${esc(b.notes)}</dd>` : ""}
@@ -389,6 +393,7 @@ function tourView(t: Row) {
     <div class="panel-head"><h2><span class="tour-name">${icon(t.slug, 24)}Impostazioni</span></h2></div>
     <dl class="info">
       <dt>Prezzo</dt><dd>${t.price_tiers ? Object.entries(t.price_tiers as Record<string, number>).map(([n, c]) => `${n} pers. ${eur(c)}`).join(" · ") : `${eur(t.price_cents)} ${UNIT[t.unit] ?? ""}`}</dd>
+      <dt>Extra</dt><dd>${t.extras.length ? t.extras.map((x: Row) => `${esc(x.name)} ${eur(x.price_cents)}`).join(" · ") : "—"}</dd>
       <dt>Pagamento online</dt><dd>${t.deposit_pct >= 100 ? "tutto online" : `${t.deposit_pct}% · il resto sul posto`}</dd>
       <dt>Conferma</dt><dd>${t.verify ? "la accetti tu: la carta è solo autorizzata finché non accetti (entro 7 giorni); chiede i partecipanti" : "immediata"}</dd>
       <dt>Capienza</dt><dd>${t.capacity} ${t.unit === "group" ? (t.capacity === 1 ? "gruppo" : "gruppi") : "posti"} ${t.times.length ? "per orario" : "al giorno"} · massimo ${t.max_guests} ospiti a prenotazione</dd>
@@ -475,6 +480,7 @@ function editTour(t: Row) {
     { name: "price_cents", label: "Prezzo (€)", type: "money", required: true },
     { name: "unit", label: "Il prezzo è", type: "select", options: Object.entries(UNIT) },
     { name: "price_tiers", label: "Prezzi per numero di persone (€)", hint: "Solo per i gruppi privati: 1=485, 2=485, 3=540… fino al massimo. Vuoto: si usa il prezzo sopra. Il prezzo sopra resta il «da» mostrato sul sito." },
+    { name: "extras", label: "Extra a pagamento", type: "textarea", hint: "Uno per riga, prezzo fisso a prenotazione in €: Classic Italian Gourmet Basket = 50. Il cliente li sceglie mentre prenota. Vuoto: nessun extra" },
     { name: "verify", label: "Conferma", type: "select", options: [["0", "Immediata"], ["1", "La accetto io (carta autorizzata, chiede i partecipanti)"]] },
     { name: "deposit_pct", label: "Deposito online (%)", type: "number", min: 1, max: 100, required: true },
     { name: "capacity", label: "Capienza per orario", type: "number", min: 1, max: 500, required: true, hint: "Posti; per i prezzi a gruppo, quanti gruppi (barche) per orario" },
@@ -488,7 +494,7 @@ function editTour(t: Row) {
     { name: "meeting_point", label: "Punto d'incontro (nelle email)" },
     { name: "operator_email", label: "Email dell'operatore", type: "email", hint: "Chi svolge l'esperienza: riceve una copia di ogni nuova prenotazione. Vuoto: solo tu" },
   ];
-  form(t.title, fields, { ...t, times: t.times.join(", "), weekdays: t.weekdays.split(""), active: String(t.active), verify: String(t.verify), price_tiers: tiersText(t) }, (data) =>
+  form(t.title, fields, { ...t, times: t.times.join(", "), weekdays: t.weekdays.split(""), active: String(t.active), verify: String(t.verify), price_tiers: tiersText(t), extras: extrasText(t.extras) }, (data) =>
     api(`tours/catalog/${t.slug}`, { method: "PATCH", data: { ...data, weekdays: data.weekdays.join("") } }), render);
 }
 

@@ -57,7 +57,13 @@ const guestsText = (n) => `${n} ${n === 1 ? "guest" : "guests"}`;
 
 // ---- tours ------------------------------------------------------------------------
 
-const parseTour = (row) => row && { ...row, times: JSON.parse(row.times), price_tiers: row.price_tiers ? JSON.parse(row.price_tiers) : null };
+const parseTour = (row) => row && {
+  ...row, times: JSON.parse(row.times), price_tiers: row.price_tiers ? JSON.parse(row.price_tiers) : null, extras: parseExtras(row.extras),
+};
+// Optional extras ([{ name, price_cents }]), flat per booking: offered on a
+// tour, and the ones chosen on a booking.
+export const parseExtras = (raw) => (raw ? JSON.parse(raw) : []);
+const extrasCents = (list) => list.reduce((sum, x) => sum + x.price_cents, 0);
 const getTour = async (env, slug) =>
   parseTour(await env.CRM_DB.prepare("SELECT * FROM tours WHERE slug = ?").bind(String(slug ?? "")).first());
 
@@ -85,6 +91,7 @@ const usedSql = (tour) => (tour.unit === "group" ? "count(*)" : "coalesce(sum(gu
 const publicTour = (t) => ({
   slug: t.slug, title: t.title, price: t.price_cents, unit: t.unit, depositPct: t.deposit_pct,
   maxGuests: t.max_guests, cancelHours: t.cancel_hours, freeTime: freeTime(t), policy: cancelPolicy(t), tiers: t.price_tiers, verify: Boolean(t.verify),
+  extras: t.extras.map((x) => ({ name: x.name, price: x.price_cents })),
 });
 // Most guests the "from" price covers (2 for €485 when one and two pay the same).
 const fromGuests = (t) => (t.price_tiers
@@ -191,6 +198,7 @@ const notifyOwner = (env, b, origin) => mail(env, {
     `Email: ${b.email}`,
     `Telefono: ${b.phone ?? "—"} · WhatsApp: ${b.whatsapp === 1 ? `sì (https://wa.me/${String(b.phone ?? "").replace(/\D/g, "").replace(/^00/, "")})` : b.whatsapp === 0 ? "no" : "—"}`,
     ...(b.participants ? ["Partecipanti:", b.participants] : []),
+    ...(b.extras ? [`Extra: ${parseExtras(b.extras).map((x) => `${x.name} (${euro(x.price_cents)})`).join(", ")}`] : []),
     ...(b.notes ? [`Note: ${b.notes}`] : []),
     `Ci ha conosciuti: ${SOURCES[b.source] ?? "—"}`,
     "",
@@ -297,9 +305,12 @@ async function hold(env, body) {
   if (!slot) throw new Invalid("slot_closed");
   if (slot.left < need(tour, guests)) throw new Invalid("slot_full");
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PUBLISHABLE_KEY) throw new Invalid("payments_off");
+  const chosen = [...new Set([].concat(body.extras ?? []).map(String))];
+  const extras = tour.extras.filter((x) => chosen.includes(x.name));
+  if (extras.length !== chosen.length) throw new Invalid("extras");
 
   const promo = await promoFor(env, body.promo, tour);
-  const full = totalFor(tour, guests);
+  const full = totalFor(tour, guests) + extrasCents(extras);
   const discount = discountFor(promo, full);
   const total = full - discount;
   const deposit = depositFor(tour, total);
@@ -309,11 +320,11 @@ async function hold(env, body) {
   // The seat check and the insert are one statement, so two people cannot
   // both take the last seats.
   const { meta } = await env.CRM_DB.prepare(
-    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total_cents, deposit_cents, promo_code, discount_cents, ticket_token)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total_cents, deposit_cents, promo_code, discount_cents, ticket_token, extras)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
      WHERE (SELECT ${usedSql(tour)} FROM tour_bookings WHERE slug = ? AND date = ? ${slotSql(tour)} AND ${HOLD}) + ? <= ?
        AND (SELECT count(*) FROM tour_bookings WHERE promo_code = ? AND ${HOLD}) < ?`,
-  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total, deposit, promo?.code ?? null, discount, newToken(),
+  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total, deposit, promo?.code ?? null, discount, newToken(), extras.length ? JSON.stringify(extras) : null,
     tour.slug, date, ...slotBind(tour, time), need(tour, guests), tour.capacity, promo?.code ?? null, promo?.max_uses ?? 1e9).run();
   if (!meta.changes) throw new Invalid("slot_full");
 
@@ -325,7 +336,7 @@ async function hold(env, body) {
       // Verified tours only authorise the card; the CRM charges it on accept.
       ...(tour.verify ? { capture_method: "manual" } : {}),
       receipt_email: email,
-      description: `${deposit === total ? "Payment" : "Deposit"} ${code} · ${tour.title} · ${date} ${time} · ${guestsText(guests)}${promo ? ` · code ${promo.code}` : ""}`,
+      description: `${deposit === total ? "Payment" : "Deposit"} ${code} · ${tour.title} · ${date} ${time} · ${guestsText(guests)}${extras.map((x) => ` + ${x.name}`).join("")}${promo ? ` · code ${promo.code}` : ""}`,
       metadata: { code, tour: tour.slug, date, time, guests, ...(promo ? { promo: promo.code } : {}) },
     }, `hold-${code}`);
     await env.CRM_DB.prepare("UPDATE tour_bookings SET payment_intent = ? WHERE code = ?").bind(intent.id, code).run();
@@ -407,6 +418,19 @@ const TOUR_FIELDS = {
   partial_refund_pct: "i", partial_refund_hours: "i", operator_email: "t",
 };
 
+// "Classic Italian Gourmet Basket = 50", one per line (euros, as typed in the
+// CRM), to [{ name, price_cents }]. Empty means no extras.
+function extrasValue(raw) {
+  const list = [];
+  for (const line of String(raw ?? "").split("\n").map((x) => x.trim()).filter(Boolean)) {
+    const m = line.match(/^(.{2,80}?)\s*[=:]\s*€?\s*(\d+(?:[.,]\d{1,2})?)$/);
+    if (!m) throw new Invalid(`Extra: «${line}» non è nel formato Nome = 50.`);
+    list.push({ name: m[1].trim(), price_cents: Math.round(Number(m[2].replace(",", ".")) * 100) });
+  }
+  if (new Set(list.map((x) => x.name)).size !== list.length) throw new Invalid("Extra: due extra hanno lo stesso nome.");
+  return list.length ? JSON.stringify(list) : null;
+}
+
 // "2=485, 3=540" (euros, as typed in the CRM) to {"2": 48500, "3": 54000}.
 // Empty means no tiers. Every size from 1 to the largest must have a price.
 function tiersValue(raw) {
@@ -446,6 +470,7 @@ function tourValues(body) {
     if (!out.weekdays) throw new Invalid("Scegli almeno un giorno.");
   }
   if ("price_tiers" in body) out.price_tiers = tiersValue(body.price_tiers);
+  if ("extras" in body) out.extras = extrasValue(body.extras);
   if ("times" in body) {
     const times = [...new Set([].concat(body.times ?? []).flatMap((t) => String(t).split(/[\s,;]+/)).filter(Boolean)
       .map((t) => t.replace(".", ":").replace(/^(\d):/, "0$1:")))].sort();
@@ -540,7 +565,7 @@ async function editBooking(env, origin, id, body) {
   }
   // A change in guests reprices the booking unless a total was typed.
   let total = body.total_cents === undefined || body.total_cents === null ? b.total_cents : Number(body.total_cents);
-  if (next.guests !== b.guests && Number(body.total_cents) === b.total_cents) total = totalFor(tour, next.guests);
+  if (next.guests !== b.guests && Number(body.total_cents) === b.total_cents) total = totalFor(tour, next.guests) + extrasCents(parseExtras(b.extras));
   if (!Number.isInteger(total) || total < 0) throw new Invalid("Totale non valido.");
   await env.CRM_DB.prepare("UPDATE tour_bookings SET date = ?, time = ?, guests = ?, name = ?, email = ?, phone = ?, whatsapp = ?, notes = ?, participants = ?, total_cents = ? WHERE id = ?")
     .bind(next.date, next.time, next.guests, next.name, next.email, next.phone, next.whatsapp, next.notes, next.participants, total, id).run();

@@ -3,7 +3,8 @@ order: 3
 title: Exclusive Private Cruise on the Tiber
 category: tours
 blurb: Rome's only private cruise of its kind
-price: 595
+price: 578.5
+priceFor: 2
 unit: group
 duration: 1
 durationLabel: 1h
@@ -32,7 +33,7 @@ liveBooking: true
 
 Glide down the Tiber aboard Stradivaria, the only hand-carved private cruise boat of its kind in Rome, with a skipper who knows every bend of the river. An hour past the city's landmarks, with 2,779 years of history on both banks and the light doing the rest.
 
-You can add an Italian gourmet basket by The Boat by Gregory's — cold cuts, artisanal cheeses and a chosen wine — and raise a glass as the sun goes down over the city.
+You can add the Classic Italian Gourmet Basket by The Boat by Gregory's (€50, choose it when you book) — cold cuts, artisanal cheeses and a chosen wine — and raise a glass as the sun goes down over the city.
 
 The boat is yours: right for couples, for a group of friends, or for a family who wants to see Rome from a perspective almost nobody gets.
 
