@@ -103,6 +103,7 @@ export const facts = (b) => [
   ["Date", longDate(b.date)],
   [b.status === "requested" ? "Preferred time" : "Time", b.time],
   ["Guests", String(b.guests)],
+  ...(b.extras ? [["Extras", JSON.parse(b.extras).map((x) => x.name).join(", ")]] : []),
   ...(b.participants ? [["Participants", b.participants.split(/\n+/).join("; ")]] : []),
   ...(b.meeting_point ? [["Meeting point", b.meeting_point]] : []),
 ];

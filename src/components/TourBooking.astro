@@ -24,6 +24,11 @@ const { slug, title, maxGuests = null } = Astro.props;
       </div>
     </section>
 
+    <section class="rq-sec" data-extras hidden>
+      <h3>Add to your experience</h3>
+      <div class="rq-extras"></div>
+    </section>
+
     <section class="rq-sec">
       <h3>Choose a date</h3>
       <div class="rq-cal">
@@ -126,7 +131,7 @@ const { slug, title, maxGuests = null } = Astro.props;
 <script>
   type Slot = { time: string; left: number };
   type Promo = { code: string; percent: number | null; amount: number | null };
-  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number; policy: string; tiers: Record<string, number> | null; verify: boolean; freeTime: boolean };
+  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number; policy: string; tiers: Record<string, number> | null; verify: boolean; freeTime: boolean; extras: { name: string; price: number }[] };
   const ERRORS: Record<string, string> = {
     slot_full: "Those places have just been taken. Please choose another time.",
     slot_closed: "That time is no longer available. Please choose another.",
@@ -136,6 +141,7 @@ const { slug, title, maxGuests = null } = Astro.props;
     payments_off: "Online booking is temporarily unavailable. Please write to us.",
     promo_invalid: "This promo code is not valid for this experience.",
     promo_too_big: "This code cannot be used for an online booking. Please write to us.",
+    extras: "One of the extras is no longer available. Please reload the page.",
   };
 
   document.querySelectorAll<HTMLElement>("[data-tb]").forEach((root) => {
@@ -156,7 +162,7 @@ const { slug, title, maxGuests = null } = Astro.props;
 
     const state = {
       tour: null as Tour | null, guests: 2, month: new Date(today.getFullYear(), today.getMonth(), 1), last: "",
-      days: {} as Record<string, Slot[]>, date: "", time: "", wa: "", code: "", promo: null as Promo | null, stripe: null as any, elements: null as any, pe: null as any,
+      days: {} as Record<string, Slot[]>, date: "", time: "", wa: "", extras: new Set<string>(), code: "", promo: null as Promo | null, stripe: null as any, elements: null as any, pe: null as any,
     };
     const cap = () => Math.min(state.tour?.maxGuests ?? Number(root.dataset.cap), 50);
     const need = () => (state.tour?.unit === "group" ? 1 : state.guests);
@@ -164,8 +170,9 @@ const { slug, title, maxGuests = null } = Astro.props;
     const full = () => {
       const t = state.tour;
       if (!t) return 0;
-      if (t.tiers) return t.tiers[state.guests] ?? t.price;
-      return t.unit === "group" ? t.price : t.price * state.guests;
+      const extras = t.extras.filter((x) => state.extras.has(x.name)).reduce((sum, x) => sum + x.price, 0);
+      if (t.tiers) return (t.tiers[state.guests] ?? t.price) + extras;
+      return (t.unit === "group" ? t.price : t.price * state.guests) + extras;
     };
     const verify = () => Boolean(state.tour?.verify);
     const allOnline = () => (state.tour?.depositPct ?? 0) >= 100;
@@ -221,7 +228,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       const sum = $(".rq-card .rq-sum");
       sum.hidden = !state.date || !t;
       if (t && state.date) {
-        $("[data-meta]").textContent = `${nice(state.date)}${state.time ? ` · ${state.time}` : ""} · ${state.guests} guest${state.guests === 1 ? "" : "s"}`;
+        $("[data-meta]").textContent = `${nice(state.date)}${state.time ? ` · ${state.time}` : ""} · ${state.guests} guest${state.guests === 1 ? "" : "s"}${[...state.extras].map((x) => ` + ${x}`).join("")}`;
         const disc = $("[data-disc]");
         disc.hidden = !discount();
         disc.textContent = discount() ? `${eur(full())} · code ${state.promo!.code} −${eur(discount())}` : "";
@@ -284,6 +291,27 @@ const { slug, title, maxGuests = null } = Astro.props;
       $("[data-slotnote]").textContent = any ? "" : "No places left on this day for your group. Please choose another date.";
     }
 
+    // Optional extras (a flat price per booking), offered once the tour is known.
+    function extrasBox() {
+      const list = state.tour?.extras ?? [];
+      const box = $(".rq-extras");
+      box.replaceChildren(...list.map((x) => {
+        const label = document.createElement("label");
+        label.className = "rq-chk";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.addEventListener("change", () => {
+          if (input.checked) state.extras.add(x.name); else state.extras.delete(x.name);
+          hidePay(); sync();
+        });
+        const text = document.createElement("span");
+        text.textContent = `${x.name} · +${eur(x.price)}`;
+        label.append(input, text);
+        return label;
+      }));
+      $("[data-extras]").hidden = !list.length;
+    }
+
     let seq = 0;
     async function load() {
       const my = ++seq;
@@ -291,7 +319,9 @@ const { slug, title, maxGuests = null } = Astro.props;
       try {
         const r = await api(`availability?tour=${encodeURIComponent(slug)}&month=${ym(state.month)}`);
         if (my !== seq) return;
+        const first = !state.tour;
         state.tour = r.tour; state.days = r.days; state.last = r.last ?? state.last;
+        if (first) extrasBox();
         state.guests = Math.min(state.guests, cap());
         showErr();
       } catch (e) {
@@ -365,7 +395,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       try {
         const r = await api("hold", {
           tour: slug, date: state.date, time: state.time, guests: state.guests,
-          name: name.value.trim(), email: mail.value.trim(), phone: `${cc.value} ${tel.value.trim()}`, whatsapp: state.wa, notes: note.value.trim(), participants: part.value.trim(), source: src.value, promo: state.promo?.code ?? "",
+          name: name.value.trim(), email: mail.value.trim(), phone: `${cc.value} ${tel.value.trim()}`, whatsapp: state.wa, notes: note.value.trim(), participants: part.value.trim(), source: src.value, promo: state.promo?.code ?? "", extras: [...state.extras],
         });
         state.code = r.code;
         await loadStripe();
