@@ -3,7 +3,7 @@ order: 3
 title: Exclusive Private Cruise on the Tiber
 category: tours
 blurb: Rome's only private cruise of its kind
-price: 578.5
+price: 580
 priceFor: 2
 unit: group
 duration: 1

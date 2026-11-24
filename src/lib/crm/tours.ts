@@ -63,8 +63,9 @@ const authEnds = (b: Row) => new Date(new Date(`${String(b.created_at).replace("
 // Extras as typed in the form: "Classic Italian Gourmet Basket = 50" per line.
 const extrasText = (list: { name: string; price_cents: number }[]) => list.map((x) => `${x.name} = ${x.price_cents / 100}`).join("\n");
 const extrasList = (raw: string | null) => (raw ? JSON.parse(raw) as { name: string; price_cents: number }[] : []);
-const tiersText = (t: Row) => t.price_tiers
-  ? Object.entries(t.price_tiers as Record<string, number>).map(([n, c]) => `${n}=${c / 100}`).join(", ") : "";
+const tiersText = (tiers: Record<string, number> | null) => tiers
+  ? Object.entries(tiers).map(([n, c]) => `${n}=${c / 100}`).join(", ") : "";
+const depositText = (t: Row) => t.deposit_tiers ? "deposito per gruppo" : t.deposit_pct >= 100 ? "tutto online" : `deposito ${t.deposit_pct}%`;
 const refundable = (b: Row) => b.paid_cents - b.refunded_cents;
 const when = (b: Row) => `${day(b.date)} · ${esc(b.time)}`;
 // The browser runs on the owner's clock, which is Rome's.
@@ -376,7 +377,7 @@ function tile(t: Row) {
   return `<a class="tour-tile${t.active ? "" : " off"}" href="#/esperienze/${esc(t.slug)}">
     <span class="ico">${icon(t.slug, 28)}</span>
     <strong>${esc(t.title)}</strong>
-    <small>${t.price_tiers ? `da ${eur(t.price_cents)} a gruppo` : `${eur(t.price_cents)} ${UNIT[t.unit] ?? ""}`} · ${t.deposit_pct >= 100 ? "tutto online" : `deposito ${t.deposit_pct}%`}${t.verify ? " · da accettare" : ""}</small>
+    <small>${t.price_tiers ? `da ${eur(t.price_cents)} a gruppo` : `${eur(t.price_cents)} ${UNIT[t.unit] ?? ""}`} · ${depositText(t)}${t.verify ? " · da accettare" : ""}</small>
     <small class="mute">${t.active ? `Questo mese: ${m.n} venduti · ${eur(m.deposits)} di depositi` : "Ferma: non si vende sul sito"}</small>
   </a>`;
 }
@@ -394,7 +395,7 @@ function tourView(t: Row) {
     <dl class="info">
       <dt>Prezzo</dt><dd>${t.price_tiers ? Object.entries(t.price_tiers as Record<string, number>).map(([n, c]) => `${n} pers. ${eur(c)}`).join(" · ") : `${eur(t.price_cents)} ${UNIT[t.unit] ?? ""}`}</dd>
       <dt>Extra</dt><dd>${t.extras.length ? t.extras.map((x: Row) => `${esc(x.name)} ${eur(x.price_cents)}`).join(" · ") : "—"}</dd>
-      <dt>Pagamento online</dt><dd>${t.deposit_pct >= 100 ? "tutto online" : `${t.deposit_pct}% · il resto sul posto`}</dd>
+      <dt>Pagamento online</dt><dd>${t.deposit_tiers ? `${Object.entries(t.deposit_tiers as Record<string, number>).map(([n, c]) => `${n} pers. ${eur(c)}`).join(" · ")} · il resto (ed eventuali extra) sul posto` : t.deposit_pct >= 100 ? "tutto online" : `${t.deposit_pct}% · il resto sul posto`}</dd>
       <dt>Conferma</dt><dd>${t.verify ? "la accetti tu: la carta è solo autorizzata finché non accetti (entro 7 giorni); chiede i partecipanti" : "immediata"}</dd>
       <dt>Capienza</dt><dd>${t.capacity} ${t.unit === "group" ? (t.capacity === 1 ? "gruppo" : "gruppi") : "posti"} ${t.times.length ? "per orario" : "al giorno"} · massimo ${t.max_guests} ospiti a prenotazione</dd>
       <dt>Orari</dt><dd>${t.times.length ? t.times.map(esc).join(" · ") : "liberi: il cliente scrive l'orario che preferisce"}</dd>
@@ -482,6 +483,7 @@ function editTour(t: Row) {
     { name: "price_tiers", label: "Prezzi per numero di persone (€)", hint: "Solo per i gruppi privati: 1=485, 2=485, 3=540… fino al massimo. Vuoto: si usa il prezzo sopra. Il prezzo sopra resta il «da» mostrato sul sito." },
     { name: "extras", label: "Extra a pagamento", type: "textarea", hint: "Uno per riga, prezzo fisso a prenotazione in €: Classic Italian Gourmet Basket = 50. Il cliente li sceglie mentre prenota. Vuoto: nessun extra" },
     { name: "verify", label: "Conferma", type: "select", options: [["0", "Immediata"], ["1", "La accetto io (carta autorizzata, chiede i partecipanti)"]] },
+    { name: "deposit_tiers", label: "Deposito per numero di persone (€)", hint: "Es. il tuo margine: 2=135, 3=145… fino al massimo. Si paga online, il resto e gli extra sul posto. Vuoto: si usa la percentuale qui sotto" },
     { name: "deposit_pct", label: "Deposito online (%)", type: "number", min: 1, max: 100, required: true },
     { name: "capacity", label: "Capienza per orario", type: "number", min: 1, max: 500, required: true, hint: "Posti; per i prezzi a gruppo, quanti gruppi (barche) per orario" },
     { name: "max_guests", label: "Massimo ospiti in una prenotazione", type: "number", min: 1, max: 500, required: true },
@@ -494,7 +496,7 @@ function editTour(t: Row) {
     { name: "meeting_point", label: "Punto d'incontro (nelle email)" },
     { name: "operator_email", label: "Email dell'operatore", type: "email", hint: "Chi svolge l'esperienza: riceve una copia di ogni nuova prenotazione. Vuoto: solo tu" },
   ];
-  form(t.title, fields, { ...t, times: t.times.join(", "), weekdays: t.weekdays.split(""), active: String(t.active), verify: String(t.verify), price_tiers: tiersText(t), extras: extrasText(t.extras) }, (data) =>
+  form(t.title, fields, { ...t, times: t.times.join(", "), weekdays: t.weekdays.split(""), active: String(t.active), verify: String(t.verify), price_tiers: tiersText(t.price_tiers), deposit_tiers: tiersText(t.deposit_tiers), extras: extrasText(t.extras) }, (data) =>
     api(`tours/catalog/${t.slug}`, { method: "PATCH", data: { ...data, weekdays: data.weekdays.join("") } }), render);
 }
 
