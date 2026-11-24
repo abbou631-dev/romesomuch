@@ -2,12 +2,14 @@
 import { getCollection } from "astro:content";
 import logo from "../assets/logo.svg";
 import Search from "./Search.astro";
-import { liveCategories } from "../lib/site";
+import { liveCategories, newestFirst } from "../lib/site";
 
 interface Props { active?: string }
 const { active = "" } = Astro.props;
 const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
 const categories = liveCategories(all.map((e) => e.data.category));
+// Phone/tablet only: the Journal pill opens the latest articles.
+const latest = newestFirst(await getCollection("journal")).slice(0, 5);
 ---
 <header class="site">
   <div class="bar">
@@ -16,7 +18,7 @@ const categories = liveCategories(all.map((e) => e.data.category));
       <div class="catwrap" id="cat-wrap">
         <button class="catbtn" type="button" id="cat-toggle" aria-expanded="false" aria-controls="cat-list">
           <span class="grid4" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <span>Categories</span>
+          <span>Experiences</span>
         </button>
         <nav class="cats" id="cat-list" aria-label="Categories">
           {categories.map((c) => (
@@ -28,6 +30,15 @@ const categories = liveCategories(all.map((e) => e.data.category));
           ))}
         </nav>
       </div>
+      <div class="catwrap jwrap" id="journal-wrap">
+        <button class="catbtn" type="button" id="journal-toggle" aria-expanded="false" aria-controls="journal-list">
+          <span>Journal</span>
+        </button>
+        <nav class="cats" id="journal-list" aria-label="Journal">
+          {latest.map((p) => <a href={`/journal/${p.id}/`}>{p.data.title}</a>)}
+          <a class="all" href="/journal/">All articles →</a>
+        </nav>
+      </div>
       <button class="searchbtn" type="button" id="search-toggle" aria-expanded="false" aria-controls="search-panel" aria-label="Search experiences">
         <span aria-hidden="true">🔍</span>
       </button>
@@ -37,7 +48,7 @@ const categories = liveCategories(all.map((e) => e.data.category));
       </button>
       <nav class="sec" id="menu-list" aria-label="Menu">
         <a href="/gift-cards/">Gift cards</a>
-        <a href="/journal/">Journal</a>
+        <a class="jl" href="/journal/">Journal</a>
         <a href="/about/">About</a>
         <a href="/contact/">Contact</a>
         <a class="cta" href="/experiences/all/">All experiences</a>
@@ -76,8 +87,8 @@ const categories = liveCategories(all.map((e) => e.data.category));
     });
   }
 
-  // Categories and, on phones, the menu: same open/close behaviour.
-  for (const [w, b] of [["cat-wrap", "cat-toggle"], ["menu-wrap", "menu-toggle"]]) {
+  // Experiences, Journal and, on phones, the menu: same open/close behaviour.
+  for (const [w, b] of [["cat-wrap", "cat-toggle"], ["journal-wrap", "journal-toggle"], ["menu-wrap", "menu-toggle"]]) {
     const wrap = document.getElementById(w);
     const btn = document.getElementById(b);
     if (!wrap || !btn) continue;
