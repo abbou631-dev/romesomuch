@@ -39,7 +39,7 @@
     "terms": {
       "t": "Terms of Service",
       "l": "The rules that apply when you book an experience through RomeSoMuch.",
-      "u": "Last updated: 18 November 2026",
+      "u": "Last updated: 24 November 2026",
       "s": [
         [
           "Who we are",
@@ -52,6 +52,10 @@
         [
           "Prices and payment",
           "Prices are shown per person or per group, as stated on each experience, and include VAT where applicable. Entry tickets, transfers and meals are included only where the experience says so. For experiences booked online you pay either a deposit, with the balance paid on the day of the experience, or the full price, as each experience states. What you pay online, and what is left for the day, is shown before you pay. Card payments are processed by Stripe."
+        ],
+        [
+          "Gift cards",
+          "Gift cards are sold on this website for €100, €200, €300 or €500 and are paid in full at purchase. A card can be used for any experience booked on this website within 12 months of purchase (the last valid day is printed on the card); the experience itself may take place later. The card pays the price of the booking, both the part paid online and the balance due on the day; any credit left stays on the card until it expires. If a booking paid with a gift card is cancelled, the amount goes back on the card, not to a bank card. Gift cards are not exchangeable for cash and expired credit is not refunded. You can withdraw from the purchase and be refunded within 14 days, if the card has not been used. Keep the code private: whoever has it can use the credit."
         ],
         [
           "Cancellation",

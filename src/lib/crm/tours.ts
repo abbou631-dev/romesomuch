@@ -57,7 +57,7 @@ function sourcesPanel(title: string, rows: Row[]) {
 const icon = (slug: string, size = 20) =>
   `<svg class="tour-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[slug] ?? PIN}</svg>`;
 
-const balance = (b: Row) => b.total_cents - b.paid_cents;
+const balance = (b: Row) => Math.max(0, b.total_cents - b.paid_cents - (b.gift_cents ?? 0));
 // Stripe drops an authorisation it was never asked to capture after 7 days.
 const authEnds = (b: Row) => new Date(new Date(`${String(b.created_at).replace(" ", "T")}Z`).getTime() + 7 * 864e5).toISOString().slice(0, 10);
 // Extras as typed in the form: "Classic Italian Gourmet Basket = 50" per line.
@@ -283,6 +283,7 @@ async function bookingView(id: number) {
         <div class="panel-head"><h2>Pagamento</h2></div>
         <dl class="info">
           <dt>Totale</dt><dd><strong>${eur(b.total_cents)}</strong>${b.promo_code ? ` <span class="promo-tag">${esc(b.promo_code)} −${eur(b.discount_cents)}</span>` : ""}</dd>
+          ${b.gift_cents ? `<dt>Gift card</dt><dd>${esc(b.gift_code)} · ${eur(b.gift_cents)} (già incassati con la gift card; se cancelli tornano sulla card)</dd>` : ""}
           ${b.status === "requested"
             ? `<dt>Sulla carta</dt><dd>${eur(b.deposit_cents)} autorizzati, non incassati · rispondi entro ${day(authEnds(b))}</dd>`
             : `<dt>Pagato online</dt><dd>${eur(b.paid_cents)}</dd>
@@ -421,6 +422,26 @@ function tourView(t: Row) {
 let promos: Row[] = [];
 const promoValue = (p: Row) => (p.percent ? `${p.percent}%` : eur(p.amount_cents));
 
+// Gift cards sold on the site (/gift-cards/): what each is worth, what is left.
+async function giftsView() {
+  const gifts = await api<Row[]>("tours/gifts");
+  const live = gifts.filter((g) => g.status === "paid" && g.expires_on >= today());
+  const sold = gifts.filter((g) => g.status === "paid").reduce((a, g) => a + g.amount_cents, 0);
+  const open = live.reduce((a, g) => a + g.balance_cents, 0);
+  const row = (g: Row) => `<tr>
+    <td><a class="promo-code" href="${esc(g.url)}" target="_blank" rel="noopener"><strong>${esc(g.code)}</strong></a><br /><small class="mute">${day(g.paid_at.slice(0, 10))}</small></td>
+    <td class="num">${eur(g.amount_cents)}</td>
+    <td class="num"><strong>${eur(g.balance_cents)}</strong>${g.uses ? `<br /><small class="mute">${g.uses} ${g.uses === 1 ? "prenotazione" : "prenotazioni"}</small>` : ""}</td>
+    <td><strong>${esc(g.buyer_name)}</strong><br /><small class="mute"><a href="mailto:${esc(g.buyer_email)}">${esc(g.buyer_email)}</a></small></td>
+    <td>${esc(g.recipient_name ?? "—")}</td>
+    <td>${g.expires_on < today() ? badge("concluso", `Scaduta ${day(g.expires_on)}`) : day(g.expires_on)}</td>
+  </tr>`;
+  view.innerHTML = `${head("Gift card", '<a class="btn" href="/gift-cards/" target="_blank" rel="noopener">Pagina sul sito</a>',
+    "Vendute sul sito, pagate per intero. Il cliente scrive il codice nel box di prenotazione: la card paga prima la parte online, poi il saldo del giorno (che allora incassi tu, non sul posto). Quello che resta rimane sulla card.")}
+    <div class="kpis">${kpi("Vendute", eur(sold), `${gifts.filter((g) => g.status === "paid").length} card`)}${kpi("Credito ancora da usare", eur(open), `${live.filter((g) => g.balance_cents > 0).length} card valide`)}</div>
+    <section class="panel">${table(["Codice", "Valore", "Residuo", "Acquirente", "Per", "Valida fino al"], gifts.map(row), "Nessuna gift card venduta ancora.", "", true)}</section>`;
+}
+
 function promoRow(p: Row) {
   const tour = tours.find((t) => t.slug === p.slug);
   const expired = p.expires_on && p.expires_on < today();
@@ -510,6 +531,7 @@ async function render() {
     if (route === "golfcart") { golfcartView(); return; }
     [tours, sum] = await Promise.all([api<Row[]>("tours/catalog"), api<Row>("tours/summary")]);
     if (route === "sconti") { await promosView(); stackTables(view); return; }
+    if (route === "gift") { await giftsView(); stackTables(view); return; }
     previewFrom = "";
     if (route === "prenotazione" && arg) { await bookingView(Number(arg)); return; }
     const tour = tours.find((t) => t.slug === arg);

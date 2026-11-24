@@ -12,6 +12,11 @@ import { cancelPolicy } from "./tour-policy.js";
 // from a preview or a local server.
 export const SITE = "https://romesomuch.com";
 export const LOGO = `${SITE}/email/logo.png`;
+// Guests' emails come from a bookings address so they can tell them apart.
+export const FROM = "RomeSoMuch Bookings <bookings@romesomuch.com>";
+// What is left to pay on the day: the total less what was paid online and
+// what a gift card covered.
+export const dueOnDay = (b) => Math.max(0, b.total_cents - b.paid_cents - (b.gift_cents ?? 0));
 // The guest's own ticket page (functions/ticket/[[path]].js): the code plus a
 // random key, so codes alone cannot be used to look up other guests' tickets.
 export const ticketUrl = (b) => (b.ticket_token ? `${SITE}/ticket/${encodeURIComponent(b.code)}?k=${b.ticket_token}` : null);
@@ -56,7 +61,9 @@ const KINDS = {
     title: "We have your request",
     intro: [
       "Thank you. We are now checking availability for your date and time, and we will confirm by email.",
-      `Your card has been authorised for ${euro(b.total_cents)} but not charged. It is charged only when we confirm; if the date is not available, the authorisation is released and nothing is charged.`,
+      b.deposit_cents > 0
+        ? `Your card has been authorised for ${euro(b.deposit_cents)} but not charged. It is charged only when we confirm; if the date is not available, the authorisation is released and nothing is charged.`
+        : "Your gift card covers it. If the date is not available, the amount goes back on your card.",
     ],
     details: true,
   }),
@@ -65,7 +72,9 @@ const KINDS = {
     title: "Sorry, that date is not available",
     intro: [
       `We could not confirm your request ${b.code} (${b.title}, ${longDate(b.date)} at ${b.time}, ${guestsText(b.guests)}).`,
-      "Nothing has been charged: the authorisation on your card has been released. Banks usually remove it within a few days. Write to us and we will help you find another date.",
+      b.deposit_cents > 0
+        ? "Nothing has been charged: the authorisation on your card has been released. Banks usually remove it within a few days. Write to us and we will help you find another date."
+        : "Nothing has been charged, and the amount is back on your gift card. Write to us and we will help you find another date.",
     ],
     details: false,
   }),
@@ -110,11 +119,12 @@ export const facts = (b) => [
 export const money = (b) => [
   ...(b.discount_cents > 0 ? [[`Discount${b.promo_code ? ` (${b.promo_code})` : ""}`, `−${euro(b.discount_cents)}`]] : []),
   ["Total", euro(b.total_cents)],
+  ...(b.gift_cents > 0 ? [[`Gift card ${b.gift_code}`, `−${euro(b.gift_cents)}`]] : []),
   ...(b.status === "requested"
     ? [["Authorised on your card, not charged yet", euro(b.deposit_cents)]]
-    : b.paid_cents >= b.total_cents
-      ? [["Paid online", euro(b.paid_cents)]]
-      : [["Paid online (deposit)", euro(b.paid_cents)], ["To pay on the day", euro(Math.max(0, b.total_cents - b.paid_cents))]]),
+    : dueOnDay(b) === 0
+      ? [[b.paid_cents > 0 ? "Paid online" : "Left to pay", euro(b.paid_cents)]]
+      : [...(b.paid_cents > 0 ? [["Paid online (deposit)", euro(b.paid_cents)]] : []), ["To pay on the day", euro(dueOnDay(b))]]),
 ];
 export const policy = (b) => `${cancelPolicy(b)} To change or cancel, reply to this email or message us on WhatsApp.`;
 

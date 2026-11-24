@@ -1,0 +1,195 @@
+---
+// Gift cards: pick a value, pay it in full with Stripe, get the card by
+// email with a printable page. The server side is server/gift-cards.js (via
+// /api/tours/gift-hold and gift-confirm); the designs are server/gift-design.js,
+// shared with the email and the card's page, so all three look the same.
+import Base from "../layouts/Base.astro";
+import "../styles/booking-box.css";
+import { GIFT_AMOUNTS, GIFT_DESIGNS, giftCardHtml, giftCss } from "../../server/gift-design.js";
+
+const first = 20000;
+const designs: Record<number, { name: string }> = GIFT_DESIGNS;
+---
+<Base title="Gift cards — RomeSoMuch" description="Give Rome: a RomeSoMuch gift card for any of our experiences, from €100 to €500, valid for a year.">
+  <section class="band">
+    <div class="wrap"><p class="crumb">Home / Gift cards</p><h1>Give <span class="hl">Rome</span></h1>
+      <p class="lede">A gift card for any of our experiences: a Vespa ride, a cooking class, a private boat on the Tiber. Valid for a year, sent to you straight away to print or forward.</p></div>
+  </section>
+
+  <div class="wrap gift">
+    <section class="gift-pick" aria-label="Choose a value">
+      {GIFT_AMOUNTS.map((amount) => (
+        <button type="button" class="gift-opt" data-amount={amount} aria-pressed={amount === first ? "true" : "false"}>
+          <Fragment set:html={giftCardHtml(amount)} />
+          <span class="gift-name">€{amount / 100} · {designs[amount].name}</span>
+        </button>
+      ))}
+    </section>
+
+    <aside class="gift-box rq" data-gift>
+      <div class="rq-card" data-form>
+        <section class="rq-sec">
+          <h3>Your gift card<small data-chosen>€{first / 100}</small></h3>
+        </section>
+        <section class="rq-sec rq-f">
+          <div class="rq-field"><label for="gName">Your name</label><input id="gName" data-name autocomplete="name" /></div>
+          <div class="rq-field"><label for="gMail">Your email</label><input id="gMail" data-mail type="email" autocomplete="email" /><p class="rq-hint">The card arrives here, ready to print or forward.</p></div>
+          <div class="rq-field"><label for="gTo">For <em>· name on the card, optional</em></label><input id="gTo" data-to maxlength="60" autocomplete="off" /></div>
+          <div class="rq-field"><label for="gMsg">Message <em>· optional</em></label><textarea id="gMsg" data-msg rows="3" maxlength="300" placeholder="Happy birthday! Enjoy Rome."></textarea></div>
+          <label class="rq-chk"><input type="checkbox" data-terms /><span>I pay the full value now. The card is valid for 12 months and is not exchangeable for cash. I accept the <a href="/legal/terms/" target="_blank">terms</a>.</span></label>
+        </section>
+        <button class="rq-btn" type="button" data-go disabled>Fill in your details</button>
+        <p class="rq-err" role="alert" hidden></p>
+        <div class="rq-pay" data-pay hidden>
+          <div data-pe></div>
+          <button class="rq-btn" type="button" data-paybtn>Pay</button>
+          <button class="rq-btn ghost" type="button" data-back>Back</button>
+          <p class="rq-fine">Secure payment by Stripe.</p>
+        </div>
+      </div>
+      <div class="rq-done" hidden>
+        <p class="rq-kick">Gift card ready</p>
+        <h3>Buon <span class="hl">regalo</span></h3>
+        <div class="gift-done" data-card></div>
+        <p class="rq-sub">We have emailed you the card. You can also open it now to print or save it as PDF.</p>
+        <a class="rq-btn" data-open target="_blank" rel="noopener">Open the printable card</a>
+      </div>
+    </aside>
+
+    <section class="gift-how">
+      <h2>How it works</h2>
+      <ol>
+        <li><b>Choose a value</b> and pay it online. The card arrives by email at once, with a page to print or forward.</li>
+        <li><b>They pick the experience</b> on romesomuch.com and type the code in the booking box.</li>
+        <li><b>The card pays the whole price</b>, the online part and what is due on the day. Whatever is left stays on the card for another booking.</li>
+      </ol>
+      <p class="mute">Valid 12 months from purchase: book by then, the experience itself can be later. For any experience booked on this site. Not exchangeable for cash; unused cards can be refunded within 14 days of purchase.</p>
+    </section>
+  </div>
+</Base>
+
+<style is:global set:html={giftCss}></style>
+<style>
+  .gift{display:grid;gap:clamp(28px,4vw,56px);grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);padding-block:clamp(28px,4vw,56px);align-items:start}
+  .gift-pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(14px,2vw,24px)}
+  .gift-opt{all:unset;cursor:pointer;display:grid;gap:10px;border-radius:24px;padding:6px;outline:2px solid transparent;outline-offset:2px;transition:transform var(--dur) var(--ease),outline-color var(--dur) var(--ease)}
+  .gift-opt:hover{transform:translateY(-3px)}
+  .gift-opt:focus-visible{outline-color:var(--yellow-deep)}
+  .gift-opt[aria-pressed="true"]{outline-color:var(--ink)}
+  .gift-name{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:center;color:var(--muted)}
+  .gift-opt[aria-pressed="true"] .gift-name{color:var(--ink)}
+  .gift-box{position:sticky;top:calc(var(--header-h) + 20px);margin:0;background:var(--surface);border:1px solid var(--hair);border-radius:var(--r-lg);padding:clamp(20px,2.4vw,30px);box-shadow:var(--shadow)}
+  .gift-done{width:100%;max-width:360px;margin:16px auto}
+  .gift-box .rq-btn[data-open]{text-decoration:none;margin-top:14px}
+  .gift-how{grid-column:1;max-width:760px}
+  .gift-how h2{font-family:var(--disp);font-weight:400;text-transform:uppercase;font-size:clamp(30px,4vw,44px);margin:0 0 14px}
+  .gift-how ol{margin:0 0 14px;padding-left:22px;display:grid;gap:8px;font-size:16px;line-height:1.55}
+  .gift-how .mute{color:var(--muted);font-size:14px;line-height:1.55}
+  @media (max-width:900px){.gift{grid-template-columns:1fr}.gift-box{position:static}}
+  @media (max-width:520px){.gift-pick{grid-template-columns:1fr}}
+</style>
+
+<script>
+  import { giftCardHtml } from "../../server/gift-design.js";
+
+  const ERRORS: Record<string, string> = {
+    missing_fields: "Please check your name and email.",
+    payments_off: "Online payment is temporarily unavailable. Please write to us.",
+    gift_amount: "Please choose one of the cards.",
+  };
+  const root = document.querySelector<HTMLElement>("[data-gift]")!;
+  const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector(s) as T;
+  const [name, mail, to, msg, terms] = ["[data-name]", "[data-mail]", "[data-to]", "[data-msg]", "[data-terms]"].map((s) => $<HTMLInputElement>(s));
+  const go = $<HTMLButtonElement>("[data-go]");
+  const err = $(".rq-err");
+  const eur = (c: number) => `€${c / 100}`;
+  const state = { amount: 20000, stripe: null as any, elements: null as any };
+
+  const showErr = (m = "") => { err.textContent = m; err.hidden = !m; };
+  const valid = () => name.value.trim().length > 1 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail.value.trim()) && terms.checked;
+  function sync() {
+    $("[data-chosen]").textContent = eur(state.amount);
+    go.disabled = !valid();
+    go.textContent = valid() ? `Continue · pay ${eur(state.amount)}` : "Fill in your details";
+  }
+  function hidePay() { $("[data-pay]").hidden = true; go.hidden = false; state.elements = null; }
+
+  document.querySelectorAll<HTMLButtonElement>("[data-amount]").forEach((b) => b.addEventListener("click", () => {
+    state.amount = Number(b.dataset.amount);
+    document.querySelectorAll("[data-amount]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    hidePay(); sync();
+    if (matchMedia("(max-width:900px)").matches) root.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+  [name, mail, terms].forEach((el) => el.addEventListener("input", sync));
+  terms.addEventListener("change", sync);
+  [to, msg].forEach((el) => el.addEventListener("input", hidePay));
+
+  const api = async (path: string, body: unknown) => {
+    const r = await fetch(`/api/tours/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(j.error || "error"), { code: j.error });
+    return j;
+  };
+  const loadStripe = () => (window as any).Stripe ? Promise.resolve() : new Promise<void>((ok, ko) => {
+    const s = document.createElement("script");
+    s.src = "https://js.stripe.com/v3/"; s.onload = () => ok(); s.onerror = ko;
+    document.head.appendChild(s);
+  });
+
+  go.addEventListener("click", async () => {
+    if (!valid()) return;
+    go.disabled = true; go.textContent = "One moment…"; showErr();
+    try {
+      const r = await api("gift-hold", { amount: state.amount, name: name.value.trim(), email: mail.value.trim(), to: to.value.trim(), message: msg.value.trim() });
+      await loadStripe();
+      state.stripe = state.stripe ?? (window as any).Stripe(r.pk);
+      state.elements = state.stripe.elements({
+        clientSecret: r.clientSecret,
+        appearance: {
+          theme: "stripe",
+          variables: { colorPrimary: "#0A0A0A", colorBackground: "#FFFFFF", colorText: "#0A0A0A", colorDanger: "#B42318", borderRadius: "10px", fontFamily: '"Plus Jakarta Sans", Helvetica Neue, Arial, sans-serif', fontSizeBase: "16px" },
+          rules: { ".Input": { border: "1px solid rgba(10,10,10,.10)", boxShadow: "none" }, ".Input:focus": { border: "1px solid #0A0A0A", boxShadow: "none" } },
+        },
+        fonts: [{ cssSrc: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" }],
+      });
+      state.elements.create("payment", { layout: "tabs", defaultValues: { billingDetails: { name: name.value.trim(), email: mail.value.trim() } } }).mount($("[data-pe]"));
+      $("[data-paybtn]").textContent = `Pay ${eur(state.amount)}`;
+      go.hidden = true; $("[data-pay]").hidden = false;
+    } catch (e) {
+      showErr(ERRORS[(e as any).code] ?? (e as Error).message ?? "Something went wrong. Please try again.");
+    }
+    sync();
+  });
+  $("[data-back]").addEventListener("click", () => { hidePay(); sync(); });
+
+  $("[data-paybtn]").addEventListener("click", async () => {
+    const b = $<HTMLButtonElement>("[data-paybtn]");
+    const label = b.textContent;
+    b.disabled = true; b.textContent = "Processing…"; showErr();
+    const back = new URL(location.href); back.search = ""; back.hash = "";
+    const r = await state.stripe.confirmPayment({ elements: state.elements, confirmParams: { return_url: back.href }, redirect: "if_required" });
+    if (r.error) { b.disabled = false; b.textContent = label; showErr(r.error.message); return; }
+    await done(r.paymentIntent.id);
+    b.disabled = false; b.textContent = label;
+  });
+
+  async function done(pi: string) {
+    let card: any = null;
+    for (let i = 0; i < 6 && card?.status !== "paid"; i++) {
+      try { card = await api("gift-confirm", { pi }); } catch { /* retried */ }
+      if (card?.status !== "paid") await new Promise((ok) => setTimeout(ok, 1500));
+    }
+    if (card?.status !== "paid") { showErr("Your payment went through, but we could not show the card. Check your email or write to us."); return; }
+    $("[data-form]").hidden = true;
+    $(".rq-done").hidden = false;
+    $("[data-card]").innerHTML = giftCardHtml(card.amount, { to: card.to ?? "", code: card.code });
+    $<HTMLAnchorElement>("[data-open]").href = card.url;
+    root.scrollIntoView({ behavior: "smooth", block: "start" });
+    (window as any).rsmTrack?.("Purchase", { content_type: "product", content_ids: ["gift-card"], value: card.amount / 100, currency: "EUR" });
+  }
+
+  // Back from a payment that needed a redirect (3-D Secure, some wallets).
+  const pi = new URLSearchParams(location.search).get("payment_intent");
+  if (pi) { history.replaceState(null, "", location.pathname); done(pi); }
+  sync();
+</script>
