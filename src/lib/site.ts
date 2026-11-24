@@ -49,7 +49,8 @@ export const phoneCodes: [string, string][] = [
 export const categoryName = (slug: string) =>
   categories.find((c) => c.slug === slug)?.name ?? slug;
 
-export const money = (n: number) => `€${n}`;
+// Whole euros stay whole (€90); cents always show two digits (€578.50).
+export const money = (n: number) => `€${Number.isInteger(n) ? n : n.toFixed(2)}`;
 
 export const total = (price: number, unit: "person" | "group", guests: number) =>
   unit === "group" ? price : price * guests;
