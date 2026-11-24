@@ -56,6 +56,12 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 .cats a.on{background:var(--ink-2);color:var(--paper);border-color:var(--ink-2)}
 .grid4{display:grid;grid-template-columns:1fr 1fr;gap:2px;width:10px;flex:none}
 .grid4 i{display:block;width:4px;height:4px;background:currentColor}
+.menuwrap{position:relative;display:flex;flex:none}
+.menubtn{position:relative;display:none;flex:none;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:1px solid var(--edge);border-radius:99px;background:none;color:var(--ink-2);cursor:pointer;transition:var(--dur) var(--ease)}
+.menubtn::after{content:"";position:absolute;inset:-5px}
+.menubtn:hover{border-color:var(--ink);background:var(--sunk)}
+.burger{display:grid;gap:3px;width:14px}
+.burger i{display:block;height:1.5px;background:currentColor;border-radius:1px}
 .sec{display:flex;align-items:center;gap:18px;flex:none}
 .sec a{font-size:13.5px;font-weight:500;color:var(--ink-2)}
 .sec a:hover{color:var(--ink)}
@@ -79,14 +85,17 @@ header.site{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--
 .search-panel .hsearch-in{box-shadow:none;border-color:var(--edge)}
 
 @media(max-width:720px){
- .searchbtn{display:inline-flex}
+ .searchbtn{display:inline-flex;margin-left:auto}
 
  :root{--header-h:67px}
  .bar{gap:14px;height:66px}
  .navstrip{gap:10px}
- .sec{display:flex;flex:none;gap:2px;margin-left:6px;padding-left:8px;border-left:1px solid var(--hair)}
- .sec a:not(.cta){display:block;white-space:nowrap;padding:9px 8px}
- .sec a.cta{display:none}
+ .menubtn{display:inline-flex}
+ .sec{position:absolute;top:calc(100% + 12px);right:0;z-index:70;display:none;flex-direction:column;align-items:stretch;gap:2px;min-width:216px;padding:8px;background:var(--surface);border:1px solid var(--hair);border-radius:14px;box-shadow:var(--shadow)}
+ .menuwrap.open .sec{display:flex}
+ .sec a:not(.cta){display:flex;align-items:center;min-height:44px;padding:0 14px;border-radius:10px;font-size:14px;font-weight:600}
+ .sec a:not(.cta):hover{background:var(--sunk)}
+ .sec a.cta{margin-top:6px;text-align:center;padding:13px 14px}
 }
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:15px 30px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--disp);font-size:17px;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;border-radius:10px;transition:var(--dur) var(--ease)}
@@ -500,7 +509,6 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
  .catbtn{min-height:30px;padding:0 9px;font-size:12px;gap:5px}
  .catbtn .grid4{width:9px;gap:1.5px}
  .catbtn .grid4 i{width:3.5px;height:3.5px}
- .sec a:not(.cta){font-size:12px;padding:8px 4px}
  .lbl{font-size:9.5px}
  .field input,.field select,.step .n{font-size:16px}
  .step button{width:38px;height:38px}
@@ -586,8 +594,6 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 
 @media(max-width:400px){
  .catbtn{padding:0 8px;gap:4px}
- .sec{margin-left:4px;padding-left:6px}
- .sec a:not(.cta){padding:8px 3px}
 }
 
 /* golf cart tours: the partner's booking box is taller than the screen, so the

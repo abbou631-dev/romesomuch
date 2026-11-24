@@ -31,13 +31,18 @@ const categories = liveCategories(all.map((e) => e.data.category));
       <button class="searchbtn" type="button" id="search-toggle" aria-expanded="false" aria-controls="search-panel" aria-label="Search experiences">
         <span aria-hidden="true">🔍</span>
       </button>
-      <nav class="sec">
+      <div class="menuwrap" id="menu-wrap">
+      <button class="menubtn" type="button" id="menu-toggle" aria-expanded="false" aria-controls="menu-list" aria-label="Menu">
+        <span class="burger" aria-hidden="true"><i></i><i></i><i></i></span>
+      </button>
+      <nav class="sec" id="menu-list" aria-label="Menu">
         <a href="/gift-cards/">Gift cards</a>
         <a href="/journal/">Journal</a>
         <a href="/about/">About</a>
         <a href="/contact/">Contact</a>
         <a class="cta" href="/experiences/all/">All experiences</a>
       </nav>
+      </div>
     </div>
   </div>
   <!-- Phone only: the hero is hidden there, so this is where the search lives. -->
@@ -71,9 +76,11 @@ const categories = liveCategories(all.map((e) => e.data.category));
     });
   }
 
-  const wrap = document.getElementById("cat-wrap");
-  const btn = document.getElementById("cat-toggle");
-  if (wrap && btn) {
+  // Categories and, on phones, the menu: same open/close behaviour.
+  for (const [w, b] of [["cat-wrap", "cat-toggle"], ["menu-wrap", "menu-toggle"]]) {
+    const wrap = document.getElementById(w);
+    const btn = document.getElementById(b);
+    if (!wrap || !btn) continue;
     const setOpen = (open: boolean) => {
       wrap.classList.toggle("open", open);
       btn.setAttribute("aria-expanded", String(open));
