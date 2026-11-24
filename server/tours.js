@@ -5,8 +5,10 @@
 
 import { Invalid, json, today, hmac, same } from "./common.js";
 import { mail } from "./access.js";
+import { stripe } from "./stripe.js";
 import { SOURCES } from "./tour-sources.js";
-import { guestEmail, EMAIL_KINDS, ticketUrl } from "./tour-emails.js";
+import { guestEmail, EMAIL_KINDS, ticketUrl, FROM, dueOnDay } from "./tour-emails.js";
+import { holdGift, confirmGift, giftUrl, GIFT_CODE } from "./gift-cards.js";
 import { ticketHtml } from "./tour-ticket.js";
 import { cancelPolicy } from "./tour-policy.js";
 import site from "../src/data/site.json";
@@ -139,35 +141,6 @@ async function availability(env, tour, month) {
 
 // ---- Stripe -------------------------------------------------------------------------
 
-// Stripe's API takes form fields; nested objects become key[sub]=value.
-function form(params, prefix = "", out = new URLSearchParams()) {
-  for (const [k, v] of Object.entries(params)) {
-    const key = prefix ? `${prefix}[${k}]` : k;
-    if (v === undefined || v === null) continue;
-    if (typeof v === "object") form(v, key, out);
-    else out.append(key, String(v));
-  }
-  return out;
-}
-async function stripe(env, method, path, params, idempotencyKey) {
-  if (!env.STRIPE_SECRET_KEY) throw new Invalid("I pagamenti online non sono configurati (manca STRIPE_SECRET_KEY).");
-  const response = await fetch(`https://api.stripe.com/v1/${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
-      ...(params ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
-      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
-    },
-    body: params ? form(params) : undefined,
-  });
-  const body = await response.json();
-  if (!response.ok) {
-    console.log("stripe error", path, response.status, JSON.stringify(body.error ?? body));
-    throw new Invalid(`Stripe: ${body.error?.message ?? response.status}`);
-  }
-  return body;
-}
-
 // Stripe signs each webhook: header "t=<time>,v1=<hmac>", HMAC-SHA256 of
 // "<time>.<raw body>" with the endpoint's secret.
 async function signedEvent(env, request) {
@@ -185,7 +158,6 @@ async function signedEvent(env, request) {
 
 // Guests get HTML with a text twin, from a bookings address so they can
 // tell these from the site's other messages; replies reach the owner.
-const FROM = "RomeSoMuch Bookings <bookings@romesomuch.com>";
 export const sendEmail = (env, kind, b, origin, ...extra) =>
   mail(env, { to: b.email, from: FROM, replyTo, ...guestEmail(kind, b, ...extra) });
 
@@ -211,9 +183,10 @@ const notifyOwner = (env, b, origin) => mail(env, {
     `Ci ha conosciuti: ${SOURCES[b.source] ?? "—"}`,
     "",
     ...(b.promo_code ? [`Codice sconto: ${b.promo_code} (−${euro(b.discount_cents)})`] : []),
+    ...(b.gift_cents > 0 ? [`Gift card ${b.gift_code}: −${euro(b.gift_cents)} (già incassati con la gift card)`] : []),
     b.status === "requested"
-      ? `Totale ${euro(b.total_cents)} · autorizzato sulla carta, da incassare quando accetti`
-      : `Totale ${euro(b.total_cents)} · incassato online ${euro(b.paid_cents)} · saldo sul posto ${euro(b.total_cents - b.paid_cents)}`,
+      ? `Totale ${euro(b.total_cents)} · ${euro(b.deposit_cents)} autorizzati sulla carta, da incassare quando accetti`
+      : `Totale ${euro(b.total_cents)} · incassato online ${euro(b.paid_cents)} · saldo sul posto ${euro(dueOnDay(b))}`,
     `Codice ${b.code}`,
     "",
     `Gestionale: ${origin}/crm/tour/`,
@@ -235,7 +208,7 @@ const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const publicOrder = (b) => ({
   code: b.code, title: b.title, date: b.date, time: b.time, guests: b.guests,
-  total: b.total_cents, paid: b.paid_cents, balance: b.total_cents - b.paid_cents, status: b.status,
+  total: b.total_cents, paid: b.paid_cents, gift: b.gift_cents ?? 0, balance: dueOnDay(b), status: b.status,
 });
 
 // Marks a paid booking confirmed and sends the emails, once: the browser and
@@ -254,13 +227,40 @@ async function confirmPayment(env, origin, intentId) {
     return publicOrder(asked);
   }
   if (intent.status !== "succeeded") return { ...publicOrder(booking), payment: intent.status };
+  return settle(env, origin, booking, intent.amount_received);
+}
+
+// A paid (or fully gift-card-covered) booking becomes confirmed, or a
+// request on a tour the owner verifies; the emails go out once.
+async function settle(env, origin, booking, paid) {
+  const status = booking.verify ? "requested" : "confirmed";
   const { meta } = await env.CRM_DB.prepare(
-    "UPDATE tour_bookings SET status = 'confirmed', paid_cents = ?, confirmed_at = datetime('now') WHERE id = ? AND status = 'pending'",
-  ).bind(intent.amount_received, booking.id).run();
-  const done = { ...booking, status: "confirmed", paid_cents: intent.amount_received };
-  if (meta.changes) await Promise.all([sendEmail(env, "confirmed", done, origin), notifyOwner(env, done, origin)]);
+    `UPDATE tour_bookings SET status = ?, paid_cents = ?, confirmed_at = ${status === "confirmed" ? "datetime('now')" : "NULL"} WHERE id = ? AND status = 'pending'`,
+  ).bind(status, paid, booking.id).run();
+  const done = { ...booking, status, paid_cents: paid };
+  if (meta.changes) await Promise.all([sendEmail(env, status, done, origin), notifyOwner(env, done, origin)]);
   return publicOrder(done);
 }
+
+// ---- gift cards ---------------------------------------------------------------------
+// A card's balance is never stored: its value less what the bookings holding
+// it use (HOLD), so a cancelled booking gives its share back by itself.
+
+const giftLeft = `g.amount_cents - (SELECT coalesce(sum(gift_cents), 0) FROM tour_bookings WHERE gift_code = g.code AND ${HOLD})`;
+export const giftByCode = (env, code) => env.CRM_DB.prepare(`SELECT g.*, ${giftLeft} AS balance_cents FROM gift_cards g WHERE g.code = ?`).bind(code).first();
+
+// A card typed in the booking box: paid, not past its last day, with credit.
+async function giftFor(env, raw) {
+  const code = String(raw ?? "").trim().toUpperCase();
+  if (!code) return null;
+  if (!GIFT_CODE.test(code)) throw new Invalid("gift_invalid");
+  const g = await giftByCode(env, code);
+  if (!g || g.status !== "paid") throw new Invalid("gift_invalid");
+  if (g.expires_on < today()) throw new Invalid("gift_expired");
+  if (g.balance_cents <= 0) throw new Invalid("gift_empty");
+  return g;
+}
+const publicGiftBalance = (g) => ({ code: g.code, balance: g.balance_cents, expires: g.expires_on });
 
 // ---- promo codes --------------------------------------------------------------------
 
@@ -282,7 +282,7 @@ async function promoFor(env, raw, tour) {
 const discountFor = (p, total) => (p ? Math.min(total, p.percent ? Math.round((total * p.percent) / 100) : p.amount_cents) : 0);
 const publicPromo = (p) => ({ code: p.code, percent: p.percent, amount: p.amount_cents });
 
-async function hold(env, body) {
+async function hold(env, origin, body) {
   const tour = await getTour(env, body.tour);
   if (!tour || !tour.active) throw new Invalid("tour_closed");
   const { date } = body;
@@ -321,20 +321,28 @@ async function hold(env, body) {
   const full = totalFor(tour, guests) + extrasCents(extras);
   const discount = discountFor(promo, full);
   const total = full - discount;
-  const deposit = depositFor(tour, total, guests, discount);
-  // Stripe's smallest card payment.
-  if (deposit < 50) throw new Invalid("promo_too_big");
+  // A gift card pays the online part first, then the balance due on the day.
+  const gift = await giftFor(env, body.gift);
+  let giftUse = gift ? Math.min(gift.balance_cents, total) : 0;
+  let deposit = Math.max(0, depositFor(tour, total, guests, discount) - giftUse);
+  // Stripe's smallest card payment is €0.50: a few cents more go online.
+  if (gift && deposit > 0 && deposit < 50) { giftUse = Math.max(0, giftUse - (50 - deposit)); deposit = 50; }
+  if (deposit < 50 && !(gift && deposit === 0)) throw new Invalid("promo_too_big");
   const code = newCode();
   // The seat check and the insert are one statement, so two people cannot
   // both take the last seats.
   const { meta } = await env.CRM_DB.prepare(
-    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total_cents, deposit_cents, promo_code, discount_cents, ticket_token, extras)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    `INSERT INTO tour_bookings (code, slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total_cents, deposit_cents, promo_code, discount_cents, ticket_token, extras, gift_code, gift_cents)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
      WHERE (SELECT ${usedSql(tour)} FROM tour_bookings WHERE slug = ? AND date = ? ${slotSql(tour)} AND ${HOLD}) + ? <= ?
-       AND (SELECT count(*) FROM tour_bookings WHERE promo_code = ? AND ${HOLD}) < ?`,
-  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total, deposit, promo?.code ?? null, discount, newToken(), extras.length ? JSON.stringify(extras) : null,
-    tour.slug, date, ...slotBind(tour, time), need(tour, guests), tour.capacity, promo?.code ?? null, promo?.max_uses ?? 1e9).run();
-  if (!meta.changes) throw new Invalid("slot_full");
+       AND (SELECT count(*) FROM tour_bookings WHERE promo_code = ? AND ${HOLD}) < ?
+       AND (? = 0 OR (SELECT ${giftLeft} FROM gift_cards g WHERE g.code = ?) >= ?)`,
+  ).bind(code, tour.slug, date, time, guests, name, email, phone, whatsapp, notes, participants, source, total, deposit, promo?.code ?? null, discount, newToken(), extras.length ? JSON.stringify(extras) : null, gift?.code ?? null, giftUse,
+    tour.slug, date, ...slotBind(tour, time), need(tour, guests), tour.capacity, promo?.code ?? null, promo?.max_uses ?? 1e9,
+    giftUse, gift?.code ?? null, giftUse).run();
+  if (!meta.changes) throw new Invalid(giftUse ? "slot_full_or_gift" : "slot_full");
+  // Nothing to pay online: the gift card covers it, no Stripe payment.
+  if (deposit === 0) return { code, free: true, order: await settle(env, origin, await bookingBy(env, "code", code), 0) };
 
   try {
     const intent = await stripe(env, "POST", "payment_intents", {
@@ -348,7 +356,7 @@ async function hold(env, body) {
       metadata: { code, tour: tour.slug, date, time, guests, ...(promo ? { promo: promo.code } : {}) },
     }, `hold-${code}`);
     await env.CRM_DB.prepare("UPDATE tour_bookings SET payment_intent = ? WHERE code = ?").bind(intent.id, code).run();
-    return { code, clientSecret: intent.client_secret, pk: env.STRIPE_PUBLISHABLE_KEY, total, deposit, balance: total - deposit };
+    return { code, clientSecret: intent.client_secret, pk: env.STRIPE_PUBLISHABLE_KEY, total, deposit, gift: giftUse, balance: total - deposit - giftUse };
   } catch (error) {
     await env.CRM_DB.prepare("DELETE FROM tour_bookings WHERE code = ?").bind(code).run();
     throw error;
@@ -399,7 +407,12 @@ export async function siteApi(request, env, path) {
     if (!promo) return json({ error: "promo_invalid" }, 404);
     return json(publicPromo(promo));
   }
-  if (what === "hold" && request.method === "POST") return json(await hold(env, await request.json()));
+  if (what === "hold" && request.method === "POST") return json(await hold(env, url.origin, await request.json()));
+  // A gift card typed in the booking box, checked before the guest pays.
+  if (what === "gift" && request.method === "GET") return json(publicGiftBalance(await giftFor(env, url.searchParams.get("code"))));
+  // Buying a gift card: src/pages/gift-cards.astro.
+  if (what === "gift-hold" && request.method === "POST") return json(await holdGift(env, await request.json()));
+  if (what === "gift-confirm" && request.method === "POST") return json(await confirmGift(env, (await request.json()).pi));
   if (what === "confirm" && request.method === "POST") {
     const { pi } = await request.json();
     return json(await confirmPayment(env, url.origin, pi));
@@ -412,6 +425,9 @@ export async function webhook(request, env) {
   const event = await signedEvent(env, request);
   if (!event) return json({ error: "bad signature" }, 400);
   // amount_capturable_updated: a verified tour's card was authorised.
+  if (event.type === "payment_intent.succeeded" && event.data?.object?.metadata?.gift) {
+    await confirmGift(env, event.data.object.id).catch((e) => console.log("webhook gift", e?.message));
+  }
   if (["payment_intent.succeeded", "payment_intent.amount_capturable_updated"].includes(event.type) && event.data?.object?.metadata?.code) {
     await confirmPayment(env, new URL(request.url).origin, event.data.object.id).catch((e) => console.log("webhook confirm", e?.message));
   }
@@ -589,6 +605,11 @@ async function editBooking(env, origin, id, body) {
 async function acceptBooking(env, origin, id) {
   const b = await bookingBy(env, "id", id);
   if (!b || b.status !== "requested") throw new Invalid("Questa richiesta non è più da accettare.");
+  // Covered by a gift card: no card to charge.
+  if (!b.payment_intent) {
+    await env.CRM_DB.prepare("UPDATE tour_bookings SET status = 'confirmed', confirmed_at = datetime('now') WHERE id = ? AND status = 'requested'").bind(id).run();
+    return { emailed: await sendEmail(env, "confirmed", await bookingBy(env, "id", id), origin) };
+  }
   const intent = await stripe(env, "GET", `payment_intents/${b.payment_intent}`);
   if (intent.status !== "requires_capture") throw new Invalid("L'autorizzazione sulla carta non c'è più (scaduta dopo 7 giorni o annullata): rifiuta la richiesta e scrivi al cliente.");
   const captured = await stripe(env, "POST", `payment_intents/${b.payment_intent}/capture`,
@@ -602,8 +623,10 @@ async function acceptBooking(env, origin, id) {
 async function declineBooking(env, origin, id, body) {
   const b = await bookingBy(env, "id", id);
   if (!b || b.status !== "requested") throw new Invalid("Questa richiesta non è più da rifiutare.");
-  const intent = await stripe(env, "GET", `payment_intents/${b.payment_intent}`);
-  if (intent.status === "requires_capture") await stripe(env, "POST", `payment_intents/${b.payment_intent}/cancel`, {}, `decline-${b.code}`);
+  if (b.payment_intent) {
+    const intent = await stripe(env, "GET", `payment_intents/${b.payment_intent}`);
+    if (intent.status === "requires_capture") await stripe(env, "POST", `payment_intents/${b.payment_intent}/cancel`, {}, `decline-${b.code}`);
+  }
   await env.CRM_DB.prepare("UPDATE tour_bookings SET status = 'cancelled', cancelled_at = datetime('now') WHERE id = ? AND status = 'requested'").bind(id).run();
   return { emailed: body.notify ? await sendEmail(env, "declined", b, origin) : false };
 }
@@ -759,6 +782,13 @@ export async function crmApi(request, env, path) {
     }
   }
   if (what === "promos") return promosApi(request, env, key);
+  // CRM Tour → Gift card: every card sold, with what is left on it.
+  if (what === "gifts" && !key && method === "GET") {
+    const { results } = await db.prepare(`SELECT g.*, ${giftLeft} AS balance_cents,
+        (SELECT count(*) FROM tour_bookings WHERE gift_code = g.code AND status IN ('confirmed', 'requested')) AS uses
+      FROM gift_cards g WHERE g.status != 'pending' ORDER BY g.created_at DESC`).all();
+    return json(results.map((g) => ({ ...g, url: giftUrl(g), token: undefined })));
+  }
   if (what === "catalog" && !key && method === "GET") {
     const [{ results: tours }, { results: closures }] = await db.batch([
       db.prepare("SELECT * FROM tours ORDER BY title"),

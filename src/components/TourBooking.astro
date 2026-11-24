@@ -93,6 +93,14 @@ const { slug, title, maxGuests = null } = Astro.props;
         </div>
         <p class="rq-hint" data-promonote aria-live="polite"></p>
       </div>
+      <div class="rq-field">
+        <label for={`tbGift-${slug}`}>Gift card <em>· optional</em></label>
+        <div class="rq-promo">
+          <input id={`tbGift-${slug}`} data-gift autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="GIFT-XXXX-XXXX" />
+          <button type="button" data-giftapply>Apply</button>
+        </div>
+        <p class="rq-hint" data-giftnote aria-live="polite"></p>
+      </div>
       <label class="rq-chk"><input type="checkbox" data-terms /><span data-termstext>I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.</span></label>
     </section>
 
@@ -101,6 +109,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       <p class="rq-item">{title}</p>
       <p class="rq-meta" data-meta></p>
       <p class="rq-disc" data-disc hidden></p>
+      <p class="rq-disc" data-giftline hidden></p>
       <p class="rq-total" data-total></p>
       <p class="rq-split"><span data-nowlbl>Pay now · deposit <b data-deposit></b></span><span data-daylbl>On the day · balance <b data-balance></b></span></p>
     </div>
@@ -141,6 +150,10 @@ const { slug, title, maxGuests = null } = Astro.props;
     payments_off: "Online booking is temporarily unavailable. Please write to us.",
     promo_invalid: "This promo code is not valid for this experience.",
     promo_too_big: "This code cannot be used for an online booking. Please write to us.",
+    gift_invalid: "This gift card code is not valid. Check it on your card.",
+    gift_expired: "This gift card has expired.",
+    gift_empty: "There is no credit left on this gift card.",
+    slot_full_or_gift: "Those places, or the credit on the gift card, have just changed. Please try again.",
     extras: "One of the extras is no longer available. Please reload the page.",
   };
 
@@ -162,7 +175,7 @@ const { slug, title, maxGuests = null } = Astro.props;
 
     const state = {
       tour: null as Tour | null, guests: 2, month: new Date(today.getFullYear(), today.getMonth(), 1), last: "",
-      days: {} as Record<string, Slot[]>, date: "", time: "", wa: "", extras: new Set<string>(), code: "", promo: null as Promo | null, stripe: null as any, elements: null as any, pe: null as any,
+      days: {} as Record<string, Slot[]>, date: "", time: "", wa: "", extras: new Set<string>(), code: "", promo: null as Promo | null, gift: null as { code: string; balance: number; expires: string } | null, stripe: null as any, elements: null as any, pe: null as any,
     };
     const cap = () => Math.min(state.tour?.maxGuests ?? Number(root.dataset.cap), 50);
     const need = () => (state.tour?.unit === "group" ? 1 : state.guests);
@@ -182,10 +195,20 @@ const { slug, title, maxGuests = null } = Astro.props;
       return p ? Math.min(full(), p.percent ? Math.round((full() * p.percent) / 100) : p.amount ?? 0) : 0;
     };
     const total = () => full() - discount();
-    const deposit = () => {
+    const baseDeposit = () => {
       const fixed = state.tour?.depositTiers?.[state.guests];
       return fixed === undefined ? Math.round((total() * (state.tour?.depositPct ?? 0)) / 100) : Math.min(total(), Math.max(0, fixed - discount()));
     };
+    // Same arithmetic as the server (server/tours.js hold): a gift card pays
+    // the online part first, then the balance; Stripe's minimum is €0.50.
+    const giftUse = () => {
+      if (!state.gift) return 0;
+      const g = Math.min(state.gift.balance, total());
+      const online = Math.max(0, baseDeposit() - g);
+      return online > 0 && online < 50 ? Math.max(0, g - (50 - online)) : g;
+    };
+    const deposit = () => Math.max(0, baseDeposit() - giftUse());
+    const onDay = () => total() - deposit() - giftUse();
     const depositWord = () => (state.tour?.depositTiers ? "a deposit" : `a ${state.tour?.depositPct}% deposit`);
 
     try {
@@ -236,15 +259,19 @@ const { slug, title, maxGuests = null } = Astro.props;
         const disc = $("[data-disc]");
         disc.hidden = !discount();
         disc.textContent = discount() ? `${eur(full())} · code ${state.promo!.code} −${eur(discount())}` : "";
+        const gl = $("[data-giftline]");
+        gl.hidden = !giftUse();
+        gl.textContent = giftUse() ? `Gift card ${state.gift!.code} −${eur(giftUse())}` : "";
         $("[data-total]").textContent = eur(total());
         $("[data-deposit]").textContent = eur(deposit());
-        $("[data-balance]").textContent = eur(total() - deposit());
+        $("[data-balance]").textContent = eur(onDay());
       }
       if (!t) { go.textContent = "Loading…"; go.disabled = true; return; }
       if (!state.date) { go.textContent = "Choose a date"; go.disabled = true; return; }
       if (!state.time) { go.textContent = t.freeTime ? "Tell us when you'd like to start" : "Choose a time"; go.disabled = true; return; }
       go.disabled = !valid();
-      go.textContent = !valid() ? "Fill in your details" : verify() ? `Continue · request for ${eur(deposit())}`
+      go.textContent = !valid() ? "Fill in your details" : deposit() === 0 ? (verify() ? "Send request · gift card" : "Book with gift card")
+        : verify() ? `Continue · request for ${eur(deposit())}`
         : allOnline() ? `Continue · pay ${eur(deposit())}` : `Continue · pay ${eur(deposit())} deposit`;
     }
 
@@ -353,6 +380,7 @@ const { slug, title, maxGuests = null } = Astro.props;
       else if (d.d) { state.date = d.d; state.time = state.tour?.freeTime && pref.value.trim().length >= 2 ? pref.value.trim() : ""; hidePay(); calendar(); times(); }
       else if (d.t) { state.time = d.t; hidePay(); times(); }
       else if ("apply" in d) { applyPromo(); return; }
+      else if ("giftapply" in d) { applyGift(); return; }
       else if (d.wa) {
         state.wa = d.wa;
         root.querySelectorAll<HTMLButtonElement>("[data-wa]").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", String(x === b)); });
@@ -384,6 +412,27 @@ const { slug, title, maxGuests = null } = Astro.props;
     });
     promoIn.addEventListener("keydown", (e) => { if ((e as KeyboardEvent).key === "Enter") { e.preventDefault(); applyPromo(); } });
 
+    // A gift card: its credit pays the online part first, then the balance.
+    const giftIn = field("[data-gift]");
+    const giftNote = (m = "", ok = false) => { const n = $("[data-giftnote]"); n.textContent = m; n.classList.toggle("ok", ok); };
+    async function applyGift() {
+      const code = giftIn.value.trim().toUpperCase();
+      hidePay();
+      if (!code) { state.gift = null; giftNote(); sync(); return; }
+      try {
+        state.gift = await api(`gift?code=${encodeURIComponent(code)}`);
+        giftNote(`Gift card applied: ${eur(state.gift!.balance)} of credit`, true);
+      } catch (e) {
+        state.gift = null;
+        giftNote(ERRORS[(e as any).code] ?? "Could not check the gift card. Please try again.");
+      }
+      sync();
+    }
+    giftIn.addEventListener("input", () => {
+      if (state.gift && giftIn.value.trim().toUpperCase() !== state.gift.code) { state.gift = null; giftNote(); hidePay(); sync(); }
+    });
+    giftIn.addEventListener("keydown", (e) => { if ((e as KeyboardEvent).key === "Enter") { e.preventDefault(); applyGift(); } });
+
     function loadStripe() {
       const w = window as any;
       return w.Stripe ? Promise.resolve() : new Promise<void>((ok, ko) => {
@@ -399,9 +448,10 @@ const { slug, title, maxGuests = null } = Astro.props;
       try {
         const r = await api("hold", {
           tour: slug, date: state.date, time: state.time, guests: state.guests,
-          name: name.value.trim(), email: mail.value.trim(), phone: `${cc.value} ${tel.value.trim()}`, whatsapp: state.wa, notes: note.value.trim(), participants: part.value.trim(), source: src.value, promo: state.promo?.code ?? "", extras: [...state.extras],
+          name: name.value.trim(), email: mail.value.trim(), phone: `${cc.value} ${tel.value.trim()}`, whatsapp: state.wa, notes: note.value.trim(), participants: part.value.trim(), source: src.value, promo: state.promo?.code ?? "", extras: [...state.extras], gift: state.gift?.code ?? "",
         });
         state.code = r.code;
+        if (r.free) { finish(r.order); return; }
         await loadStripe();
         state.stripe = state.stripe ?? (window as any).Stripe(r.pk);
         state.elements = state.stripe.elements({
@@ -449,11 +499,16 @@ const { slug, title, maxGuests = null } = Astro.props;
         if (!settled()) await new Promise((ok) => setTimeout(ok, 1500));
       }
       if (!order) { showErr("Your payment went through, but we could not show the confirmation. Check your email or write to us."); return; }
+      finish(order);
+    }
+
+    function finish(order: any) {
       $("[data-form]").hidden = true;
       $(".rq-done").hidden = false;
       $("[data-code]").textContent = order.code;
       const asked = order.status === "requested";
-      const money = asked ? `${eur(order.total)} authorised, not charged yet` : order.balance > 0 ? `${eur(order.paid)} paid, ${eur(order.balance)} on the day` : `${eur(order.paid)} paid`;
+      const gift = order.gift ? ` (gift card ${eur(order.gift)})` : "";
+      const money = asked ? `${eur(order.paid || order.total - order.gift)} authorised, not charged yet${gift}` : order.balance > 0 ? `${eur(order.paid + order.gift)} paid${gift}, ${eur(order.balance)} on the day` : `${eur(order.paid + order.gift)} paid${gift}`;
       $("[data-okline]").textContent = `${order.title} · ${nice(order.date)} · ${order.time} · ${order.guests} guest${order.guests === 1 ? "" : "s"} · ${money}`;
       if (asked) {
         $("[data-donekick]").textContent = "Request received";
