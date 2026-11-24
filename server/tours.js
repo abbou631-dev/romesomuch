@@ -59,6 +59,7 @@ const guestsText = (n) => `${n} ${n === 1 ? "guest" : "guests"}`;
 
 const parseTour = (row) => row && {
   ...row, times: JSON.parse(row.times), price_tiers: row.price_tiers ? JSON.parse(row.price_tiers) : null, extras: parseExtras(row.extras),
+  deposit_tiers: row.deposit_tiers ? JSON.parse(row.deposit_tiers) : null,
 };
 // Optional extras ([{ name, price_cents }]), flat per booking: offered on a
 // tour, and the ones chosen on a booking.
@@ -72,7 +73,13 @@ const getTour = async (env, slug) =>
 export const totalFor = (tour, guests) =>
   tour.price_tiers ? tour.price_tiers[guests] ?? tour.price_cents
     : tour.unit === "group" ? tour.price_cents : tour.price_cents * guests;
-export const depositFor = (tour, total) => Math.round((total * tour.deposit_pct) / 100);
+// The online part: a fixed deposit for the group size when the tour has one
+// (the owner's margin; a discount comes off it, the rest and any extras are
+// paid on the spot), otherwise deposit_pct of the total.
+export const depositFor = (tour, total, guests, discount = 0) => {
+  const fixed = tour.deposit_tiers?.[guests];
+  return fixed === undefined ? Math.round((total * tour.deposit_pct) / 100) : Math.min(total, Math.max(0, fixed - discount));
+};
 // No fixed start times: the guest writes, in their own words, when they would
 // like to start ("morning, around 10"); tour_bookings.time keeps that text
 // until the owner replaces it with the agreed time. The day is the slot
@@ -91,6 +98,7 @@ const usedSql = (tour) => (tour.unit === "group" ? "count(*)" : "coalesce(sum(gu
 const publicTour = (t) => ({
   slug: t.slug, title: t.title, price: t.price_cents, unit: t.unit, depositPct: t.deposit_pct,
   maxGuests: t.max_guests, cancelHours: t.cancel_hours, freeTime: freeTime(t), policy: cancelPolicy(t), tiers: t.price_tiers, verify: Boolean(t.verify),
+  depositTiers: t.deposit_tiers,
   extras: t.extras.map((x) => ({ name: x.name, price: x.price_cents })),
 });
 // Most guests the "from" price covers (2 for €485 when one and two pay the same).
@@ -313,7 +321,7 @@ async function hold(env, body) {
   const full = totalFor(tour, guests) + extrasCents(extras);
   const discount = discountFor(promo, full);
   const total = full - discount;
-  const deposit = depositFor(tour, total);
+  const deposit = depositFor(tour, total, guests, discount);
   // Stripe's smallest card payment.
   if (deposit < 50) throw new Invalid("promo_too_big");
   const code = newCode();
@@ -433,17 +441,17 @@ function extrasValue(raw) {
 
 // "2=485, 3=540" (euros, as typed in the CRM) to {"2": 48500, "3": 54000}.
 // Empty means no tiers. Every size from 1 to the largest must have a price.
-function tiersValue(raw) {
+function tiersValue(raw, label = "Prezzi per persone") {
   const text = String(raw ?? "").trim();
   if (!text) return null;
   const tiers = {};
   for (const part of text.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean)) {
     const m = part.match(/^(\d+)\s*[=:]\s*€?\s*(\d+(?:[.,]\d{1,2})?)$/);
-    if (!m) throw new Invalid(`Prezzi per persone: «${part}» non è nel formato 2=485.`);
+    if (!m) throw new Invalid(`${label}: «${part}» non è nel formato 2=485.`);
     tiers[Number(m[1])] = Math.round(Number(m[2].replace(",", ".")) * 100);
   }
   const top = Math.max(...Object.keys(tiers).map(Number));
-  for (let n = 1; n <= top; n++) if (!tiers[n]) throw new Invalid(`Prezzi per persone: manca il prezzo per ${n}.`);
+  for (let n = 1; n <= top; n++) if (!tiers[n]) throw new Invalid(`${label}: manca il valore per ${n}.`);
   return JSON.stringify(tiers);
 }
 
@@ -470,6 +478,7 @@ function tourValues(body) {
     if (!out.weekdays) throw new Invalid("Scegli almeno un giorno.");
   }
   if ("price_tiers" in body) out.price_tiers = tiersValue(body.price_tiers);
+  if ("deposit_tiers" in body) out.deposit_tiers = tiersValue(body.deposit_tiers, "Deposito per persone");
   if ("extras" in body) out.extras = extrasValue(body.extras);
   if ("times" in body) {
     const times = [...new Set([].concat(body.times ?? []).flatMap((t) => String(t).split(/[\s,;]+/)).filter(Boolean)
@@ -678,7 +687,7 @@ function sampleBooking(env, tour) {
     name: "Jane Smith", email: notifyTo(env), meeting_point: tour.meeting_point, cancel_hours: tour.cancel_hours,
     partial_refund_pct: tour.partial_refund_pct, partial_refund_hours: tour.partial_refund_hours, verify: tour.verify,
     participants: tour.verify ? "Jane Smith, 12/03/1985\nJohn Smith, 02/07/1983" : null,
-    status: "confirmed", total_cents: total, deposit_cents: depositFor(tour, total), paid_cents: depositFor(tour, total),
+    status: "confirmed", total_cents: total, deposit_cents: depositFor(tour, total, 2), paid_cents: depositFor(tour, total, 2),
     refunded_cents: 0, discount_cents: 0, ticket_token: "0".repeat(32),
   };
 }

@@ -131,7 +131,7 @@ const { slug, title, maxGuests = null } = Astro.props;
 <script>
   type Slot = { time: string; left: number };
   type Promo = { code: string; percent: number | null; amount: number | null };
-  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number; policy: string; tiers: Record<string, number> | null; verify: boolean; freeTime: boolean; extras: { name: string; price: number }[] };
+  type Tour = { slug: string; title: string; price: number; unit: "person" | "group"; depositPct: number; maxGuests: number; cancelHours: number; policy: string; tiers: Record<string, number> | null; verify: boolean; freeTime: boolean; depositTiers: Record<string, number> | null; extras: { name: string; price: number }[] };
   const ERRORS: Record<string, string> = {
     slot_full: "Those places have just been taken. Please choose another time.",
     slot_closed: "That time is no longer available. Please choose another.",
@@ -182,7 +182,11 @@ const { slug, title, maxGuests = null } = Astro.props;
       return p ? Math.min(full(), p.percent ? Math.round((full() * p.percent) / 100) : p.amount ?? 0) : 0;
     };
     const total = () => full() - discount();
-    const deposit = () => Math.round((total() * (state.tour?.depositPct ?? 0)) / 100);
+    const deposit = () => {
+      const fixed = state.tour?.depositTiers?.[state.guests];
+      return fixed === undefined ? Math.round((total() * (state.tour?.depositPct ?? 0)) / 100) : Math.min(total(), Math.max(0, fixed - discount()));
+    };
+    const depositWord = () => (state.tour?.depositTiers ? "a deposit" : `a ${state.tour?.depositPct}% deposit`);
 
     try {
       const region = (navigator.language.split("-")[1] || "").toUpperCase();
@@ -211,7 +215,7 @@ const { slug, title, maxGuests = null } = Astro.props;
         $("[data-paxhint]").textContent = t.tiers ? `private group · up to ${t.maxGuests}`
           : t.unit === "group" ? `private boat · up to ${t.maxGuests} guests` : `1–${t.maxGuests} guests · all ages`;
         const pay = verify() ? "My card is authorised now and charged only when you confirm availability; if you cannot, nothing is charged."
-          : allOnline() ? "I pay the full price now." : `I pay a ${t.depositPct}% deposit now and the balance on the day.`;
+          : allOnline() ? "I pay the full price now." : `I pay ${depositWord()} now and the balance on the day.`;
         const ids = verify() ? " The names and dates of birth I give match each passport, and everyone brings a valid ID." : "";
         $("[data-termstext]").innerHTML = `${pay} ${t.policy}${ids} I accept the <a href="/legal/terms/" target="_blank">booking terms</a>.`;
         $("[data-partwrap]").hidden = !t.verify;
@@ -246,7 +250,7 @@ const { slug, title, maxGuests = null } = Astro.props;
 
     // How the price is paid, for the box's small print and the panel above it.
     function payLine() {
-      return verify() ? "paid online once we confirm availability" : allOnline() ? "paid online" : `${state.tour?.depositPct}% deposit online, the rest on the day`;
+      return verify() ? "paid online once we confirm availability" : allOnline() ? "paid online" : `${state.tour?.depositTiers ? "deposit" : `${state.tour?.depositPct}% deposit`} online, the rest on the day`;
     }
 
     function calendar() {
