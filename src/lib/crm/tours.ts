@@ -272,6 +272,8 @@ async function bookingView(id: number) {
           <dt>Nome</dt><dd>${esc(b.name)}</dd>
           <dt>Email</dt><dd><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></dd>
           <dt>Telefono</dt><dd>${b.phone ? `<a href="tel:${esc(b.phone)}">${esc(b.phone)}</a>${b.whatsapp === 1 ? ` · <a href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : b.whatsapp === 0 ? " · niente WhatsApp" : ""}` : "—"}</dd>
+          <dt>Data</dt><dd>${day(b.date)}</dd>
+          <dt>Orario</dt><dd>${esc(b.time)}</dd>
           <dt>Ospiti</dt><dd>${b.guests}</dd>
           ${b.extras ? `<dt>Extra</dt><dd>${extrasList(b.extras).map((x) => `${esc(x.name)} (${eur(x.price_cents)})`).join(", ")}</dd>` : ""}
           ${b.participants ? `<dt>Partecipanti</dt><dd>${esc(b.participants).replace(/\n/g, "<br />")}</dd>` : ""}
