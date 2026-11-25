@@ -166,6 +166,7 @@ select:focus, input:focus, textarea:focus, .btn:focus-visible, .link:focus-visib
 .panel { border: 1px solid var(--hair); border-radius: 12px; padding: 16px; margin-bottom: 16px; min-width: 0; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
 .panel-head h2 { margin: 0; }
+.panel-head .acts { display: flex; gap: 6px; flex-wrap: wrap; }
 .grid2, .grid3 { display: grid; gap: 0 16px; }
 @media (min-width: 1000px) {
   .grid2 { grid-template-columns: 1fr 1fr; }

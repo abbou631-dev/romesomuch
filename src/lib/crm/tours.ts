@@ -267,7 +267,7 @@ async function bookingView(id: number) {
         </div>` : `<p class="mute">${b.status === "cancelled" ? "Prenotazione cancellata: non si può spostare." : "Non si può spostare."}</p>`}
       </section>
       <section class="panel">
-        <div class="panel-head"><h2>Cliente</h2>${b.status !== "cancelled" ? `<button class="btn small" data-edit="${b.id}">Modifica dati</button>` : ""}</div>
+        <div class="panel-head"><h2>Cliente</h2><div class="acts"><button class="btn small" data-copy="${b.id}">Copia info</button>${b.status !== "cancelled" ? `<button class="btn small" data-edit="${b.id}">Modifica dati</button>` : ""}</div></div>
         <dl class="info">
           <dt>Nome</dt><dd>${esc(b.name)}</dd>
           <dt>Email</dt><dd><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></dd>
@@ -560,6 +560,31 @@ async function act(work: () => Promise<unknown>, done: string) {
   }
 }
 
+// The booking as plain text, to paste into WhatsApp or a calendar event.
+async function copyBooking(b: Row) {
+  const lines = [
+    b.title,
+    `Data: ${day(b.date)}`,
+    `Orario: ${b.time}`,
+    `Ospiti: ${b.guests}`,
+    `Nome: ${b.name}`,
+    ...(b.phone ? [`Telefono: ${b.phone}`] : []),
+    `Email: ${b.email}`,
+    ...(b.extras ? [`Extra: ${extrasList(b.extras).map((x) => x.name).join(", ")}`] : []),
+    ...(b.participants ? [`Partecipanti: ${String(b.participants).replace(/\n/g, ", ")}`] : []),
+    ...(b.notes ? [`Note: ${b.notes}`] : []),
+    ...(b.status === "confirmed" ? [`Da pagare sul posto: ${eur(balance(b))}`] : []),
+    `Codice: ${b.code}`,
+  ];
+  const text = lines.join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    say("Info copiate: incollale su WhatsApp o nel calendario");
+  } catch {
+    prompt("Copia le info:", text);
+  }
+}
+
 view.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
   // A tap anywhere on a booking row, except its links and buttons, opens it.
@@ -575,6 +600,7 @@ view.addEventListener("click", (event) => {
   else if (d.preview) { previewKind = d.preview; loadPreview(); }
   else if ("move" in d) moveBooking();
   else if (d.edit) { const b = booking(d.edit); if (b) editBooking(b); }
+  else if (d.copy) { const b = booking(d.copy); if (b) copyBooking(b); }
   else if (d.cancel) { const b = booking(d.cancel); if (b) cancelBooking(b); }
   else if (d.accept) {
     const b = booking(d.accept);
