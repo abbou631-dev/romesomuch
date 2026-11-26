@@ -432,7 +432,7 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
 .fcta p{color:rgba(10,10,10,.72);margin:18px auto 26px;max-width:38ch;font-size:19px;font-weight:500}
 .fcta .btn{background:#0a0a0a;border-color:#0a0a0a;color:#fff;box-shadow:var(--shadow-lift)}
 .fcta .btn:hover{background:#fff;color:#0a0a0a;border-color:#0a0a0a;transform:scale(1.05)}
-.fgrid{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:28px;padding:38px 0;max-width:var(--maxw);margin:0 auto}
+.fgrid{display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:28px;padding:38px 0;max-width:var(--maxw);margin:0 auto}
 @media(max-width:760px){.fgrid{grid-template-columns:1fr 1fr}}
 .fcol h4{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:700;font-family:var(--body)}
 .fcol a{display:block;font-size:13.5px;color:var(--ink-2);padding:4px 0;font-weight:500}
@@ -588,7 +588,7 @@ footer{border-top:1px solid var(--hair);background:var(--sunk);margin-top:0}
  .fcta{padding:32px var(--pad)}
  .fcta p{font-size:14.5px;margin:12px auto 20px;max-width:32ch}
  .fcta .btn,.article .locked-cta .btn{padding:12px 22px;font-size:14px}
- .fgrid{grid-template-columns:repeat(3,1fr);gap:20px 10px;padding:24px 0;text-align:center}
+ .fgrid{grid-template-columns:repeat(2,1fr);gap:20px 10px;padding:24px 0;text-align:center}
  .fgrid .fcol:first-child{grid-column:1/-1}
  .fcol img{height:21px;width:auto;display:block;margin-inline:auto}
  .fcol p{margin-inline:auto}

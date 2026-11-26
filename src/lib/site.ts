@@ -6,6 +6,9 @@ export const categories = site.categories as { slug: CategorySlug; name: string;
 export const topPicks = site.topPicks as string[];
 export const cancellationDefault = site.cancellationDefault as string;
 export const contactEmail = site.contactEmail as string;
+// The brand's own profiles: linked in the footer and given to search engines as sameAs,
+// so they know the site and the accounts are one RomeSoMuch.
+export const social = site.social as { name: string; url: string }[];
 export const whatsapp = site.whatsapp as string;
 // A pixel id is public by nature: it ships in the page for anyone to read. It
 // lives here, not in a secret, and an empty value simply loads no pixel at all.

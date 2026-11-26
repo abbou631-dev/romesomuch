@@ -146,6 +146,11 @@
     }
   },
   "cancellationDefault": "All sales are final unless otherwise noted.",
+  "social": [
+    { "name": "Instagram", "url": "https://www.instagram.com/romesomuch" },
+    { "name": "TikTok", "url": "https://www.tiktok.com/@romesomuch" },
+    { "name": "Facebook", "url": "https://www.facebook.com/p/Romesomuch-61565593650767" }
+  ],
   "contactEmail": "romesomuch@gmail.com",
   "whatsapp": "+39 351 401 4023",
   "metaPixelId": "1540946811405508"

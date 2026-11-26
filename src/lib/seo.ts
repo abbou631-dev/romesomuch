@@ -1,8 +1,8 @@
 // Structured data (schema.org) for Journal articles, so search engines and AI
 // assistants can read the article, its date and its questions without guessing.
-import { postTime } from "./site";
+import { postTime, social } from "./site";
 
-const ORG = { "@type": "Organization", name: "RomeSoMuch", url: "https://romesomuch.com/" };
+const ORG = { "@type": "Organization", name: "RomeSoMuch", url: "https://romesomuch.com/", sameAs: social.map((s) => s.url) };
 
 const plain = (md: string) =>
   md

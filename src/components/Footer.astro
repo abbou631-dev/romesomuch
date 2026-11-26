@@ -1,5 +1,6 @@
 ---
 import logo from "../assets/logo.svg";
+import { social } from "../lib/site";
 ---
 <footer>
   <div class="fcta wrap">
@@ -30,6 +31,10 @@ import logo from "../assets/logo.svg";
         <a href="/work-with-us/">Work with us</a>
         <a href="/partners/">Become a partner</a>
         <a href="/experiences/all/">All experiences</a>
+      </div>
+      <div class="fcol">
+        <h4>Follow us</h4>
+        {social.map((s) => <a href={s.url} target="_blank" rel="noopener me">{s.name}</a>)}
       </div>
       <div class="fcol">
         <h4>Legal</h4>

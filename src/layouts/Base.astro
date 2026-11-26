@@ -3,6 +3,7 @@ import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import Consent from "../components/Consent.astro";
 import "../styles/global.css";
+import { social } from "../lib/site";
 
 interface Props {
   title: string;
@@ -41,6 +42,7 @@ const identity = Astro.url.pathname === "/" && JSON.stringify([
     name: "RomeSoMuch",
     url: Astro.site,
     logo: new URL("/favicon-192.png", Astro.site),
+    sameAs: social.map((s) => s.url),
   },
 ]);
 ---
