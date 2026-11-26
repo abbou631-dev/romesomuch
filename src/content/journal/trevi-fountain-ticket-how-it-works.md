@@ -62,7 +62,7 @@ The ticket applies only during the hours above. Outside them, the operator's sit
 
 If you want to stand by the water, go during the ticketed hours and arrive before the last entry at 21.00. The operator's home page shows a crowd level indicator, based on average attendance trends, which is worth a look before you set off.
 
-If you would rather see the fountain as one stop on a longer walk, from the Spanish Steps to the Pantheon and Piazza Navona, with a guide just for your group, we run a [two-hour private walk](/experience/heart-of-rome-walk) that comes this way. For lunch or dinner nearby, see [where to eat near the Trevi Fountain](/journal/where-to-eat-near-trevi-fountain), and for the other big sights, our guide to [visiting the Vatican Museums](/journal/vatican-museums-worth-it-how-to-visit).
+For lunch or dinner nearby, see [where to eat near the Trevi Fountain](/journal/where-to-eat-near-trevi-fountain), and for the other big sights, our guide to [visiting the Vatican Museums](/journal/vatican-museums-worth-it-how-to-visit).
 
 ## Good to know
 
