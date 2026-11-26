@@ -3,6 +3,10 @@ title: "Is the Borghese Gallery worth it? How to get tickets, even when it is so
 date: "6 November 2026"
 excerpt: "Is the Borghese Gallery worth it? A straight answer, then how to book, what to do when it is sold out, the free first Sunday and the bag rule, all from the gallery's own site."
 cover: "borghese-gallery-front"
+experiences:
+  - roman-mosaic-class
+  - private-golf-cart-tour
+  - micromosaic-jewelry-class
 ---
 
 Is the Borghese Gallery worth it? Yes, if you want to see sculptures by Bernini and Canova and paintings by Caravaggio, Raphael and Titian in twenty frescoed rooms, in a booked visit of two hours. You could skip it if your only free day is a Monday, when it is closed, or if the official site has no tickets for your dates and you would rather not queue at the box office for a ticket that is not guaranteed. What decides it is the ticket: every visit needs a timed booking, at 16 euros plus a 2 euro booking fee, on the gallery's own site or by phone on +39 06 32810, and when both show nothing the box office still sells a few last-minute tickets from twenty past each hour, and tickets for the first date available.

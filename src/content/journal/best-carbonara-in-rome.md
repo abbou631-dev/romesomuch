@@ -3,6 +3,10 @@ title: "The best carbonara in Rome: seven places to eat it"
 date: "2 November 2026"
 excerpt: "The best carbonara in Rome: seven trattorie and restaurants, with how each one makes it, the address and the opening days, all checked on their own websites."
 cover: "carbonara-cover"
+experiences:
+  - pasta-cooking-class
+  - vespa-tour
+  - rome-by-night-golf-cart-tour
 ---
 
 The best carbonara in Rome is the plain Roman one: pasta tossed with guanciale (cured pork cheek), egg, Pecorino Romano and black pepper, and no cream. Seven places that put it on their own menus are Armando al Pantheon, Salumeria Roscioli, Il Maritozzo Rosso, Da Enzo al 29, Checchino dal 1887, Flavio al Velavevodetto and Felice a Testaccio.

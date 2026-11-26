@@ -3,6 +3,10 @@ title: "Where to eat near the Trevi Fountain: six places worth the walk"
 date: "21 October 2026"
 excerpt: "Where to eat near the Trevi Fountain: six places within five minutes on foot, from trattorie to a pizzeria and a 1906 beer hall, with hours and closing days checked this week."
 cover: "trevi-fountain-cover"
+experiences:
+  - private-golf-cart-tour
+  - pasta-cooking-class
+  - rome-by-night-golf-cart-tour
 ---
 
 If you want to eat well near the Trevi Fountain, walk away from the square for two to five minutes, into the lanes towards the Quirinale or across to Via di San Marcello. That short walk takes you to the six places below, which range from a family restaurant and a pizzeria that takes no bookings to a beer hall founded in 1906.

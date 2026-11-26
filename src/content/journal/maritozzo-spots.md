@@ -3,6 +3,10 @@ title: "The best maritozzo in Rome: eight places to find it"
 date: "3 October 2026"
 excerpt: "A soft bun split open and filled with whipped cream: where to eat Rome's most generous pastry, from historic pasticcerie to a bar that barely closes."
 cover: "maritozzo-cover"
+experiences:
+  - pasta-cooking-class
+  - vespa-tour
+  - private-golf-cart-tour
 ---
 
 The maritozzo is a sweet bun, light and slightly glossy, split down the middle and filled with so much whipped cream that the bread becomes almost a frame. Romans eat it at breakfast with a cappuccino, mid-morning when the cornetto has worn off, and at three in the morning on the way home.

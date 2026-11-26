@@ -1,4 +1,4 @@
-import { defineCollection, z } from "astro:content";
+import { defineCollection, reference, z } from "astro:content";
 import { glob } from "astro/loaders";
 
 const picture = z.union([
@@ -58,6 +58,9 @@ const journal = defineCollection({
     date: z.string().regex(/^([1-9]|[12]\d|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) 20\d\d$/),
     excerpt: z.string(),
     cover: z.string(),
+    // The experiences shown under the article, best fit first. An id that is not
+    // in the catalogue fails the build, so a retired tour cannot linger here.
+    experiences: z.array(reference("experiences")).max(3).default([]),
   }),
 });
 

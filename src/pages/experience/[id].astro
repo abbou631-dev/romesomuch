@@ -6,7 +6,11 @@ import Gallery from "../../components/Gallery.astro";
 import Rail from "../../components/Rail.astro";
 import BookingPanel from "../../components/BookingPanel.astro";
 import MeetingMap from "../../components/MeetingMap.astro";
-import { cancellationDefault, categoryName } from "../../lib/site";
+import JournalCard from "../../components/JournalCard.astro";
+import { getImage } from "astro:assets";
+import { cancellationDefault, cardImage, categoryName, experienceIdsFor, newestFirst } from "../../lib/site";
+import { photo } from "../../lib/images";
+import { experienceSchema } from "../../lib/seo";
 
 export const getStaticPaths = (async () => {
   const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
@@ -18,8 +22,29 @@ const d = exp.data;
 const { Content } = await render(exp);
 const all = (await getCollection("experiences")).sort((a, b) => a.data.order - b.data.order);
 const related = all.filter((e) => e.data.category === d.category && e.id !== exp.id).slice(0, 4);
+const catalogue = new Set(all.map((e) => e.id));
+// Articles that send readers here, newest first: the page links back to them.
+const stories = newestFirst(await getCollection("journal"))
+  .filter((post) => experienceIdsFor(post, catalogue).includes(exp.id))
+  .slice(0, 3);
+const url = new URL(`/experience/${exp.id}/`, Astro.site).href;
+const still = cardImage(d.images);
+const image = "photo" in still
+  ? new URL((await getImage({ src: photo(still.photo), width: 1200, format: "jpg" })).src, Astro.site).href
+  : undefined;
+const schema = experienceSchema({
+  title: d.title,
+  blurb: d.blurb,
+  url,
+  image,
+  price: d.price,
+  unit: d.unit,
+  durationHours: d.duration,
+  categoryName: categoryName(d.category),
+  categoryUrl: new URL(`/experiences/${d.category}/`, Astro.site).href,
+});
 ---
-<Base title={`${d.title} — RomeSoMuch`} description={d.blurb} active={d.category}>
+<Base title={`${d.title} — RomeSoMuch`} description={d.blurb} active={d.category} schema={schema} image={image}>
   <div class="wrap">
     <header class="dhead">
       <p class="crumb" style="opacity:1;color:var(--muted)">
@@ -82,6 +107,15 @@ const related = all.filter((e) => e.data.category === d.category && e.id !== exp
       ...(price === null ? {} : { value: price, currency: "EUR" }),
     });
   </script>
+
+  {stories.length > 0 && (
+    <section class="rail">
+      <div class="wrap">
+        <div class="rail-head"><div><h2>From the Journal</h2></div></div>
+        <div class="track">{stories.map((post) => <JournalCard post={post} />)}</div>
+      </div>
+    </section>
+  )}
 
   {related.length > 0 && (
     <Rail title={`More ${categoryName(d.category)}`} items={related} href={`/experiences/${d.category}/`} tone="tone" />

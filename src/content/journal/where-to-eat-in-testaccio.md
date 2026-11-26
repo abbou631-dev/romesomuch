@@ -3,6 +3,10 @@ title: "Where to eat in Testaccio: six places in Rome's old food quarter"
 date: "14 November 2026"
 excerpt: "Where to eat in Testaccio: the market, a deli, a pasticceria and three Roman trattorie, with opening days, closed days and booking rules checked on their own websites."
 cover: "testaccio-market-cover"
+experiences:
+  - pasta-cooking-class
+  - vespa-tour
+  - vespa-sidecar-tour
 ---
 
 For where to eat in Testaccio, start with the Mercato di Testaccio for lunch at a market stall, Salumeria Volpetti for cheese and cured meats and Pasticceria Linari for pastry, then sit down at Felice a Testaccio, Checchino dal 1887 or Flavio al Velavevodetto. On Sunday the market and Volpetti are closed; Checchino closes on Monday and Tuesday, and Linari at half past one on Tuesday. Felice is booked online and does not accept cancellations by phone, email or social media.

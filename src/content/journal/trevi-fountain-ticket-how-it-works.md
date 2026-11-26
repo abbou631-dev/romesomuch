@@ -3,6 +3,10 @@ title: "Do you need a ticket for the Trevi Fountain? How the €2 entry works, a
 date: "13 November 2026"
 excerpt: "Do you need a ticket for the Trevi Fountain? Only to enter the area by the basin. The €2 ticket, the hours, who goes free, where to buy it and the coin rule, from the official site."
 cover: "trevi-fountain-basin-cover"
+experiences:
+  - private-golf-cart-tour
+  - rome-by-night-golf-cart-tour
+  - vespa-tour
 ---
 
 Do you need a ticket for the Trevi Fountain? Not to see it. The fountain can be seen for free from the piazza at any hour, and since 2 February 2026 the €2 ticket is needed only if you do not live in Rome and want to enter the inner area by the basin, from 9.00 to 22.00, or from 11.30 on Mondays and Fridays. There is no time slot to book: you can buy the ticket online, at the Civic Museums and Tourist Infopoints, or at the entrance on Via della Stamperia, where only cards are accepted.

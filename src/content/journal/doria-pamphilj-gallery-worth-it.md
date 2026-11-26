@@ -3,6 +3,10 @@ title: "Is the Doria Pamphilj Gallery worth it? Hours, tickets and what to see"
 date: "21 November 2026"
 excerpt: "Is the Doria Pamphilj Gallery worth it? Who it suits, the Wednesday closing, ticket prices and booking, and what to see, from Velázquez's Innocent X to Caravaggio."
 cover: "doria-pamphilj-hall-of-mirrors"
+experiences:
+  - roman-mosaic-class
+  - micromosaic-jewelry-class
+  - private-golf-cart-tour
 ---
 
 Is the Doria Pamphilj Gallery worth it? Yes, if you want to see Velázquez's Portrait of Pope Innocent X, two early Caravaggios and works by Titian and Raphael in the palace of the family that collected them, a few metres from Piazza Venezia. The entrance is at Via del Corso 305, and you need to book: the gallery says access will not be granted without a reservation. It is closed every Wednesday, so if Wednesday is your only free day in the centre, choose something else.

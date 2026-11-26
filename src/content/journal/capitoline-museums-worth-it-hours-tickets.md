@@ -3,6 +3,10 @@ title: "Are the Capitoline Museums worth it? Hours, tickets and what to see"
 date: "26 November 2026"
 excerpt: "Are the Capitoline Museums worth it? What you see, from Marcus Aurelius to Caravaggio, the official prices from €15, opening hours and the rules at the door."
 cover: "capitoline-marcus-aurelius-exedra"
+experiences:
+  - private-colosseum-tour
+  - roman-mosaic-class
+  - rome-in-one-day-golf-cart
 ---
 
 Are the Capitoline Museums worth it? Yes, if you want to see the bronzes and marbles of ancient Rome, and two Caravaggios, in a single visit. The Musei Capitolini are the city's own museum, in the palaces on Piazza del Campidoglio, and they hold the bronze equestrian statue of Marcus Aurelius, the Capitoline She-wolf, the Capitoline Venus, Caravaggio's St John the Baptist and a gallery that looks out over the Roman Forum. A ticket for the museums alone costs €15, or €9.50 reduced, and they are open every day from 9.30 to 19.30.

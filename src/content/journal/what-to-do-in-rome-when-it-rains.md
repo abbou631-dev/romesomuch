@@ -3,6 +3,10 @@ title: "What to do in Rome when it rains: seven indoor places worth the wet walk
 date: "2 November 2026"
 excerpt: "What to do in Rome when it rains: six museums and a catacomb, with opening hours, booking rules and the closed day to check before you set off."
 cover: "pantheon-rainy-day"
+experiences:
+  - pasta-cooking-class
+  - roman-mosaic-class
+  - coccio-ceramics-class
 ---
 
 When it rains in Rome, go indoors to places that can fill a whole morning: the Vatican Museums, the Galleria Borghese, the Musei Capitolini, the Galleria Doria Pamphilj, Palazzo Barberini, MAXXI and, underground on the Appian Way, the Catacombs of San Callisto. The one rule that saves the day is to check the closed day before you set off: Monday for the Borghese, Palazzo Barberini and MAXXI, Wednesday for the Doria Pamphilj and San Callisto, and most Sundays for the Vatican.

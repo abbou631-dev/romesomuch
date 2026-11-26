@@ -82,3 +82,49 @@ export const articleSchema = (o: {
   }
   return out;
 };
+
+// An experience page: the trip itself, its price when we publish one, the
+// breadcrumb. No rating: there are no reviews on the site to back one.
+export const experienceSchema = (o: {
+  title: string;
+  blurb: string;
+  url: string;
+  image?: string;
+  price: number | null;
+  unit: "person" | "group";
+  durationHours: number;
+  categoryName: string;
+  categoryUrl: string;
+  body?: string;
+}) => [
+  {
+    "@context": "https://schema.org",
+    "@type": "TouristTrip",
+    name: o.title,
+    description: o.blurb,
+    url: o.url,
+    ...(o.image && { image: [o.image] }),
+    touristType: "Visitors to Rome",
+    provider: ORG,
+    itinerary: { "@type": "City", name: "Rome", sameAs: "https://en.wikipedia.org/wiki/Rome" },
+    ...(o.price !== null && {
+      offers: {
+        "@type": "Offer",
+        price: o.price,
+        priceCurrency: "EUR",
+        url: o.url,
+        availability: "https://schema.org/InStock",
+        description: `From €${o.price} per ${o.unit}, ${o.durationHours} hours`,
+      },
+    }),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://romesomuch.com/" },
+      { "@type": "ListItem", position: 2, name: o.categoryName, item: o.categoryUrl },
+      { "@type": "ListItem", position: 3, name: o.title, item: o.url },
+    ],
+  },
+];

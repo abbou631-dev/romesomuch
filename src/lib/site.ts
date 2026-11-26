@@ -89,3 +89,16 @@ const live = (bands: Band[], values: number[]) =>
 
 export const bandsFor = (values: number[], kind: "price" | "length") =>
   live(kind === "price" ? priceBands : lengthBands, values);
+
+// The experiences an article sells, best fit first, at most three: the ones its
+// frontmatter names, else the ones its text links to, else the top picks. Only
+// ids still in the catalogue survive, so the box never points at a retired tour.
+export const experienceIdsFor = (
+  post: { body?: string; data: { experiences: { id: string }[] } },
+  catalogue: Set<string>,
+) => {
+  const named = post.data.experiences.map((e) => e.id);
+  const linked = [...(post.body ?? "").matchAll(/\]\(\/experience\/([a-z0-9-]+)\/?\)/g)].map((m) => m[1]);
+  const pick = (ids: string[]) => [...new Set(ids)].filter((id) => catalogue.has(id)).slice(0, 3);
+  return [named, linked, topPicks].map(pick).find((ids) => ids.length > 0) ?? [];
+};

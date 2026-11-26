@@ -3,6 +3,10 @@ title: "Seven bars for a night out in Rome"
 date: "19 September 2026"
 excerpt: "Where to go when dinner is over and nobody wants to go home: seven rooms across the centre, from a frescoed palazzo to a garden under the Pincio."
 cover: "ocra-corinthia"
+experiences:
+  - rome-by-night-golf-cart-tour
+  - tiber-cruise
+  - vespa-sidecar-tour
 ---
 
 Rome eats late and drinks later. Dinner finishes somewhere near eleven, the piazzas fill with people who have nowhere in particular to be, and the question is always the same: now what?

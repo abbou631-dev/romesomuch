@@ -3,6 +3,10 @@ title: "Lunch near the Pantheon: five places for pasta, pizza and gelato"
 date: "9 November 2026"
 excerpt: "Lunch near the Pantheon: a Roman trattoria, a deli restaurant, a bakery for pizza and two gelaterie, with walking minutes, opening days and booking rules checked this week."
 cover: "pantheon-cover"
+experiences:
+  - private-golf-cart-tour
+  - pasta-cooking-class
+  - rome-by-night-golf-cart-tour
 ---
 
 For a sit-down Roman lunch near the Pantheon, book Armando al Pantheon, a family trattoria a minute's walk from the square, or walk ten minutes to the restaurant inside Salumeria Roscioli. For pizza from a bakery counter, go to Antico Forno Roscioli, also ten minutes away, and for gelato afterwards, Giolitti is four minutes from the square and Gelateria del Teatro ten. Tables on Piazza della Rotonda itself cost more than the same lunch a street or two away. On Sunday, Armando is closed (and on Saturday evening too), while both Roscioli addresses and Giolitti open every day.

@@ -3,6 +3,10 @@ title: "The best specialty coffee in Rome: breakfast spots you can't miss"
 date: "3 October 2026"
 excerpt: "Where to start the day when a cornetto standing at the bar is not enough: eight bakeries and specialty coffee rooms, from Prati to the Campo."
 cover: "breakfast-barnum"
+experiences:
+  - vespa-tour
+  - pasta-cooking-class
+  - private-golf-cart-tour
 ---
 
 The Roman breakfast is a ninety-second affair: a cappuccino and a cornetto at the counter, a coin on the saucer, gone. It is a fine ritual and nobody should talk you out of it.

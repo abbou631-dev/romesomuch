@@ -3,6 +3,10 @@ title: "Do you need a ticket for the Pantheon? Price, free days and how to book"
 date: "26 November 2026"
 excerpt: "Do you need a ticket for the Pantheon? Yes, €7 since July 2026. Who goes in free, the first Sunday, hours, mass times and where to book, from the official page."
 cover: "pantheon-cover"
+experiences:
+  - private-golf-cart-tour
+  - rome-in-one-day-golf-cart
+  - vespa-tour
 ---
 
 Do you need a ticket for the Pantheon? Yes. Since 1 July 2026 a full ticket costs €7 (it used to be €5), and you buy it for a time slot on the Musei Italiani website or app, or at the Pantheon itself. Under-18s and residents of the Municipality of Rome go in free, and so does everyone on the first Sunday of the month, when you cannot book and simply queue at the entrance. EU citizens aged 18 to 25 pay €2.

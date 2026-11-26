@@ -3,6 +3,10 @@ title: "Akira Back opens in Rome, inside the St. Regis"
 date: "10 October 2026"
 excerpt: "Contemporary Japanese cooking with Korean accents, a dining room in copper and amber glass, and a debut week with the chef himself in the kitchen."
 cover: "akira-back-cover"
+experiences:
+  - pasta-cooking-class
+  - rome-by-night-golf-cart-tour
+  - tiber-cruise
 ---
 
 Akira Back is one of the best-known names in international dining: 29 restaurants around the world, with ten more on the way. His newest one is in Rome, inside the St. Regis, and it is the first time his cooking has come to the city.

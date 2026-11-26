@@ -3,6 +3,10 @@ title: "Massimo Dutti opens inside Palazzo Ruspoli on Via del Corso"
 date: "10 October 2026"
 excerpt: "A palace almost five hundred years old, a grand staircase, painted ceilings over the fitting rooms: the new Massimo Dutti flagship may be the most beautiful shop in Rome."
 cover: "massimo-dutti-cover"
+experiences:
+  - micromosaic-jewelry-class
+  - coccio-ceramics-class
+  - vespa-tour
 ---
 
 Via del Corso is the street Romans walk to shop, and most of what lines it is shop windows set into old buildings. The new Massimo Dutti flagship works the other way round: you do not walk into a shop, you walk into a palace that happens to sell clothes.

@@ -3,6 +3,10 @@ title: "Osvaldo retires after 45 years of pizza bianca at Forno Campo de' Fiori"
 date: "13 October 2026"
 excerpt: "For more than four decades, nearly every pizza that left Rome's best-known bakery passed through Osvaldo Palamidesse's hands. This year he hung up his cap."
 cover: "forno-osvaldo-cover"
+experiences:
+  - pasta-cooking-class
+  - vespa-tour
+  - private-golf-cart-tour
 ---
 
 For more than 45 years, Osvaldo Palamidesse made pizza bianca at Forno Campo de' Fiori, one of the most loved bakeries in Rome. This year, he retired.

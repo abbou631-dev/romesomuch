@@ -1,12 +1,14 @@
 ---
 import type { GetStaticPaths } from "astro";
 import { getCollection, render } from "astro:content";
+import Rail from "../../components/Rail.astro";
 import Base from "../../layouts/Base.astro";
 import TripPrompt from "../../components/TripPrompt.astro";
 import Shot from "../../components/Shot.astro";
 import { getImage } from "astro:assets";
 import { photo } from "../../lib/images";
 import { articleSchema } from "../../lib/seo";
+import { experienceIdsFor } from "../../lib/site";
 
 export const getStaticPaths = (async () => {
   const posts = await getCollection("journal");
@@ -19,6 +21,8 @@ const url = new URL(`/journal/${post.id}/`, Astro.site).href;
 const cover = await getImage({ src: photo(post.data.cover), width: 1200, format: "jpg" });
 const image = new URL(cover.src, Astro.site).href;
 const schema = articleSchema({ ...post.data, url, image, body: post.body });
+const catalogue = new Map((await getCollection("experiences")).map((e) => [e.id, e]));
+const sells = experienceIdsFor(post, new Set(catalogue.keys())).map((id) => catalogue.get(id)!);
 ---
 <Base title={`${post.data.title} — RomeSoMuch`} description={post.data.excerpt} schema={schema} image={image} type="article">
   <div class="wrap">
@@ -30,5 +34,8 @@ const schema = articleSchema({ ...post.data, url, image, body: post.body });
       <Content />
     </article>
   </div>
+  {sells.length > 0 && (
+    <Rail title="Experiences for this trip" sub="Tours and classes in Rome you can book with RomeSoMuch" items={sells} tone="tone" />
+  )}
   <TripPrompt />
 </Base>

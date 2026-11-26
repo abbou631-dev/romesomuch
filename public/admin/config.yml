@@ -226,6 +226,18 @@ collections:
         label: Cover photo
         widget: image
 
+      - name: experiences
+        label: Experiences shown under the article
+        widget: relation
+        collection: experiences
+        value_field: "{{slug}}"
+        search_fields: [title]
+        display_fields: [title]
+        multiple: true
+        max: 3
+        required: false
+        hint: Best fit first, up to three. Left empty, the box shows the tours the article links to, or the top picks.
+
       - name: body
         label: Article
         widget: markdown

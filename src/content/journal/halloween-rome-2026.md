@@ -3,6 +3,10 @@ title: "Seven ways to spend Halloween in Rome"
 date: "20 October 2026"
 excerpt: "A theme park after dark, a vampire marathon that runs until breakfast, a party on the steps of Villa Borghese: seven picks for 31 October 2026."
 cover: "halloween-rome-cover"
+experiences:
+  - rome-by-night-golf-cart-tour
+  - tiber-cruise
+  - vespa-tour
 ---
 
 Rome was not built for Halloween. This is a city that takes its dead seriously the other way round: on 2 November families go to the Verano with chrysanthemums, and the night before was, for a long time, something that happened in films. That has changed. Every October now the hotels dress their bars, the clubs print orange flyers, and on the 31st the trams fill with witches, zombies and at least one person who has clearly given up and come as a bedsheet.

@@ -3,6 +3,10 @@ title: "The 73 best restaurants in Rome"
 date: "19 October 2026"
 excerpt: "Our guide to eating well in Rome, sorted by category, from century-old trattorias to Michelin stars: the first five of our own selection, in detail."
 cover: "restaurants-cover"
+experiences:
+  - pasta-cooking-class
+  - rome-by-night-golf-cart-tour
+  - tiber-cruise
 ---
 
 Rome has more restaurants than anyone could get through in a lifetime, and a good share of them, especially near the monuments, exist mainly to feed people who will never come back. The menu is in six languages, the carbonara has cream in it, and nobody minds because nobody local is there to notice.

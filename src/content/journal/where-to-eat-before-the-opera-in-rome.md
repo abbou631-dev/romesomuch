@@ -3,6 +3,10 @@ title: "Where to eat before the opera in Rome: six places near the Teatro dell'O
 date: "26 October 2026"
 excerpt: "Where to eat before the opera in Rome: six places one to twelve minutes on foot from the Teatro dell'Opera, with dinner hours, closing days and curtain times checked this week."
 cover: "teatro-opera-roma-night"
+experiences:
+  - rome-by-night-golf-cart-tour
+  - pasta-cooking-class
+  - tiber-cruise
 ---
 
 If you are wondering where to eat before the opera in Rome, the six places below are between one and twelve minutes on foot from the Teatro dell'Opera, the Teatro Costanzi on Piazza Beniamino Gigli. For an 8pm curtain, either sit down at about half past six somewhere that serves dinner early, or have something light beforehand and keep dinner for after the show, at a place that stays open late.

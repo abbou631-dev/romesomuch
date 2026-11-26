@@ -3,6 +3,10 @@ title: "Christmas World at Villa Borghese in Rome: is it worth it? Dates, ticket
 date: "21 November 2026"
 excerpt: "Christmas World at Villa Borghese in Rome, 28 November 2026 to 10 January 2027: hours, ticket prices, what the ticket covers, what costs extra, and the rules on rain and re-entry."
 cover: "villa-borghese-november-pines"
+experiences:
+  - rome-by-night-golf-cart-tour
+  - private-golf-cart-tour
+  - pasta-cooking-class
 ---
 
 Christmas World, the Christmas village in Villa Borghese in Rome, runs from 28 November 2026 to 10 January 2027. It is open every day from 10.00 to 20.00, closing at 18.00 on 24 and 31 December, and the entrance is in Piazzale delle Canestre, off Viale del Galoppatoio. An adult ticket costs between 12.50 and 18.50 euros, depending on the day. It covers the village, the shows, the parades and meeting Santa and the other characters, but every ride and all the food are paid on top.

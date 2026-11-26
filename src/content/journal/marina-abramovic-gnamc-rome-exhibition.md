@@ -3,6 +3,10 @@ title: "Marina Abramović in Rome: hours, tickets and what to expect at the Gall
 date: "22 November 2026"
 excerpt: "The Marina Abramović exhibition in Rome runs at the Galleria Nazionale until 4 April 2027: hours, the 20 euro ticket that includes it, Thursday evenings and the Borghese offer."
 cover: "gnamc-facade-viale-delle-belle-arti"
+experiences:
+  - roman-mosaic-class
+  - coccio-ceramics-class
+  - micromosaic-jewelry-class
 ---
 
 The Marina Abramović exhibition in Rome, "Marina Abramović: Historical Works and Transforming Energy", is at the Galleria Nazionale d'Arte Moderna e Contemporanea (GNAMC), Viale delle Belle Arti 131, from 18 November 2026 to 4 April 2027. The museum is open from Tuesday to Sunday, 9am to 7pm, and the show is included in the ordinary museum ticket: 20 euros full price, 2 euros for EU citizens aged 18 to 25, free for under-18s.

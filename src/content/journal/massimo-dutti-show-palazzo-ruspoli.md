@@ -3,6 +3,10 @@ title: "Massimo Dutti's runway show inside Palazzo Ruspoli"
 date: "10 October 2026"
 excerpt: "The Limited Edition Fall/Winter 2026 collection walked between travertine pillars and mirrors, then the palace turned into a party with a bar, a DJ and silver trays."
 cover: "md-show-cover"
+experiences:
+  - micromosaic-jewelry-class
+  - coccio-ceramics-class
+  - vespa-tour
 ---
 
 Before the doors of the new flagship opened to the public, Massimo Dutti used it for a night of its own. On 8 October the brand held a runway show inside Palazzo Ruspoli, its new home on Via del Corso, to present the Limited Edition Fall/Winter 2026 collection. We were there with our cameras.

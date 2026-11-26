@@ -3,6 +3,10 @@ title: "Is the Colosseum worth it? How to get tickets when your date looks sold 
 date: "10 November 2026"
 excerpt: "Is the Colosseum worth it? A straight answer, which ticket to choose, when tickets go on sale, the name and ID rule, winter hours and the free first Sunday, from the official site."
 cover: "colosseum-hero"
+experiences:
+  - private-colosseum-tour
+  - rome-in-one-day-golf-cart
+  - vespa-sidecar-tour
 ---
 
 Is the Colosseum worth it? Yes, if you want to go inside the amphitheatre and walk the Roman Forum and the Palatine on the same ticket. The standard ticket, 18 euros, gives you 75 minutes on the first and second levels and one entry to the Forum and Palatine within 24 hours. The Full Experience Underground and Arena, 24 euros, adds the arena floor and, when there is availability, the underground, with 90 minutes inside. If your date shows no tickets, count the days first: the official site puts tickets on sale 30 days before the visit, so a date further away has not gone on sale yet and is not sold out.

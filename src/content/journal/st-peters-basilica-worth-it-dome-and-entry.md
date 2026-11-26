@@ -3,6 +3,10 @@ title: "Is St Peter's Basilica worth it? Hours, security, dress code and the dom
 date: "16 November 2026"
 excerpt: "Is St Peter's Basilica worth it? Yes. The winter hours, where the security check is, what to wear and how the dome visit works, from the Basilica's own website."
 cover: "st-peters-basilica-facade"
+experiences:
+  - private-vatican-museums-tour
+  - private-golf-cart-tour
+  - rome-in-one-day-golf-cart
 ---
 
 Is St Peter's Basilica worth it? Yes. Its own website calls it the largest church in the world, and inside are Michelangelo's Pietà, Bernini's baldachin and, beneath the dome, the tomb of St Peter. Until 28 March 2027 it is open from 7.00 to 19.00. You go in through the Italian State Police security checks under the right-hand colonnade of St Peter's Square as you face the church, dressed for a place of worship, which means no excessively short clothing, sleeveless tops or hats. The real decision is the dome, which you climb by stairs or take a lift partway up, and which comes with a visit to the Basilica.
